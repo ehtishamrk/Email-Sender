@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Haulxify — Employee Portal</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #F5A623;
+      --gold-dark: #D4860A;
+      --bg: #0E0E0E;
+      --surface: #161616;
+      --surface2: #1C1C1C;
+      --border: #242424;
+      --border2: #1E1E1E;
+      --text: #C8C8C8;
+      --text-muted: #555;
+      --text-dim: #333;
+    }
+
+    body {
+      background: var(--bg);
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ══════════════════════════════
+       LOGIN SCREEN
+    ══════════════════════════════ */
+    #loginScreen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .login-box {
+      width: 100%;
+      max-width: 400px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .login-strip { height: 3px; background: linear-gradient(90deg, var(--gold), var(--gold-dark)); }
+
+    .login-head {
+      padding: 36px 36px 0;
+      text-align: center;
+    }
+
+    .login-logo {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 26px;
+      font-weight: bold;
+      color: var(--gold);
+      letter-spacing: -0.3px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .login-sub {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: var(--text-dim);
+    }
+
+    .login-divider { height: 1px; background: var(--border2); margin: 28px 36px 0; }
+
+    .login-body { padding: 24px 36px 36px; }
+
+    .login-label {
+      display: block;
+      font-size: 10px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #3E3E3E;
+      margin-bottom: 7px;
+    }
+
+    .login-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid #272727;
+      border-radius: 8px;
+      padding: 11px 13px;
+      font-size: 14px;
+      color: #CCCCCC;
+      outline: none;
+      font-family: Arial, Helvetica, sans-serif;
+      margin-bottom: 14px;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+    .login-input::placeholder { color: #363636; }
+    .login-input:focus {
+      border-color: rgba(245,166,35,0.38);
+      box-shadow: 0 0 0 3px rgba(245,166,35,0.07);
+    }
+
+    .login-btn {
+      width: 100%;
+      background: var(--gold);
+      color: #111;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 14px;
+      font-weight: bold;
+      padding: 13px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: background 0.15s;
+    }
+    .login-btn:hover { background: #FFBA42; }
+    .login-btn:active { background: var(--gold-dark); transform: scale(0.99); }
+
+    .login-error {
+      display: none;
+      background: rgba(217,79,79,0.07);
+      border: 1px solid rgba(217,79,79,0.2);
+      border-radius: 8px;
+      padding: 10px 13px;
+      font-size: 12px;
+      color: #D94F4F;
+      margin-top: 12px;
+      text-align: center;
+    }
+    .login-error.show { display: block; }
+
+    .login-footer {
+      text-align: center;
+      padding-bottom: 20px;
+      font-size: 10px;
+      color: #1E1E1E;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    /* ══════════════════════════════
+       PORTAL / DASHBOARD
+    ══════════════════════════════ */
+    #portalScreen { display: none; min-height: 100vh; flex-direction: column; }
+    #portalScreen.show { display: flex; }
+
+    /* Top nav */
+    .topnav {
+      background: #111111;
+      border-bottom: 1px solid var(--border2);
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-logo {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--gold);
+    }
+    .nav-logo span {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: normal;
+      margin-left: 10px;
+    }
+
+    .nav-right { display: flex; align-items: center; gap: 16px; }
+
+    .nav-emp {
+      font-size: 11px;
+      color: #444;
+      text-align: right;
+    }
+    .nav-emp strong { display: block; color: #777; font-size: 12px; }
+
+    .nav-logout {
+      background: transparent;
+      border: 1px solid #252525;
+      border-radius: 6px;
+      padding: 7px 14px;
+      font-size: 11px;
+      font-weight: bold;
+      color: #444;
+      cursor: pointer;
+      font-family: Arial, Helvetica, sans-serif;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .nav-logout:hover { border-color: rgba(245,166,35,0.3); color: var(--gold); }
+
+    /* Main content area */
+    .portal-main { flex: 1; padding: 32px 28px 60px; }
+
+    /* View management */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* Dashboard grid */
+    .dash-greeting {
+      margin-bottom: 28px;
+    }
+    .dash-greeting h1 {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 24px;
+      color: #FFFFFF;
+      font-weight: bold;
+      letter-spacing: -0.3px;
+      margin-bottom: 4px;
+    }
+    .dash-greeting p { font-size: 12px; color: var(--text-muted); }
+
+    .dash-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+      max-width: 800px;
+    }
+
+    .dash-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px 22px 20px;
+      cursor: pointer;
+      transition: border-color 0.18s, transform 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .dash-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--gold), var(--gold-dark));
+      opacity: 0;
+      transition: opacity 0.18s;
+    }
+    .dash-card:hover { border-color: rgba(245,166,35,0.3); transform: translateY(-2px); }
+    .dash-card:hover::before { opacity: 1; }
+    .dash-card:active { transform: translateY(0); }
+
+    .card-icon { font-size: 28px; margin-bottom: 14px; }
+    .card-title {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 16px;
+      color: #FFFFFF;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+    .card-desc { font-size: 11px; color: var(--text-muted); line-height: 1.6; }
+
+    /* Back button */
+    .back-btn {
+      background: transparent;
+      border: 1px solid #252525;
+      border-radius: 7px;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: bold;
+      color: #555;
+      cursor: pointer;
+      font-family: Arial, Helvetica, sans-serif;
+      margin-bottom: 20px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .back-btn:hover { border-color: rgba(245,166,35,0.3); color: var(--gold); }
+
+    /* Attendance view */
+    .view-title {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 20px;
+      color: #FFF;
+      font-weight: bold;
+      margin-bottom: 4px;
+      letter-spacing: -0.3px;
+    }
+    .view-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 24px; }
+
+    .att-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      max-width: 440px;
+    }
+
+    .att-time {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 48px;
+      font-weight: bold;
+      color: var(--gold);
+      letter-spacing: -2px;
+      margin-bottom: 4px;
+      line-height: 1;
+    }
+    .att-date { font-size: 12px; color: #444; margin-bottom: 24px; }
+
+    .att-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      margin-bottom: 22px;
+    }
+    .att-status.out { background: rgba(217,79,79,0.08); border: 1px solid rgba(217,79,79,0.2); color: #D94F4F; }
+    .att-status.in  { background: rgba(76,175,128,0.08); border: 1px solid rgba(76,175,128,0.2); color: #4CAF80; }
+    .att-status .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    .att-btn {
+      width: 100%;
+      padding: 13px;
+      border-radius: 8px;
+      border: none;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: background 0.15s;
+    }
+    .att-btn.clockin  { background: var(--gold); color: #111; }
+    .att-btn.clockin:hover { background: #FFBA42; }
+    .att-btn.clockout { background: #1E1E1E; color: #888; border: 1px solid #282828; }
+    .att-btn.clockout:hover { border-color: #D94F4F; color: #D94F4F; }
+
+    .att-log { margin-top: 20px; }
+    .att-log-title { font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; color: #2A2A2A; margin-bottom: 10px; }
+    .att-log-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 0;
+      border-bottom: 1px solid #1A1A1A;
+      font-size: 12px;
+    }
+    .att-log-item:last-child { border-bottom: none; }
+    .att-log-item span:first-child { color: #555; }
+    .att-log-item span:last-child { color: #888; font-family: Georgia, serif; }
+
+    /* Leave view */
+    .leave-form { max-width: 440px; }
+    .lf-field { margin-bottom: 14px; }
+    .lf-label {
+      display: block;
+      font-size: 10px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #3E3E3E;
+      margin-bottom: 7px;
+    }
+    .lf-input, .lf-select, .lf-textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid #272727;
+      border-radius: 8px;
+      padding: 11px 13px;
+      font-size: 14px;
+      color: #CCCCCC;
+      outline: none;
+      font-family: Arial, Helvetica, sans-serif;
+      transition: border-color 0.18s, box-shadow 0.18s;
+      -webkit-appearance: none;
+    }
+    .lf-textarea { resize: vertical; min-height: 90px; }
+    .lf-input:focus, .lf-select:focus, .lf-textarea:focus {
+      border-color: rgba(245,166,35,0.38);
+      box-shadow: 0 0 0 3px rgba(245,166,35,0.07);
+    }
+    .lf-input::placeholder, .lf-textarea::placeholder { color: #363636; }
+    .lf-select option { background: #1C1C1C; }
+
+    .lf-submit {
+      width: 100%;
+      background: var(--gold);
+      color: #111;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 14px;
+      font-weight: bold;
+      padding: 13px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: background 0.15s;
+    }
+    .lf-submit:hover { background: #FFBA42; }
+
+    .lf-success {
+      display: none;
+      background: rgba(76,175,128,0.07);
+      border: 1px solid rgba(76,175,128,0.18);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: #4CAF80;
+      margin-top: 12px;
+    }
+    .lf-success.show { display: block; }
+
+    /* Email sender iframe */
+    .email-frame-wrap {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      max-width: 560px;
+    }
+    .email-frame-wrap iframe {
+      width: 100%;
+      height: 900px;
+      border: none;
+      display: block;
+      background: #0E0E0E;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     LOGIN SCREEN
+══════════════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-strip"></div>
+    <div class="login-head">
+      <span class="login-logo">Haulxify</span>
+      <span class="login-sub">Employee Portal</span>
+    </div>
+    <div class="login-divider"></div>
+    <div class="login-body">
+      <label class="login-label" for="empId">Employee ID</label>
+      <input class="login-input" type="text" id="empId" placeholder="e.g. HX-0001" autocomplete="off"
+             oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')doLogin()">
+
+      <label class="login-label" for="empPass">Password</label>
+      <input class="login-input" type="password" id="empPass" placeholder="Enter your password"
+             onkeydown="if(event.key==='Enter')doLogin()">
+
+      <button class="login-btn" onclick="doLogin()">Sign In →</button>
+      <div class="login-error" id="loginError">Incorrect Employee ID or password. Please try again.</div>
+    </div>
+    <div class="login-footer">Haulxify · Virtual Back Office</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PORTAL SCREEN
+══════════════════════════════════════════ -->
+<div id="portalScreen">
+
+  <!-- Top Nav -->
+  <div class="topnav">
+    <div class="nav-logo">
+      Haulxify
+      <span>Employee Portal</span>
+    </div>
+    <div class="nav-right">
+      <div class="nav-emp">
+        <strong id="navName">—</strong>
+        <span id="navId">—</span>
+      </div>
+      <button class="nav-logout" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="portal-main">
+
+    <!-- ── DASHBOARD VIEW ── -->
+    <div id="viewDash" class="view active">
+      <div class="dash-greeting">
+        <h1>Good <span id="timeGreet">day</span>, <span id="greetName">—</span>.</h1>
+        <p id="greetDate">—</p>
+      </div>
+      <div class="dash-grid">
+        <div class="dash-card" onclick="showView('viewAttendance')">
+          <div class="card-icon">🕐</div>
+          <div class="card-title">Mark Attendance</div>
+          <div class="card-desc">Clock in or clock out for today's shift. View your recent attendance log.</div>
+        </div>
+        <div class="dash-card" onclick="showView('viewLeave')">
+          <div class="card-icon">📋</div>
+          <div class="card-title">Request Leave</div>
+          <div class="card-desc">Submit a leave request for review. Sick days, personal time, and more.</div>
+        </div>
+        <div class="dash-card" onclick="showView('viewEmail')">
+          <div class="card-icon">✉️</div>
+          <div class="card-title">Email Sender</div>
+          <div class="card-desc">Send personalized outreach emails to prospects. All 5 sequence types.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ATTENDANCE VIEW ── -->
+    <div id="viewAttendance" class="view">
+      <button class="back-btn" onclick="showView('viewDash')">← Back to Dashboard</button>
+      <div class="view-title">Mark Attendance</div>
+      <div class="view-sub" id="attSubtitle">Today's shift tracking</div>
+      <div class="att-box">
+        <div class="att-time" id="attClock">—</div>
+        <div class="att-date" id="attDate">—</div>
+        <div class="att-status out" id="attStatus">
+          <span class="dot"></span>
+          <span id="attStatusText">Not Clocked In</span>
+        </div>
+        <button class="att-btn clockin" id="attBtn" onclick="toggleClock()">Clock In</button>
+        <div class="att-log">
+          <div class="att-log-title">Today's Log</div>
+          <div id="attLogList"><div style="font-size:12px;color:#2A2A2A;padding:8px 0;">No entries yet.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── LEAVE REQUEST VIEW ── -->
+    <div id="viewLeave" class="view">
+      <button class="back-btn" onclick="showView('viewDash')">← Back to Dashboard</button>
+      <div class="view-title">Request Leave</div>
+      <div class="view-sub">Fill in the form below. Your manager will be notified.</div>
+      <div class="leave-form">
+        <div class="lf-field">
+          <label class="lf-label" for="leaveType">Leave Type</label>
+          <select class="lf-select" id="leaveType">
+            <option value="sick">Sick Leave</option>
+            <option value="personal">Personal Day</option>
+            <option value="vacation">Vacation</option>
+            <option value="emergency">Emergency</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <div class="lf-field" style="flex:1;">
+            <label class="lf-label" for="leaveFrom">From Date</label>
+            <input class="lf-input" type="date" id="leaveFrom">
+          </div>
+          <div class="lf-field" style="flex:1;">
+            <label class="lf-label" for="leaveTo">To Date</label>
+            <input class="lf-input" type="date" id="leaveTo">
+          </div>
+        </div>
+        <div class="lf-field">
+          <label class="lf-label" for="leaveReason">Reason <span style="font-weight:normal;color:#2A2A2A;font-size:9px;">(optional)</span></label>
+          <textarea class="lf-textarea" id="leaveReason" placeholder="Brief description..."></textarea>
+        </div>
+        <button class="lf-submit" onclick="submitLeave()">Submit Leave Request →</button>
+        <div class="lf-success" id="leaveSuccess">
+          ✓ &nbsp;<strong>Request submitted.</strong> Your manager has been notified and will respond shortly.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── EMAIL SENDER VIEW ── -->
+    <div id="viewEmail" class="view">
+      <button class="back-btn" onclick="showView('viewDash')">← Back to Dashboard</button>
+      <div class="view-title">Email Sender</div>
+      <div class="view-sub">Send outreach emails to prospects. Select a sequence and fill in prospect details.</div>
+      <div class="email-frame-wrap">
+        <iframe id="emailFrame" src="" title="Haulxify Email Sender"></iframe>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<script>
+// ══════════════════════════════════════════════════════
+//  EMPLOYEES — add/remove here as needed
+//  ⚠ Passwords are visible in source. For internal
+//  use only — do not share this file's URL publicly.
+// ══════════════════════════════════════════════════════
+const EMPLOYEES = {
+  'HX-0001': { password: 'Some,What1@',       name: 'Employee 1' },
+  'HX-0002': { password: 'Somewhat786@1',      name: 'Employee 2' },
+  'HX-0003': { password: 'mombalogistics',     name: 'Employee 3' },
+  'HX-0004': { password: 'kingans',            name: 'Employee 4' },
+};
+
+// ──────────────────────────────────────────────────────
+//  ⚙ CONFIG — point this to your actual email sender file
+// ──────────────────────────────────────────────────────
+const EMAIL_SENDER_URL = 'email-sender.html';  // ← change if filename differs
+
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+let currentUser = null;
+let clockedIn   = false;
+let clockInTime = null;
+let attLog      = [];
+let clockInterval = null;
+
+// ══════════════════════════════════════════════════════
+//  LOGIN / LOGOUT
+// ══════════════════════════════════════════════════════
+function doLogin() {
+  const id   = document.getElementById('empId').value.trim().toUpperCase();
+  const pass = document.getElementById('empPass').value;
+  const err  = document.getElementById('loginError');
+
+  const emp = EMPLOYEES[id];
+  if (emp && emp.password === pass) {
+    err.classList.remove('show');
+    currentUser = { id, ...emp };
+    enterPortal();
+  } else {
+    err.classList.add('show');
+    document.getElementById('empPass').value = '';
+    document.getElementById('empPass').focus();
+  }
+}
+
+function doLogout() {
+  currentUser = null;
+  clockedIn   = false;
+  clockInTime = null;
+  attLog      = [];
+  clearInterval(clockInterval);
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('portalScreen').classList.remove('show');
+  document.getElementById('empId').value   = '';
+  document.getElementById('empPass').value = '';
+  document.getElementById('emailFrame').src = '';
+  showView('viewDash');
+}
+
+function enterPortal() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('portalScreen').classList.add('show');
+
+  document.getElementById('navName').textContent = currentUser.name;
+  document.getElementById('navId').textContent   = currentUser.id;
+  document.getElementById('greetName').textContent = currentUser.name.split(' ')[0];
+
+  updateGreeting();
+  startAttClock();
+}
+
+// ══════════════════════════════════════════════════════
+//  VIEW ROUTER
+// ══════════════════════════════════════════════════════
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+
+  // Lazy-load email iframe only when needed
+  if (id === 'viewEmail') {
+    const frame = document.getElementById('emailFrame');
+    if (!frame.src || frame.src === window.location.href) {
+      frame.src = EMAIL_SENDER_URL;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  GREETING
+// ══════════════════════════════════════════════════════
+function updateGreeting() {
+  const h = new Date().getHours();
+  const greet = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+  document.getElementById('timeGreet').textContent = greet;
+
+  const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
+  document.getElementById('greetDate').textContent = new Date().toLocaleDateString('en-US', opts);
+}
+
+// ══════════════════════════════════════════════════════
+//  ATTENDANCE
+// ══════════════════════════════════════════════════════
+function startAttClock() {
+  function tick() {
+    const now = new Date();
+    document.getElementById('attClock').textContent =
+      now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    document.getElementById('attDate').textContent =
+      now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+    document.getElementById('attSubtitle').textContent =
+      'Today — ' + now.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+  }
+  tick();
+  clockInterval = setInterval(tick, 1000);
+}
+
+function toggleClock() {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+  const btn     = document.getElementById('attBtn');
+  const status  = document.getElementById('attStatus');
+  const stText  = document.getElementById('attStatusText');
+
+  if (!clockedIn) {
+    // Clock In
+    clockedIn   = true;
+    clockInTime = now;
+    attLog.push({ type:'Clock In', time: timeStr });
+    btn.textContent = 'Clock Out';
+    btn.className   = 'att-btn clockout';
+    status.className = 'att-status in';
+    stText.textContent = 'Clocked In';
+  } else {
+    // Clock Out
+    clockedIn = false;
+    const dur = Math.round((now - clockInTime) / 60000);
+    attLog.push({ type:'Clock Out', time: timeStr, dur: `${Math.floor(dur/60)}h ${dur%60}m` });
+    btn.textContent = 'Clock In';
+    btn.className   = 'att-btn clockin';
+    status.className = 'att-status out';
+    stText.textContent = 'Not Clocked In';
+    clockInTime = null;
+  }
+  renderAttLog();
+}
+
+function renderAttLog() {
+  const el = document.getElementById('attLogList');
+  if (attLog.length === 0) {
+    el.innerHTML = '<div style="font-size:12px;color:#2A2A2A;padding:8px 0;">No entries yet.</div>';
+    return;
+  }
+  el.innerHTML = attLog.map(e =>
+    `<div class="att-log-item">
+      <span>${e.type}</span>
+      <span>${e.time}${e.dur ? ' · '+e.dur : ''}</span>
+    </div>`
+  ).join('');
+}
+
+// ══════════════════════════════════════════════════════
+//  LEAVE REQUEST
+// ══════════════════════════════════════════════════════
+function submitLeave() {
+  const from   = document.getElementById('leaveFrom').value;
+  const to     = document.getElementById('leaveTo').value;
+  const type   = document.getElementById('leaveType').value;
+  const reason = document.getElementById('leaveReason').value.trim();
+
+  if (!from || !to) { alert('Please select both a start and end date.'); return; }
+  if (new Date(to) < new Date(from)) { alert('End date cannot be before start date.'); return; }
+
+  // In a real system this would POST to a backend.
+  // Here we just show a success message.
+  document.getElementById('leaveSuccess').classList.add('show');
+  document.getElementById('leaveFrom').value   = '';
+  document.getElementById('leaveTo').value     = '';
+  document.getElementById('leaveReason').value = '';
+
+  setTimeout(() => {
+    document.getElementById('leaveSuccess').classList.remove('show');
+  }, 5000);
+}
+</script>
+
+</body>
+</html>
