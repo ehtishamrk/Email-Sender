@@ -134,13 +134,13 @@
   <!-- ═══ EMAIL SEQUENCE SELECTOR ═══ -->
   <div class="seq-card">
     <span class="seq-eyebrow">Select Email in Sequence</span>
-    <div class="seq-tabs">
-      <button class="seq-tab active" onclick="selectSeq(1, this)">Email 1<br><small>Cold Outreach</small></button>
-      <button class="seq-tab active" onclick="selectSeq(2, this)">Email 2<br><small>Follow-Up</small></button>
-      <button class="seq-tab soon" title="Coming soon">Email 3<br><small>Coming Soon</small></button>
-      <button class="seq-tab soon" title="Coming soon">Email 4<br><small>Coming Soon</small></button>
-      <button class="seq-tab soon" title="Coming soon">Email 5<br><small>Coming Soon</small></button>
-    </div>
+   <div class="seq-tabs">
+  <button class="seq-tab active" onclick="selectSeq(1, this)">Email 1<br><small>Cold Outreach</small></button>
+  <button class="seq-tab active" onclick="selectSeq(2, this)">Email 2<br><small>Follow-Up</small></button>
+  <button class="seq-tab active" onclick="selectSeq(3, this)">Email 3<br><small>Said Not Interested</small></button>
+  <button class="seq-tab active" onclick="selectSeq(4, this)">Email 4<br><small>Went Cold</small></button>
+  <button class="seq-tab active" onclick="selectSeq(5, this)">Email 5<br><small>Final Breakup</small></button>
+</div>
     <div class="seq-desc" id="seqDesc">
       <span>Email 1 — First Contact.</span> Sent to operators you've never emailed before. Introduces Haulxify, hits pain points, shows stats, and asks for a first response.
     </div>
@@ -174,8 +174,8 @@
 
       <div class="field-row">
         <div class="field half">
-          <label for="fName">First Name</label>
-          <input type="text" id="fName" placeholder="e.g. JC" autocomplete="off">
+         <label for="fName">First Name <span style="font-weight:normal;color:#2A2A2A;font-size:9px;letter-spacing:0;">(optional)</span></label>
+<input type="text" id="fName" placeholder="e.g. JC — leave blank if unknown" autocomplete="off">
         </div>
         <div class="field half">
           <label for="fEmail">Email Address</label>
@@ -279,18 +279,30 @@
 // ═══════════════════════════════════════════════════════════════
 const SEQ_CONFIG = {
   1: { live: true,  label: 'Email 1 — First Contact',
-       desc: '<span>Email 1 — First Contact.</span> Sent to operators you\'ve never emailed before. Introduces Haulxify, hits pain points, shows stats.',
+       desc: '<span>Email 1 — Cold Outreach.</span> First ever touch. Introduces Haulxify, hits pain points, shows stats, asks for a response.',
        formTitle: 'Prospect Details',
        subject: (v) => `A Smarter Way to Run Your ${v.truck === 'unknown' ? 'Trucking' : v.truck} Operation — Haulxify`
   },
   2: { live: true,  label: 'Email 2 — Follow-Up',
        desc: '<span>Email 2 — Follow-Up.</span> Sent 3–5 days after Email 1 with no reply. Shorter, more direct, different angle.',
        formTitle: 'Prospect Details',
-       subject: (v) => `Still Thinking About It, ${v.name}? — Haulxify`
+       subject: (v) => v.name ? `Still Thinking About It, ${v.name}? — Haulxify` : `Still Thinking About It? — Haulxify`
   },
-  3: { live: false, label: 'Email 3 — Coming Soon', desc: 'Coming soon.', subject: () => '' },
-  4: { live: false, label: 'Email 4 — Coming Soon', desc: 'Coming soon.', subject: () => '' },
-  5: { live: false, label: 'Email 5 — Coming Soon', desc: 'Coming soon.', subject: () => '' },
+  3: { live: true,  label: 'Email 3 — Said Not Interested (Phone)',
+       desc: '<span>Email 3 — Post-Call "Not Interested".</span> They answered the phone but turned us down. Respectful, plants a seed, no pressure. Leaves the door open.',
+       formTitle: 'Prospect Details',
+       subject: (v) => `Fair Enough, ${v.name ? v.name : v.company} — One Thing Before We Go`
+  },
+  4: { live: true,  label: 'Email 4 — Went Cold After Interest',
+       desc: '<span>Email 4 — Gone Cold.</span> They showed interest on the phone but have since gone quiet on calls and email. Re-engages without being desperate.',
+       formTitle: 'Prospect Details',
+       subject: (v) => v.name ? `${v.name}, You Were Interested — What Changed?` : `You Were Interested — What Changed?`
+  },
+  5: { live: true,  label: 'Email 5 — Final Breakup',
+       desc: '<span>Email 5 — Last Contact.</span> Closing the loop for good. Short, honest, no pressure. These often get the most replies.',
+       formTitle: 'Prospect Details',
+       subject: (v) => `Closing Your File — ${v.company}`
+  },
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -366,11 +378,15 @@ function getValues() {
   const state   = document.getElementById('fState').value.trim().toUpperCase();
   const truck   = document.getElementById('fTruck').value;
 
-  if (!name)  { alert('Please enter the recipient\'s first name.'); return null; }
+  // name is now OPTIONAL — no alert if missing
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { alert('Please enter a valid email.'); return null; }
   if (!company) { alert('Please enter the company name.'); return null; }
 
   return { name, email, company, state: state || 'your state', truck };
+}
+  // Returns name if present, fallback otherwise
+function n(name, fallback) {
+  return (name && name.length > 0) ? name : (fallback || 'there');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -381,10 +397,9 @@ function buildEmail(v) {
   switch (currentSeq) {
     case 1: return buildEmail1(v);
     case 2: return buildEmail2(v);
-    // ── ADD NEW EMAILS HERE ──
-    // case 3: return buildEmail3(v);
-    // case 4: return buildEmail4(v);
-    // case 5: return buildEmail5(v);
+    case 3: return buildEmail3(v);
+    case 4: return buildEmail4(v);
+    case 5: return buildEmail5(v);
     default: return buildEmail1(v);
   }
 }
@@ -715,7 +730,357 @@ a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important
 </table></td></tr></table>
 </body></html>`;
 }
+  // ═══════════════════════════════════════════════════════════════
+//  ╔══════════════════════════════════════════════════════╗
+//  ║  EMAIL 3 — POST-CALL "NOT INTERESTED" RE-ENGAGEMENT  ║
+//  ╚══════════════════════════════════════════════════════╝
+//  They picked up the phone and said no. This email is
+//  respectful, brief, challenges one assumption softly,
+//  and leaves the door open without any pressure.
+// ═══════════════════════════════════════════════════════════════
+function buildEmail3(v) {
+  const td = TRUCK_DATA[v.truck] || TRUCK_DATA['unknown'];
+  const firstName = n(v.name, 'there');
+  const truckMention = v.truck === 'unknown' ? 'your operation' : `your ${v.truck} operation`;
+  const preheader = `No hard feelings — just one thing I want to leave you with before we close the loop.`;
 
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Haulxify — Fair Enough</title>
+<style type="text/css">
+body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:collapse!important;}
+body{margin:0!important;padding:0!important;width:100%!important;background-color:#1C1C1C;}
+a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important;}
+@media only screen and (max-width:620px){
+  .email-outer{width:100%!important;}
+  .mobile-pad{padding-left:24px!important;padding-right:24px!important;}
+  .footer-l,.footer-r{display:block!important;width:100%!important;text-align:center!important;padding-bottom:8px!important;}
+}
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#1C1C1C;font-family:Georgia,'Times New Roman',serif;">
+<div style="display:none;font-size:1px;color:#1C1C1C;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${preheader}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#1C1C1C">
+<tr><td align="center" style="padding:32px 16px 48px;">
+<table class="email-outer" role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+
+<!-- BAND -->
+<tr><td bgcolor="#F5A623" style="background-color:#F5A623;border-radius:10px 10px 0 0;padding:10px 38px;" class="mobile-pad">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+<td><span style="font-family:Georgia,'Times New Roman',serif;font-size:14px;font-weight:bold;color:#111111;">Haulxify</span></td>
+<td align="right"><span style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:rgba(0,0,0,0.5);text-transform:uppercase;letter-spacing:1.8px;">Your Virtual Back Office</span></td>
+</tr></table>
+</td></tr>
+
+<!-- HERO — calm, human tone -->
+<tr><td bgcolor="#0A0A0A" style="background-color:#0A0A0A;padding:48px 38px;" class="mobile-pad">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;"><tr>
+  <td style="border-left:3px solid #555555;padding-left:14px;">
+  <span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#666666;text-transform:uppercase;letter-spacing:2px;font-weight:bold;">Regarding — ${v.company}</span>
+  </td></tr></table>
+  <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:36px;font-weight:bold;color:#FFFFFF;line-height:1.1;margin:0 0 20px 0;letter-spacing:-1px;">
+    Fair Enough,<br><span style="color:#AAAAAA;">${firstName}.</span>
+  </h1>
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#666666;line-height:1.78;margin:0;">
+    I appreciate you taking the time to speak with us. I respect your decision — and I'm not going to try to change your mind.
+  </p>
+</td></tr>
+
+<!-- SINGLE SOFT CHALLENGE — cream -->
+<tr><td bgcolor="#F7F4EF" style="background-color:#F7F4EF;padding:44px 38px;" class="mobile-pad">
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:bold;color:#B8A88A;text-transform:uppercase;letter-spacing:3px;margin:0 0 20px 0;">Before we close your file</p>
+
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#444444;line-height:1.82;margin:0 0 18px 0;">
+    The most common reason operators tell us they're not interested usually falls into one of three things:
+  </p>
+
+  <!-- Three assumption cards -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+    <tr><td bgcolor="#FFFFFF" style="background-color:#FFFFFF;border-radius:8px;border-left:3px solid #DDCDB0;padding:14px 18px;margin-bottom:8px;">
+      <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#555555;line-height:1.6;margin:0;">
+        <strong style="color:#111111;">"I already have a dispatcher I trust."</strong><br>
+        That's great — and you still pay them 8–10% of every load. We charge $3.50/hr flat. Those two things can be compared on paper.
+      </p>
+    </td></tr>
+  </table>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
+    <tr><td bgcolor="#FFFFFF" style="background-color:#FFFFFF;border-radius:8px;border-left:3px solid #DDCDB0;padding:14px 18px;">
+      <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#555555;line-height:1.6;margin:0;">
+        <strong style="color:#111111;">"I handle my own back office."</strong><br>
+        Most operators who tell us this are quietly spending 10–15 hrs/week on admin. That's driving time — and income — walking out the door.
+      </p>
+    </td></tr>
+  </table>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;margin-top:8px;">
+    <tr><td bgcolor="#FFFFFF" style="background-color:#FFFFFF;border-radius:8px;border-left:3px solid #DDCDB0;padding:14px 18px;">
+      <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#555555;line-height:1.6;margin:0;">
+        <strong style="color:#111111;">"I'm not sure I can afford it."</strong><br>
+        If your current setup is costing you 10% per load on ${truckMention}, you're spending far more than $3.50/hr. The math usually surprises people.
+      </p>
+    </td></tr>
+  </table>
+
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#444444;line-height:1.82;margin:0;">
+    If none of those apply — no worries at all. We'll remove your details from our list.
+  </p>
+</td></tr>
+
+<!-- SOFT CTA — dark -->
+<tr><td bgcolor="#0A0A0A" style="background-color:#0A0A0A;padding:44px 38px;" class="mobile-pad">
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#666666;line-height:1.78;margin:0 0 28px 0;text-align:center;">
+    If anything above hit differently — or if things change down the road at <strong style="color:#999999;">${v.company}</strong> — we're one message away. No application process, no waiting list.
+  </p>
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr>
+    <td align="center" bgcolor="#222222" style="background-color:#222222;border-radius:8px;border:1px solid #333333;">
+      <a href="https://haulxify.com" target="_blank" style="font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#AAAAAA;text-decoration:none;display:inline-block;padding:14px 36px;border-radius:8px;letter-spacing:0.3px;">I Changed My Mind &rarr;</a>
+    </td></tr></table>
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#2A2A2A;text-align:center;margin:16px 0 0 0;">Clicking this does nothing binding. Just opens a conversation.</p>
+</td></tr>
+
+<!-- FOOTER -->
+<tr><td bgcolor="#141414" style="background-color:#141414;padding:22px 38px;border-radius:0 0 10px 10px;border-top:1px solid #1E1E1E;" class="mobile-pad">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+<td class="footer-l" valign="middle"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#383838;"><strong style="color:#F5A623;">Haulxify</strong> &nbsp;|&nbsp; Virtual Back Office</span></td>
+<td class="footer-r" align="right" valign="middle"><span style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#2E2E2E;">You received this because we connected previously.&nbsp;<a href="#" style="color:#444444;text-decoration:underline;">Unsubscribe</a></span></td>
+</tr></table>
+</td></tr>
+
+</table></td></tr></table>
+</body></html>`;
+}
+
+  // ═══════════════════════════════════════════════════════════════
+//  ╔══════════════════════════════════════════════════════╗
+//  ║  EMAIL 4 — SHOWED INTEREST, NOW GONE COLD           ║
+//  ╚══════════════════════════════════════════════════════╝
+//  They were warm on the call. Now silence on phone + email.
+//  Tone: direct, slightly puzzled, not desperate.
+//  Goal: get a simple yes/no — either restart or close cleanly.
+// ═══════════════════════════════════════════════════════════════
+function buildEmail4(v) {
+  const td = TRUCK_DATA[v.truck] || TRUCK_DATA['unknown'];
+  const firstName = n(v.name, 'there');
+  const truckMention = v.truck === 'unknown' ? 'your operation' : `your ${v.truck} operation`;
+  const preheader = `You said you were interested — I just want to know if something changed.`;
+
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Haulxify — What Changed?</title>
+<style type="text/css">
+body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:collapse!important;}
+body{margin:0!important;padding:0!important;width:100%!important;background-color:#1C1C1C;}
+a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important;}
+@media only screen and (max-width:620px){
+  .email-outer{width:100%!important;}
+  .mobile-pad{padding-left:24px!important;padding-right:24px!important;}
+  .hero-hl{font-size:28px!important;}
+  .two-col{display:block!important;width:100%!important;padding:0 0 8px 0!important;}
+  .footer-l,.footer-r{display:block!important;width:100%!important;text-align:center!important;padding-bottom:8px!important;}
+}
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#1C1C1C;font-family:Georgia,'Times New Roman',serif;">
+<div style="display:none;font-size:1px;color:#1C1C1C;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${preheader}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#1C1C1C">
+<tr><td align="center" style="padding:32px 16px 48px;">
+<table class="email-outer" role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+
+<!-- BAND -->
+<tr><td bgcolor="#F5A623" style="background-color:#F5A623;border-radius:10px 10px 0 0;padding:10px 38px;" class="mobile-pad">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+<td><span style="font-family:Georgia,'Times New Roman',serif;font-size:14px;font-weight:bold;color:#111111;">Haulxify</span></td>
+<td align="right"><span style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:rgba(0,0,0,0.5);text-transform:uppercase;letter-spacing:1.8px;">Your Virtual Back Office</span></td>
+</tr></table>
+</td></tr>
+
+<!-- HERO -->
+<tr><td bgcolor="#0A0A0A" style="background-color:#0A0A0A;padding:48px 38px;" class="mobile-pad">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;"><tr>
+  <td style="border-left:3px solid #F5A623;padding-left:14px;">
+  <span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#888888;text-transform:uppercase;letter-spacing:2px;font-weight:bold;">Checking In — ${v.company}</span>
+  </td></tr></table>
+  <h1 class="hero-hl" style="font-family:Georgia,'Times New Roman',serif;font-size:36px;font-weight:bold;color:#FFFFFF;line-height:1.1;margin:0 0 20px 0;letter-spacing:-1px;">
+    ${firstName}, You Were<br><span style="color:#F5A623;">Interested.</span><br>What Changed?
+  </h1>
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#666666;line-height:1.78;margin:0;">
+    Last time we spoke, you told us you liked what you heard about Haulxify. Since then — nothing. That's okay. But I'd rather ask you straight than keep guessing.
+  </p>
+</td></tr>
+
+<!-- WHAT MIGHT BE HOLDING THEM — cream -->
+<tr><td bgcolor="#F7F4EF" style="background-color:#F7F4EF;padding:44px 38px;" class="mobile-pad">
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:bold;color:#B8A88A;text-transform:uppercase;letter-spacing:3px;margin:0 0 22px 0;">Usually it's one of these</p>
+
+  <!-- Timeline/checklist style -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;"><tr>
+  <td valign="top" width="36" style="padding-right:14px;padding-top:3px;">
+    <div style="width:28px;height:28px;border-radius:50%;background:#111111;text-align:center;line-height:28px;font-family:Arial,sans-serif;font-size:12px;font-weight:bold;color:#F5A623;">?</div>
+  </td>
+  <td valign="top" style="border-bottom:1px solid #E8E0D4;padding-bottom:14px;">
+    <p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333333;line-height:1.7;margin:0;"><strong style="color:#111111;">Timing got bad.</strong> Things picked up, loads stacked, life happened. We get it — this isn't going anywhere.</p>
+  </td></tr></table>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;"><tr>
+  <td valign="top" width="36" style="padding-right:14px;padding-top:3px;">
+    <div style="width:28px;height:28px;border-radius:50%;background:#111111;text-align:center;line-height:28px;font-family:Arial,sans-serif;font-size:12px;font-weight:bold;color:#F5A623;">?</div>
+  </td>
+  <td valign="top" style="border-bottom:1px solid #E8E0D4;padding-bottom:14px;">
+    <p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333333;line-height:1.7;margin:0;"><strong style="color:#111111;">You have a concern you haven't said yet.</strong> Pricing, trust, switching mid-operations — whatever it is, tell us. We'd rather talk it out than lose you to a misunderstanding.</p>
+  </td></tr></table>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;"><tr>
+  <td valign="top" width="36" style="padding-right:14px;padding-top:3px;">
+    <div style="width:28px;height:28px;border-radius:50%;background:#111111;text-align:center;line-height:28px;font-family:Arial,sans-serif;font-size:12px;font-weight:bold;color:#F5A623;">?</div>
+  </td>
+  <td valign="top">
+    <p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333333;line-height:1.7;margin:0;"><strong style="color:#111111;">You changed your mind.</strong> No problem. A quick reply and we'll stop reaching out — no questions, no guilt trip.</p>
+  </td></tr></table>
+
+  <!-- Re-state the one number that matters -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+  <td bgcolor="#0A0A0A" style="background-color:#0A0A0A;border-radius:10px;padding:24px 26px;text-align:center;">
+    <p style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#444444;text-transform:uppercase;letter-spacing:2px;margin:0 0 8px 0;">As a reminder — what you'd pay</p>
+    <p style="font-family:Georgia,'Times New Roman',serif;font-size:44px;font-weight:bold;color:#F5A623;margin:0 0 4px 0;line-height:1;">$3.50<span style="font-size:20px;color:#888888;">/hr</span></p>
+    <p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#555555;margin:0;">Zero commission. Zero % of your load. Full back office support for ${truckMention}.</p>
+  </td></tr></table>
+</td></tr>
+
+<!-- DIRECT ASK — dark -->
+<tr><td bgcolor="#0A0A0A" style="background-color:#0A0A0A;padding:44px 38px;" class="mobile-pad">
+  <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:bold;color:#FFFFFF;margin:0 0 16px 0;text-align:center;">Just give me a one-word reply.</h2>
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#666666;line-height:1.78;margin:0 auto 32px;max-width:380px;text-align:center;">Reply <strong style="color:#F5A623;">"YES"</strong> and I'll send a calendar link right away. Reply <strong style="color:#888888;">"NO"</strong> and I'll close your file permanently. Either works.</p>
+
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto;">
+  <tr>
+    <td style="padding-right:10px;">
+      <a href="https://haulxify.com" target="_blank" style="font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#111111;text-decoration:none;display:inline-block;padding:14px 32px;border-radius:8px;background-color:#F5A623;letter-spacing:0.3px;">YES — Let's Talk &rarr;</a>
+    </td>
+    <td style="padding-left:10px;">
+      <a href="mailto:hello@haulxify.com?subject=Not interested — ${encodeURIComponent(v.company)}&body=Please close my file. Thanks." style="font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#555555;text-decoration:none;display:inline-block;padding:14px 32px;border-radius:8px;border:1px solid #2A2A2A;letter-spacing:0.3px;">NO — Close My File</a>
+    </td>
+  </tr></table>
+</td></tr>
+
+<!-- FOOTER -->
+<tr><td bgcolor="#141414" style="background-color:#141414;padding:22px 38px;border-radius:0 0 10px 10px;border-top:1px solid #1E1E1E;" class="mobile-pad">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+<td class="footer-l" valign="middle"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#383838;"><strong style="color:#F5A623;">Haulxify</strong> &nbsp;|&nbsp; Virtual Back Office</span></td>
+<td class="footer-r" align="right" valign="middle"><span style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#2E2E2E;">You received this because we connected previously.&nbsp;<a href="#" style="color:#444444;text-decoration:underline;">Unsubscribe</a></span></td>
+</tr></table>
+</td></tr>
+
+</table></td></tr></table>
+</body></html>`;
+}
+
+  // ═══════════════════════════════════════════════════════════════
+//  ╔══════════════════════════════════════════════════════╗
+//  ║  EMAIL 5 — FINAL BREAKUP / CLOSING THE FILE         ║
+//  ╚══════════════════════════════════════════════════════╝
+//  Last email ever. Short, human, no pressure.
+//  Breakup emails statistically get the highest reply rates.
+//  Goal: one final yes, OR a clean close. Either outcome is fine.
+// ═══════════════════════════════════════════════════════════════
+function buildEmail5(v) {
+  const firstName = n(v.name, 'there');
+  const preheader = `This is the last email we'll ever send you — no drama, just closing the loop.`;
+
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Haulxify — Closing Your File</title>
+<style type="text/css">
+body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:collapse!important;}
+body{margin:0!important;padding:0!important;width:100%!important;background-color:#1C1C1C;}
+a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important;}
+@media only screen and (max-width:620px){
+  .email-outer{width:100%!important;}
+  .mobile-pad{padding-left:24px!important;padding-right:24px!important;}
+  .footer-l,.footer-r{display:block!important;width:100%!important;text-align:center!important;padding-bottom:8px!important;}
+}
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#1C1C1C;font-family:Georgia,'Times New Roman',serif;">
+<div style="display:none;font-size:1px;color:#1C1C1C;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${preheader}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#1C1C1C">
+<tr><td align="center" style="padding:32px 16px 48px;">
+<table class="email-outer" role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+
+<!-- BAND — muted this time, not gold -->
+<tr><td bgcolor="#222222" style="background-color:#222222;border-radius:10px 10px 0 0;padding:10px 38px;border-bottom:1px solid #2A2A2A;" class="mobile-pad">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+<td><span style="font-family:Georgia,'Times New Roman',serif;font-size:14px;font-weight:bold;color:#F5A623;">Haulxify</span></td>
+<td align="right"><span style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#333333;text-transform:uppercase;letter-spacing:1.8px;">Virtual Back Office</span></td>
+</tr></table>
+</td></tr>
+
+<!-- ENTIRE BODY — single column, letter-style -->
+<tr><td bgcolor="#0C0C0C" style="background-color:#0C0C0C;padding:56px 38px;" class="mobile-pad">
+
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#444444;text-transform:uppercase;letter-spacing:2.5px;font-weight:bold;margin:0 0 32px 0;">A note from the Haulxify team</p>
+
+  <p style="font-family:Georgia,'Times New Roman',serif;font-size:22px;color:#CCCCCC;line-height:1.45;margin:0 0 32px 0;font-style:italic;">
+    "Hey ${firstName} — this is the last time<br>you'll hear from us."
+  </p>
+
+  <!-- Letter body -->
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#666666;line-height:1.85;margin:0 0 18px 0;">
+    We've reached out a few times about <strong style="color:#888888;">${v.company}</strong>. You haven't responded — and that's a completely valid answer.
+  </p>
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#666666;line-height:1.85;margin:0 0 18px 0;">
+    We're closing your file today. You won't get another email from us — unless you reach out first.
+  </p>
+
+  <!-- Divider line -->
+  <table role="presentation" width="60" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0;"><tr>
+  <td height="2" bgcolor="#2A2A2A" style="line-height:2px;font-size:2px;">&nbsp;</td></tr></table>
+
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#666666;line-height:1.85;margin:0 0 18px 0;">
+    If your situation ever changes — your current dispatcher lets you down, the commission starts to sting, or you just want a second opinion on your operation's numbers — we'll be here. No application, no waiting list.
+  </p>
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#666666;line-height:1.85;margin:0 0 40px 0;">
+    We genuinely wish you safe miles and profitable runs. Take care of yourself out there.
+  </p>
+
+  <!-- Final quiet CTA -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:40px;"><tr>
+  <td bgcolor="#141414" style="background-color:#141414;border-radius:10px;border:1px solid #222222;padding:28px 30px;text-align:center;">
+    <p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#333333;text-transform:uppercase;letter-spacing:2px;margin:0 0 12px 0;">If you've changed your mind</p>
+    <a href="https://haulxify.com" target="_blank" style="font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#F5A623;text-decoration:none;display:inline-block;padding:13px 36px;border-radius:8px;border:1px solid rgba(245,166,35,0.25);letter-spacing:0.3px;">Start Fresh with Haulxify &rarr;</a>
+    <p style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#282828;margin:14px 0 0 0;">This link works anytime — even months from now.</p>
+  </td></tr></table>
+
+  <!-- Sign-off -->
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#444444;line-height:1.7;margin:0;">
+    — The Haulxify Team<br>
+    <span style="font-size:11px;color:#2E2E2E;">hello@haulxify.com &nbsp;·&nbsp; haulxify.com</span>
+  </p>
+
+</td></tr>
+
+<!-- FOOTER -->
+<tr><td bgcolor="#0A0A0A" style="background-color:#0A0A0A;padding:18px 38px;border-radius:0 0 10px 10px;border-top:1px solid #181818;" class="mobile-pad">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+<td class="footer-l" valign="middle"><span style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#2A2A2A;">This is the final email we'll send to this address.</span></td>
+<td class="footer-r" align="right" valign="middle"><a href="#" style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#2E2E2E;text-decoration:underline;">Unsubscribe</a></td>
+</tr></table>
+</td></tr>
+
+</table></td></tr></table>
+</body></html>`;
+}
+  
 // ═══════════════════════════════════════════════════════════════
 //  CLIPBOARD
 // ═══════════════════════════════════════════════════════════════
