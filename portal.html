@@ -1478,23 +1478,20 @@ function performClockOut(reason) {
 }
 
 async function pushAttendanceToSheet(eventType, timestamp, durationMins) {
-  // ↓↓↓ FILL THESE IN AFTER CREATING YOUR ATTENDANCE GOOGLE FORM ↓↓↓
-  const FORM_URL  = 'YOUR_ATTENDANCE_FORM_RESPONSE_URL';   // ← paste formResponse URL
-  const ENTRY_EMP_ID   = 'entry.XXXXXXXXX';  // ← Employee ID field
-  const ENTRY_EMP_NAME = 'entry.XXXXXXXXX';  // ← Employee Name field
-  const ENTRY_EVENT    = 'entry.XXXXXXXXX';  // ← Event Type field
-  const ENTRY_TIMESTAMP= 'entry.XXXXXXXXX';  // ← Timestamp field
-  const ENTRY_DATE     = 'entry.XXXXXXXXX';  // ← Date field
-  const ENTRY_DURATION = 'entry.XXXXXXXXX';  // ← Duration Minutes field
-  // ↑↑↑ ↑↑↑ ↑↑↑
-
+  const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdl9bB9vbv4wslZElGNmVEOfMk0yksfX6hr1bitKMPwVS-7rw/formResponse';
+  const d = timestamp;
+  const yr  = String(d.getFullYear());
+  const mo  = String(d.getMonth() + 1);
+  const dy  = String(d.getDate());
   const body = new URLSearchParams({
-    [ENTRY_EMP_ID]:    currentUser.id,
-    [ENTRY_EMP_NAME]:  currentUser.name,
-    [ENTRY_EVENT]:     eventType,
-    [ENTRY_TIMESTAMP]: timestamp.toLocaleString('en-US'),
-    [ENTRY_DATE]:      today(),
-    [ENTRY_DURATION]:  durationMins != null ? String(durationMins) : '',
+    'entry.659033920':      currentUser.id,
+    'entry.1523580971':     currentUser.name,
+    'entry.313045477':      eventType,
+    'entry.1473279511':     d.toLocaleString('en-US'),
+    'entry.72683249_year':  yr,
+    'entry.72683249_month': mo,
+    'entry.72683249_day':   dy,
+    'entry.146806779':      durationMins != null ? String(durationMins) : '',
   });
   try { await fetch(FORM_URL, { method: 'POST', mode: 'no-cors', body }); } catch(e) {}
 }
