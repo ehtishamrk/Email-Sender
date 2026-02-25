@@ -25,6 +25,8 @@
       --green: #22C55E;
       --blue: #3B82F6;
       --purple: #8B5CF6;
+      --teal: #0A7D6C;
+      --teal-light: #E6F4F1;
       --radius: 16px;
       --shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
       --shadow-lg: 0 12px 48px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.06);
@@ -387,6 +389,92 @@
     .icon-blue { background: #EFF6FF; }
     .icon-green { background: #F0FFF5; }
     .icon-purple { background: #F5F3FF; }
+    .icon-teal { background: var(--teal-light); }
+
+    /* ════════════════════════════════════
+       GOOGLE VOICE VIEW
+    ════════════════════════════════════ */
+    .gv-hero {
+      background: linear-gradient(135deg, #0A7D6C 0%, #0D9688 50%, #0A7D6C 100%);
+      border-radius: 20px; padding: 36px 36px 32px;
+      margin-bottom: 20px; position: relative; overflow: hidden;
+    }
+    .gv-hero::before {
+      content: '';
+      position: absolute; top: -40px; right: -40px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .gv-hero-inner { position: relative; z-index: 1; display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+    .gv-logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+    .gv-logo-icon {
+      width: 52px; height: 52px; border-radius: 16px;
+      background: rgba(255,255,255,0.15); backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center; font-size: 26px;
+    }
+    .gv-logo-text { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: #FFF; }
+    .gv-logo-sub { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+    .gv-headline { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
+    .gv-number { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; color: #FFF; letter-spacing: -1px; }
+    .gv-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.7); margin-top: 8px; }
+    .gv-status .dot { width: 7px; height: 7px; border-radius: 50%; background: #4ADE80; animation: pulse-ring 2s infinite; }
+
+    .gv-launch-btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: #FFF; color: var(--teal);
+      font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
+      padding: 14px 28px; border-radius: 14px; border: none;
+      cursor: pointer; transition: all 0.2s; text-decoration: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .gv-launch-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+    .gv-launch-btn:active { transform: translateY(0); }
+
+    .gv-quick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .gv-quick-card {
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: 16px; padding: 20px; cursor: pointer;
+      transition: all 0.2s; text-decoration: none; display: block;
+    }
+    .gv-quick-card:hover { border-color: var(--teal); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+    .gv-quick-icon { font-size: 24px; margin-bottom: 10px; }
+    .gv-quick-title { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .gv-quick-desc { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+
+    .gv-tips { background: var(--surface); border: 1.5px solid var(--border); border-radius: 20px; padding: 28px 32px; }
+    .gv-tips-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 18px; }
+    .gv-tip-row { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .gv-tip-row:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+    .gv-tip-num {
+      width: 28px; height: 28px; min-width: 28px; border-radius: 8px;
+      background: var(--teal-light); color: var(--teal);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 800;
+      margin-top: 1px;
+    }
+    .gv-tip-text { font-size: 13px; color: var(--text-mid); line-height: 1.65; }
+    .gv-tip-text strong { color: var(--text); }
+
+    .gv-extension-bar {
+      background: linear-gradient(135deg, #1A1714, #2D2520);
+      border-radius: 16px; padding: 20px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; flex-wrap: wrap; margin-bottom: 20px;
+    }
+    .gv-ext-left { display: flex; align-items: center; gap: 14px; }
+    .gv-ext-icon { font-size: 28px; }
+    .gv-ext-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: #FFF; margin-bottom: 3px; }
+    .gv-ext-desc { font-size: 12px; color: rgba(255,255,255,0.45); }
+    .gv-ext-btn {
+      background: var(--gold); color: #111;
+      font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+      padding: 10px 22px; border-radius: 10px; border: none;
+      cursor: pointer; transition: all 0.18s; text-decoration: none;
+      white-space: nowrap;
+    }
+    .gv-ext-btn:hover { background: #FFB83A; }
 
     .nav-card-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
     .nav-card-desc { font-size: 12px; color: var(--text-muted); line-height: 1.6; padding-right: 28px; }
@@ -602,7 +690,7 @@
 <div class="modal-backdrop" id="modalForgot">
   <div class="modal-box">
     <div class="modal-title">Reset Password 🔑</div>
-    <div class="modal-sub">Enter your Employee ID and we'll send reset instructions to your company email.</div>
+    <div class="modal-sub">Enter your Employee ID and company email — we'll send your password over shortly.</div>
     <div class="field-wrap">
       <label class="field-label">Employee ID</label>
       <div class="input-group">
@@ -613,7 +701,7 @@
     </div>
     <div id="forgotResult"></div>
     <div style="display:flex;gap:10px;margin-top:8px;">
-      <button class="btn-gold" onclick="submitForgot()">Send Reset Link</button>
+      <button class="btn-gold" onclick="submitForgot()">Submit Request</button>
       <button class="btn-outline" onclick="hideModal('modalForgot')">Cancel</button>
     </div>
   </div>
@@ -646,7 +734,6 @@
           <option>Compliance Specialist</option>
           <option>Account Manager</option>
           <option>Operations Support</option>
-          <option>Intern</option>
           <option>Other</option>
         </select>
       </div>
@@ -774,6 +861,11 @@
             <div class="nav-card-title">Email Sender</div>
             <div class="nav-card-desc">Send personalized prospect outreach — all 5 sequence types.</div>
           </div>
+          <div class="nav-card" onclick="showView('viewVoice')">
+            <div class="nav-card-icon icon-teal">📞</div>
+            <div class="nav-card-title">Google Voice</div>
+            <div class="nav-card-desc">Launch your team line, access voicemail, messages and call history.</div>
+          </div>
           <!-- Admin only card (shown conditionally) -->
           <div class="nav-card" id="adminCard" style="display:none;" onclick="showView('viewAdmin')">
             <div class="nav-card-icon icon-purple">🛡️</div>
@@ -884,6 +976,121 @@
       </div>
     </div>
 
+    <!-- ── GOOGLE VOICE VIEW ── -->
+    <div id="viewVoice" class="view">
+      <div class="view-shell-wide">
+        <div class="back-row">
+          <button class="back-link" onclick="showView('viewDash')">← Back to Dashboard</button>
+        </div>
+        <div class="view-header">
+          <div class="view-title">Google Voice</div>
+          <div class="view-sub">Your Haulxify team line — calls, texts, voicemail, all in one place.</div>
+        </div>
+
+        <!-- Hero launch section -->
+        <div class="gv-hero">
+          <div class="gv-hero-inner">
+            <div>
+              <div class="gv-logo-row">
+                <div class="gv-logo-icon">📞</div>
+                <div>
+                  <div class="gv-logo-text">Google Voice</div>
+                  <div class="gv-logo-sub">Haulxify Team Line</div>
+                </div>
+              </div>
+              <div class="gv-headline">Your assigned number</div>
+              <div class="gv-number" id="gvNumber">Loading...</div>
+              <div class="gv-status">
+                <span class="dot"></span>
+                <span>Active &amp; ready</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+              <a href="https://voice.google.com" target="_blank" class="gv-launch-btn">
+                ↗ Open Google Voice
+              </a>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4);text-align:right;">Opens in a new tab</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chrome extension bar -->
+        <div class="gv-extension-bar">
+          <div class="gv-ext-left">
+            <div class="gv-ext-icon">🔌</div>
+            <div>
+              <div class="gv-ext-title">Use Google Voice from any tab</div>
+              <div class="gv-ext-desc">Install the Chrome extension to make &amp; receive calls without switching tabs</div>
+            </div>
+          </div>
+          <a href="https://chrome.google.com/webstore/detail/google-voice/kkdljjklagahhfpbcimfccdlmfbdgfab" target="_blank" class="gv-ext-btn">
+            Install Extension →
+          </a>
+        </div>
+
+        <!-- Quick action cards -->
+        <div class="section-title" style="margin-bottom:14px;">Quick Actions</div>
+        <div class="gv-quick-grid" style="margin-bottom:28px;">
+          <a href="https://voice.google.com/calls" target="_blank" class="gv-quick-card">
+            <div class="gv-quick-icon">📲</div>
+            <div class="gv-quick-title">Make a Call</div>
+            <div class="gv-quick-desc">Dial any number directly from your browser</div>
+          </a>
+          <a href="https://voice.google.com/messages" target="_blank" class="gv-quick-card">
+            <div class="gv-quick-icon">💬</div>
+            <div class="gv-quick-title">Messages</div>
+            <div class="gv-quick-desc">View and reply to SMS from prospects</div>
+          </a>
+          <a href="https://voice.google.com/voicemail" target="_blank" class="gv-quick-card">
+            <div class="gv-quick-icon">📬</div>
+            <div class="gv-quick-title">Voicemail</div>
+            <div class="gv-quick-desc">Listen to and transcribe voicemails</div>
+          </a>
+          <a href="https://voice.google.com/calls" target="_blank" class="gv-quick-card">
+            <div class="gv-quick-icon">📋</div>
+            <div class="gv-quick-title">Call History</div>
+            <div class="gv-quick-desc">Review all incoming and outgoing calls</div>
+          </a>
+          <a href="https://voice.google.com/settings" target="_blank" class="gv-quick-card">
+            <div class="gv-quick-icon">⚙️</div>
+            <div class="gv-quick-title">Settings</div>
+            <div class="gv-quick-desc">Forwarding, voicemail greeting, do not disturb</div>
+          </a>
+          <a href="https://voice.google.com/contacts" target="_blank" class="gv-quick-card">
+            <div class="gv-quick-icon">👥</div>
+            <div class="gv-quick-title">Contacts</div>
+            <div class="gv-quick-desc">Manage your prospect and broker contact list</div>
+          </a>
+        </div>
+
+        <!-- Pro tips -->
+        <div class="gv-tips">
+          <div class="gv-tips-title">📌 Outreach Tips for Google Voice</div>
+          <div class="gv-tip-row">
+            <div class="gv-tip-num">1</div>
+            <div class="gv-tip-text"><strong>Always identify yourself immediately.</strong> Say "Hey, this is [Name] from Haulxify — I'm calling about your trucking operation." Operators hang up on anonymous callers in seconds.</div>
+          </div>
+          <div class="gv-tip-row">
+            <div class="gv-tip-num">2</div>
+            <div class="gv-tip-text"><strong>Best call windows: 7–9 AM and 4–6 PM local time.</strong> Operators are off the road and more likely to pick up. Avoid midday — they're often driving or loading.</div>
+          </div>
+          <div class="gv-tip-row">
+            <div class="gv-tip-num">3</div>
+            <div class="gv-tip-text"><strong>No answer? Leave a voicemail and follow up with Email 1.</strong> The combo of a voicemail + personalized email within the same hour dramatically increases response rates.</div>
+          </div>
+          <div class="gv-tip-row">
+            <div class="gv-tip-num">4</div>
+            <div class="gv-tip-text"><strong>Keep calls under 3 minutes on first contact.</strong> The goal is a callback or a "tell me more" — not closing on call one. Ask one question: "Are you currently using a dispatcher?"</div>
+          </div>
+          <div class="gv-tip-row">
+            <div class="gv-tip-num">5</div>
+            <div class="gv-tip-text"><strong>Enable voicemail transcription in Settings.</strong> Google Voice will auto-transcribe every voicemail so you can read them instantly without listening — huge time saver during busy shifts.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
     <!-- ── EMAIL SENDER (full screen, no view shell) ── -->
     <div id="viewEmail" class="view">
       <div class="email-topbar">
@@ -937,11 +1144,23 @@ document.querySelectorAll('.modal-backdrop').forEach(m => {
 // ══════════════════════════════════════════════════════════════
 //  FORGOT PASSWORD
 // ══════════════════════════════════════════════════════════════
-function submitForgot() {
-  const id = document.getElementById('forgotId').value.trim();
+async function submitForgot() {
+  const id  = document.getElementById('forgotId').value.trim();
   const res = document.getElementById('forgotResult');
-  if (!id) { res.innerHTML = '<div style="color:var(--red);font-size:13px;margin-bottom:12px;">Please enter your Employee ID.</div>'; return; }
-  res.innerHTML = '<div class="alert-success">✅ <strong>Request received.</strong><br>If <strong>HX-' + id + '</strong> is in our system, you\'ll receive your password to your company email within a few minutes.</div>';
+
+  if (!id) {
+    res.innerHTML = '<div style="color:var(--red);font-size:13px;margin-bottom:12px;">Please enter your Employee ID.</div>';
+    return;
+  }
+
+  res.innerHTML = '<div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Submitting...</div>';
+
+  const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSevY4X0yLHL3tufLPc93DckYXvYAwR2aCU9bxzVp6LBsUtZTw/formResponse';
+  const body = new URLSearchParams({ 'entry.93033223': 'HX-' + id });
+
+  try { await fetch(FORM_URL, { method: 'POST', mode: 'no-cors', body }); } catch(e) {}
+
+  res.innerHTML = '<div class="alert-success">✅ <strong>Request received.</strong><br>Your password will be sent to your assigned company email shortly.</div>';
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1024,6 +1243,7 @@ function showView(id) {
   if (id === 'viewAttendance') renderAttReport();
   if (id === 'viewLeave') { refreshLeaveHistory(); }
   if (id === 'viewAdmin') renderAdmin();
+  if (id === 'viewVoice') renderVoiceView();
 }
 
 function switchAdminTab(tabId, btn) {
@@ -1137,11 +1357,14 @@ function today() {
 // ══════════════════════════════════════════════════════════════
 //  AUTO CLOCK-OUT ON TAB CLOSE
 // ══════════════════════════════════════════════════════════════
+// Only auto clock-out on actual page unload (browser close / navigation away).
+// visibilitychange is intentionally NOT used — it fires on every tab switch,
+// which would incorrectly wipe mid-session data when employees switch browser tabs.
 window.addEventListener('beforeunload', () => {
   if (clockedIn && currentUser) performClockOut('auto');
 });
-window.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden' && clockedIn && currentUser) performClockOut('auto');
+window.addEventListener('pagehide', () => {
+  if (clockedIn && currentUser) performClockOut('auto');
 });
 
 // ══════════════════════════════════════════════════════════════
@@ -1244,9 +1467,24 @@ function refreshLeaveHistory() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  ADMIN PANEL
+//  GOOGLE VOICE
+//  ↓ ADD YOUR TEAM'S GOOGLE VOICE NUMBERS HERE ↓
 // ══════════════════════════════════════════════════════════════
+const GV_NUMBERS = {
+  'HX-0001': '+1 (555) 000-0001',   // ← replace with real number
+  'HX-0002': '+1 (555) 000-0002',   // ← replace with real number
+  'HX-0003': '+1 (555) 000-0003',   // ← replace with real number
+  'HX-0004': '+1 (555) 000-0004',   // ← replace with real number
+};
+
+function renderVoiceView() {
+  if (!currentUser) return;
+  const num = GV_NUMBERS[currentUser.id] || 'Not assigned — contact admin';
+  document.getElementById('gvNumber').textContent = num;
+}
+
 function renderAdmin() {
+  if (!currentUser || !currentUser.isAdmin) return;
   renderAdminAttendance();
   renderAdminLeaves();
 }
@@ -1254,24 +1492,66 @@ function renderAdmin() {
 function renderAdminAttendance() {
   const el = document.getElementById('adminAttContent');
   if (!el) return;
+  // Ensure the container is always visible with correct background
+  el.style.background = 'transparent';
+  el.style.color = 'var(--text)';
   let html = '';
-  Object.entries(EMPLOYEES).forEach(([id, emp]) => {
-    const log = load('attLog_' + id, []);
-    if (!log.length) {
-      html += `<div class="card-box"><div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:12px;">${emp.name} <span style="font-size:12px;font-weight:400;color:var(--text-muted);">(${id})</span></div><div class="empty-state" style="padding:16px 0;"><div class="empty-text">No records.</div></div></div>`;
+  try {
+    const empEntries = Object.entries(EMPLOYEES);
+    if (!empEntries.length) {
+      el.innerHTML = '<div class="card-box"><div class="empty-state"><div class="empty-text">No employees found.</div></div></div>';
       return;
     }
-    const rows = [...log].reverse().slice(0,10).map(e => {
-      const inT = new Date(e.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-      const outT = e.outTs ? new Date(e.outTs).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—';
-      const dur = e.duration ? Math.floor(e.duration/60)+'h '+(e.duration%60)+'m' : '—';
-      const dateStr = new Date(e.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-      return `<tr><td>${dateStr}</td><td><span class="tag tag-in">↑ ${inT}</span></td><td>${e.outTs?'<span class="tag tag-out">↓ '+outT+'</span>':'—'}</td><td>${dur}</td></tr>`;
-    }).join('');
-    html += `<div class="card-box"><div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:16px;">${emp.name} <span style="font-size:12px;font-weight:400;color:var(--text-muted);">(${id})</span></div>
-      <table class="att-log-table"><thead><tr><th>Date</th><th>In</th><th>Out</th><th>Duration</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-  });
-  el.innerHTML = html || '<div class="empty-state"><div class="empty-text">No data yet.</div></div>';
+    empEntries.forEach(([id, emp]) => {
+      const rawLog = load('attLog_' + id, []);
+      // Defensive: filter only valid entries
+      const log = Array.isArray(rawLog) ? rawLog.filter(e => e && e.ts) : [];
+      if (!log.length) {
+        html += `<div class="card-box" style="margin-bottom:16px;">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);margin-bottom:12px;">
+            ${emp.name} <span style="font-size:12px;font-weight:400;color:var(--text-muted);">(${id})</span>
+          </div>
+          <div class="empty-state" style="padding:16px 0;"><div class="empty-text">No records yet.</div></div>
+        </div>`;
+        return;
+      }
+      const allRows = [...log].reverse();
+      // Compute total hours this month
+      const thisMonth = new Date().toISOString().substring(0,7);
+      let totalMinThisMonth = 0;
+      allRows.forEach(e => { if (e.ts && e.ts.startsWith(thisMonth) && e.duration) totalMinThisMonth += e.duration; });
+      const totalHrsStr = totalMinThisMonth ? Math.floor(totalMinThisMonth/60)+'h '+(totalMinThisMonth%60)+'m this month' : '';
+      const rows = allRows.map(e => {
+        try {
+          const inT  = new Date(e.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+          const outT = e.outTs ? new Date(e.outTs).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—';
+          const dur  = e.duration != null ? Math.floor(e.duration/60)+'h '+(e.duration%60)+'m' : '—';
+          const dateStr = new Date(e.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+          const autoFlag = e.autoOut ? ' <span style="font-size:10px;color:var(--text-muted);">(auto)</span>' : '';
+          const outCell = e.outTs ? `<span class="tag tag-out">↓ ${outT}</span>${autoFlag}` : '<span style="color:var(--text-muted);">Still clocked in</span>';
+          return `<tr><td>${dateStr}</td><td><span class="tag tag-in">↑ ${inT}</span></td><td>${outCell}</td><td>${dur}</td></tr>`;
+        } catch(rowErr) { return ''; }
+      }).join('');
+      html += `<div class="card-box" style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--text);">
+            ${emp.name} <span style="font-size:12px;font-weight:400;color:var(--text-muted);">(${id})</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            ${totalHrsStr ? `<span class="tag tag-in">${totalHrsStr}</span>` : ''}
+            <span style="font-size:12px;color:var(--text-muted);">${allRows.length} session${allRows.length!==1?'s':''}</span>
+          </div>
+        </div>
+        <table class="att-log-table">
+          <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Duration</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    });
+  } catch(err) {
+    html = `<div class="card-box"><div class="empty-state"><div class="empty-text" style="color:var(--text);">Error loading attendance data. Please refresh the page.<br><small style="color:var(--text-muted);">${err.message||''}</small></div></div></div>`;
+  }
+  el.innerHTML = html || '<div class="card-box"><div class="empty-state"><div class="empty-text">No attendance data recorded yet.</div></div></div>';
 }
 
 function renderAdminLeaves() {
