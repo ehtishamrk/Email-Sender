@@ -690,7 +690,7 @@
 <div class="modal-backdrop" id="modalForgot">
   <div class="modal-box">
     <div class="modal-title">Reset Password 🔑</div>
-    <div class="modal-sub">Enter your Employee ID and company email — we'll send your password over shortly.</div>
+<div class="modal-sub">Enter your Employee ID and we'll send your password to your assigned company email shortly.</div>
     <div class="field-wrap">
       <label class="field-label">Employee ID</label>
       <div class="input-group">
@@ -1173,27 +1173,26 @@ async function submitSignup() {
   const desig   = document.getElementById('su_desig').value.trim();
   const email   = document.getElementById('su_email').value.trim();
   const phone   = document.getElementById('su_phone').value.trim();
-  const joining = document.getElementById('su_joining').value.trim();
-  const pwd     = document.getElementById('su_pwd').value.trim();
+  const joining = document.getElementById('su_join').value.trim();
+  const pwd     = document.getElementById('su_pass').value.trim();
 
   if (!first || !last || !desig || !email || !phone || !joining || !pwd) {
     alert('Please fill in all fields.'); return;
   }
 
-  // Parse joining date into year/month/day
   const [yr, mo, dy] = joining.split('-');
 
   const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSex5VOJHxAjIp1gmf43UmtmRzefcMGEkxFghnU0uggnzt3iwA/formResponse';
   const body = new URLSearchParams({
-    'entry.761221268':        first,
-    'entry.2041241804':       last,
-    'entry.1919737191':       desig,
-    'entry.960589017':        email,
-    'entry.2110842126':       phone,
-    'entry.734508737_year':   yr,
-    'entry.734508737_month':  mo,
-    'entry.734508737_day':    dy,
-    'entry.734677989':        pwd,
+    'entry.761221268':       first,
+    'entry.2041241804':      last,
+    'entry.1919737191':      desig,
+    'entry.960589017':       email,
+    'entry.2110842126':      phone,
+    'entry.734508737_year':  yr,
+    'entry.734508737_month': mo,
+    'entry.734508737_day':   dy,
+    'entry.734677989':       pwd,
   });
 
   try { await fetch(FORM_URL, { method: 'POST', mode: 'no-cors', body }); } catch(e) {}
@@ -1201,19 +1200,6 @@ async function submitSignup() {
   document.getElementById('signupForm').style.display = 'none';
   document.getElementById('signupSuccess').style.display = 'block';
 }
-```
-
----
-
-**Change 2 — Check your Request Access modal has these exact field IDs.** Find the signup modal in your HTML and make sure each input has the right `id`. They should be:
-```
-First Name     → id="su_first"
-Last Name      → id="su_last"
-Designation    → id="su_desig"
-Email          → id="su_email"
-Phone          → id="su_phone"
-Joining Date   → id="su_joining"  (must be type="date" input)
-Desired Pwd    → id="su_pwd"
 
 // ══════════════════════════════════════════════════════════════
 //  LOGIN / LOGOUT
