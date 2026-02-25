@@ -788,11 +788,13 @@
         <div class="nav-user-info">
           <div class="nav-user-name" id="navName">—</div>
           <div class="nav-user-id" id="navId">—</div>
+          <div style="font-size:10px;color:var(--text-muted);text-align:right;" id="navDesig">—</div>
         </div>
         <div class="nav-avatar" id="navAvatar">?</div>
       </div>
-      <button class="nav-logout-btn" onclick="doLogout()">Sign Out</button>
-    </div>
+<button class="nav-logout-btn" onclick="showView('viewProfile')" style="background:var(--bg2);border-color:var(--border2);color:var(--text-mid);">👤 Profile</button>
+      <button class="nav-logout-btn" onclick="showView('viewSettings')" style="background:var(--bg2);border-color:var(--border2);color:var(--text-mid);">⚙️</button>
+      <button class="nav-logout-btn" onclick="doLogout()">Sign Out</button>    </div>
   </div>
 
   <!-- Main -->
@@ -857,7 +859,7 @@
             <div class="nav-card-title">Request Leave</div>
             <div class="nav-card-desc">Submit leave requests and track their approval status.</div>
           </div>
-          <div class="nav-card" onclick="showView('viewEmail')">
+         <div class="nav-card" id="emailCard" style="display:none;" onclick="showView('viewEmail')">
             <div class="nav-card-icon icon-green">✉️</div>
             <div class="nav-card-title">Email Sender</div>
             <div class="nav-card-desc">Send personalized prospect outreach — all 5 sequence types.</div>
@@ -959,9 +961,10 @@
           <div class="view-sub">Manage team attendance and leave requests.</div>
         </div>
 
-        <div class="tab-strip">
+       <div class="tab-strip">
           <button class="tab-item active" onclick="switchAdminTab('tabAttendance', this)">Attendance Reports</button>
           <button class="tab-item" onclick="switchAdminTab('tabLeaves', this)">Leave Management</button>
+          <button class="tab-item" onclick="switchAdminTab('tabAccess', this)">Tool Access</button>
         </div>
 
         <!-- Attendance Reports Tab -->
@@ -969,9 +972,14 @@
           <div id="adminAttContent">Loading...</div>
         </div>
 
-        <!-- Leave Management Tab -->
+      <!-- Leave Management Tab -->
         <div id="tabLeaves" style="display:none;">
           <div id="adminLeaveContent">Loading...</div>
+        </div>
+
+        <!-- Tool Access Tab -->
+        <div id="tabAccess" style="display:none;">
+          <div id="adminAccessContent"></div>
         </div>
 
       </div>
@@ -1091,7 +1099,100 @@
 
       </div>
     </div>
+<!-- ── PROFILE VIEW ── -->
+    <div id="viewProfile" class="view">
+      <div class="view-shell">
+        <div class="back-row">
+          <button class="back-link" onclick="showView('viewDash')">← Back to Dashboard</button>
+        </div>
+        <div class="view-header">
+          <div class="view-title">My Profile 👤</div>
+          <div class="view-sub">Your employment information. Contact fields can be updated by you.</div>
+        </div>
 
+        <!-- Read-only company info -->
+        <div class="card-box">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:20px;color:var(--text);">Company Information <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--bg2);padding:3px 10px;border-radius:20px;margin-left:8px;">Read-only</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div><div class="field-label">Full Name</div><div id="pf_name" style="font-size:14px;color:var(--text);padding:10px 0;border-bottom:1px solid var(--border);">—</div></div>
+            <div><div class="field-label">Employee ID</div><div id="pf_id" style="font-size:14px;color:var(--text);padding:10px 0;border-bottom:1px solid var(--border);">—</div></div>
+            <div><div class="field-label">Designation</div><div id="pf_desig" style="font-size:14px;color:var(--text);padding:10px 0;border-bottom:1px solid var(--border);">—</div></div>
+            <div><div class="field-label">Department</div><div id="pf_dept" style="font-size:14px;color:var(--text);padding:10px 0;border-bottom:1px solid var(--border);">—</div></div>
+            <div><div class="field-label">Company Email</div><div id="pf_email" style="font-size:14px;color:var(--text);padding:10px 0;border-bottom:1px solid var(--border);">—</div></div>
+            <div><div class="field-label">Joining Date</div><div id="pf_joining" style="font-size:14px;color:var(--text);padding:10px 0;border-bottom:1px solid var(--border);">—</div></div>
+            <div><div class="field-label">Blood Group</div><div id="pf_blood" style="font-size:14px;color:var(--text);padding:10px 0;border-bottom:1px solid var(--border);">—</div></div>
+          </div>
+        </div>
+
+        <!-- Editable personal info -->
+        <div class="card-box">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:20px;color:var(--text);">Personal Information <span style="font-size:11px;font-weight:400;color:var(--green);background:#F0FFF5;padding:3px 10px;border-radius:20px;margin-left:8px;">Editable</span></div>
+          <div class="field-wrap">
+            <label class="field-label">Contact Number</label>
+            <input class="field-input" type="tel" id="pf_phone" placeholder="+1 (555) 000-0000">
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Emergency Contact Number</label>
+            <input class="field-input" type="tel" id="pf_emergency" placeholder="Emergency contact number">
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Current Address</label>
+            <textarea class="field-input" id="pf_address" placeholder="Your current residential address" style="min-height:80px;"></textarea>
+          </div>
+          <button class="btn-gold" onclick="saveProfile()" style="width:auto;padding:12px 28px;">Save Changes →</button>
+          <div id="pfSaveMsg" style="margin-top:12px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS VIEW ── -->
+    <div id="viewSettings" class="view">
+      <div class="view-shell">
+        <div class="back-row">
+          <button class="back-link" onclick="showView('viewDash')">← Back to Dashboard</button>
+        </div>
+        <div class="view-header">
+          <div class="view-title">Settings ⚙️</div>
+          <div class="view-sub">Manage your account and portal preferences.</div>
+        </div>
+
+        <!-- Appearance -->
+        <div class="card-box">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:20px;">Appearance</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">
+            <div>
+              <div style="font-size:14px;font-weight:600;color:var(--text);">Dark Mode</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Switch between light and dark interface</div>
+            </div>
+            <label style="position:relative;display:inline-block;width:48px;height:26px;cursor:pointer;">
+              <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode(this.checked)" style="opacity:0;width:0;height:0;">
+              <span id="darkModeTrack" style="position:absolute;inset:0;background:var(--border2);border-radius:26px;transition:0.3s;"></span>
+              <span id="darkModeThumb" style="position:absolute;left:3px;top:3px;width:20px;height:20px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.2);"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Account -->
+        <div class="card-box">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:20px;">Account</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">
+            <div>
+              <div style="font-size:14px;font-weight:600;color:var(--text);">Request Password Change</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Submit a request to update your login password</div>
+            </div>
+            <button class="btn-sm" onclick="requestPasswordChange()">Request →</button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;">
+            <div>
+              <div style="font-size:14px;font-weight:600;color:var(--text);">Sign Out of Portal</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">End your current session</div>
+            </div>
+            <button class="btn-sm-outline" onclick="doLogout()" style="color:var(--red);border-color:var(--red);">Sign Out</button>
+          </div>
+        </div>
+        <div id="settingsMsg" style="margin-top:4px;"></div>
+      </div>
+    </div>
     <!-- ── EMAIL SENDER (full screen, no view shell) ── -->
     <div id="viewEmail" class="view">
       <div class="email-topbar">
@@ -1110,14 +1211,13 @@
 //  CONFIG
 // ══════════════════════════════════════════════════════════════
 const EMPLOYEES = {
-  'HX-0001': { password: 'Some,What1@',   name: 'Ehtisham Rana Khan', isAdmin: true },
-  'HX-0002': { password: 'Somewhat786@1', name: 'Zaighaum Rana Khan', isAdmin: true },
-  'HX-0003': { password: 'mombalogistics',name: 'Rana Nouman Ahmad', isAdmin: false },
-  'HX-0004': { password: 'kingans',        name: 'Muhammad Ans', isAdmin: false },
-  'HX-0005': { password: '25feb2026',        name: 'Sania Rafi', isAdmin: false },
-  'HX-0006': { password: 'faru@123',        name: 'Farwa Qamar', isAdmin: false },
+  'HX-0001': { password: 'Some,What1@',   name: 'Ehtisham Rana Khan',  isAdmin: true,  designation: 'Founder & CEO',     department: 'Leadership',  email: 'founder@haulxify.com',  joiningDate: '2024-01-01', hasEmailAccess: true  },
+  'HX-0002': { password: 'Somewhat786@1', name: 'Zaighaum Rana Khan',  isAdmin: true,  designation: 'Co-Founder & COO',     department: 'Leadership',  email: 'muhammadzaighum@haulxify.com',  joiningDate: '2024-01-01', hasEmailAccess: true  },
+  'HX-0003': { password: 'mombalogistics',name: 'Rana Nouman Ahmad',   isAdmin: false, designation: 'Freight Coordinator',    department: 'Dispatch',    email: 'nouman@haulxify.com',    joiningDate: '2024-02-01', hasEmailAccess: true  },
+  'HX-0004': { password: 'kingans',       name: 'Muhammad Ans',        isAdmin: false, designation: 'Business Development Associate - Prob',         department: 'Sales',    email: 'ans.haulxify@gmail.com',       joiningDate: '2024-03-01', hasEmailAccess: true  },
+  'HX-0005': { password: '25feb2026',     name: 'Sania Rafi',          isAdmin: false, designation: 'Business Development Associate - Prob',        department: 'Sales',    email: 'sania.haulxify@gmail.com',     joiningDate: '2025-02-25', hasEmailAccess: false },
+  'HX-0006': { password: 'faru@123',      name: 'Farwa Qamar',         isAdmin: false, designation: 'Email Marketer',  department: 'Sales',  email: 'farwaqamar91@gmail.com',     joiningDate: '2025-02-25', hasEmailAccess: false },
 };
-
 const EMAIL_SENDER_URL = 'email-sender.html';
 
 // ══════════════════════════════════════════════════════════════
@@ -1133,6 +1233,16 @@ let currentUser = null;
 let clockInterval = null;
 let clockedIn = false;
 let clockInTimestamp = null;
+// Restore dark mode on load
+applyDarkMode(load('darkMode', false));
+// ── AUTO-RESTORE SESSION ON REFRESH ──
+(function restoreSession() {
+  const saved = load('session', null);
+  if (saved && EMPLOYEES[saved.id]) {
+    currentUser = { id: saved.id, ...EMPLOYEES[saved.id] };
+    document.addEventListener('DOMContentLoaded', () => enterPortal());
+  }
+})();
 
 // ══════════════════════════════════════════════════════════════
 //  MODAL HELPERS
@@ -1215,6 +1325,7 @@ function doLogin() {
   if (emp && emp.password === pass) {
     err.classList.remove('show');
     currentUser = { id, ...emp };
+    store('session', { id });
     enterPortal();
   } else {
     err.classList.add('show');
@@ -1227,6 +1338,7 @@ function doLogout() {
   // Auto-clock-out if still clocked in
   if (clockedIn) performClockOut('auto');
   currentUser = null; clockedIn = false; clockInTimestamp = null;
+  store('session', null);
   clearInterval(clockInterval);
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('portalScreen').classList.remove('show');
@@ -1241,13 +1353,17 @@ function enterPortal() {
   document.getElementById('portalScreen').classList.add('show');
 
   // Populate nav
-  document.getElementById('navName').textContent = currentUser.name;
+ document.getElementById('navName').textContent = currentUser.name;
   document.getElementById('navId').textContent = currentUser.id;
+  document.getElementById('navDesig').textContent = currentUser.designation || '';
   document.getElementById('navAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
 
   // Admin card
+// Admin card
   document.getElementById('adminCard').style.display = currentUser.isAdmin ? '' : 'none';
-
+  // Email sender card — based on hasEmailAccess flag (admin can toggle)
+  const emailAccess = load('emailAccess_' + currentUser.id, currentUser.hasEmailAccess);
+  document.getElementById('emailCard').style.display = emailAccess ? '' : 'none';
   updateDashHeader();
   startClock();
   resumeClockState();
@@ -1268,11 +1384,20 @@ function showView(id) {
   if (id === 'viewAttendance') renderAttReport();
   if (id === 'viewLeave') { refreshLeaveHistory(); }
   if (id === 'viewAdmin') renderAdmin();
+  if (id === 'viewProfile') loadProfile();
+  if (id === 'viewSettings') {
+    const isDark = load('darkMode', false);
+    document.getElementById('darkModeToggle').checked = isDark;
+    const track = document.getElementById('darkModeTrack');
+    const thumb = document.getElementById('darkModeThumb');
+    track.style.background = isDark ? 'var(--gold)' : 'var(--border2)';
+    thumb.style.left = isDark ? '25px' : '3px';
+  }
   if (id === 'viewVoice') renderVoiceView();
 }
 
 function switchAdminTab(tabId, btn) {
-  document.querySelectorAll('#tabAttendance,#tabLeaves').forEach(t => t.style.display = 'none');
+  document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess').forEach(t => t.style.display = 'none');
   document.getElementById(tabId).style.display = '';
   document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -1320,11 +1445,11 @@ function toggleClock() {
     clockedIn = true;
     clockInTimestamp = new Date();
     store('clockState_' + currentUser.id, { clockedIn: true, timestamp: clockInTimestamp.toISOString() });
-    // Log it
     const log = load('attLog_' + currentUser.id, []);
     log.push({ type: 'in', ts: clockInTimestamp.toISOString(), date: today() });
     store('attLog_' + currentUser.id, log);
     updateClockUI(true);
+    pushAttendanceToSheet('CLOCK_IN', clockInTimestamp, null);
   } else {
     performClockOut('manual');
   }
@@ -1334,12 +1459,12 @@ function performClockOut(reason) {
   if (!clockedIn) return;
   const outTime = new Date();
   const log = load('attLog_' + currentUser.id, []);
-  // Find last clock-in without a paired clock-out
+  let durMins = 0;
   for (let i = log.length - 1; i >= 0; i--) {
     if (log[i].type === 'in' && !log[i].outTs) {
       log[i].outTs = outTime.toISOString();
-      const dur = Math.round((outTime - new Date(log[i].ts)) / 60000);
-      log[i].duration = dur;
+      durMins = Math.round((outTime - new Date(log[i].ts)) / 60000);
+      log[i].duration = durMins;
       log[i].autoOut = reason === 'auto';
       break;
     }
@@ -1349,6 +1474,29 @@ function performClockOut(reason) {
   clockedIn = false; clockInTimestamp = null;
   updateClockUI(false);
   refreshStats();
+  pushAttendanceToSheet('CLOCK_OUT', outTime, durMins);
+}
+
+async function pushAttendanceToSheet(eventType, timestamp, durationMins) {
+  // ↓↓↓ FILL THESE IN AFTER CREATING YOUR ATTENDANCE GOOGLE FORM ↓↓↓
+  const FORM_URL  = 'YOUR_ATTENDANCE_FORM_RESPONSE_URL';   // ← paste formResponse URL
+  const ENTRY_EMP_ID   = 'entry.XXXXXXXXX';  // ← Employee ID field
+  const ENTRY_EMP_NAME = 'entry.XXXXXXXXX';  // ← Employee Name field
+  const ENTRY_EVENT    = 'entry.XXXXXXXXX';  // ← Event Type field
+  const ENTRY_TIMESTAMP= 'entry.XXXXXXXXX';  // ← Timestamp field
+  const ENTRY_DATE     = 'entry.XXXXXXXXX';  // ← Date field
+  const ENTRY_DURATION = 'entry.XXXXXXXXX';  // ← Duration Minutes field
+  // ↑↑↑ ↑↑↑ ↑↑↑
+
+  const body = new URLSearchParams({
+    [ENTRY_EMP_ID]:    currentUser.id,
+    [ENTRY_EMP_NAME]:  currentUser.name,
+    [ENTRY_EVENT]:     eventType,
+    [ENTRY_TIMESTAMP]: timestamp.toLocaleString('en-US'),
+    [ENTRY_DATE]:      today(),
+    [ENTRY_DURATION]:  durationMins != null ? String(durationMins) : '',
+  });
+  try { await fetch(FORM_URL, { method: 'POST', mode: 'no-cors', body }); } catch(e) {}
 }
 
 function updateClockUI(isIn) {
@@ -1507,11 +1655,118 @@ function renderVoiceView() {
   const num = GV_NUMBERS[currentUser.id] || 'Not assigned — contact admin';
   document.getElementById('gvNumber').textContent = num;
 }
+// ══════════════════════════════════════════════════════════════
+//  PROFILE
+// ══════════════════════════════════════════════════════════════
+function loadProfile() {
+  if (!currentUser) return;
+  document.getElementById('pf_name').textContent    = currentUser.name;
+  document.getElementById('pf_id').textContent      = currentUser.id;
+  document.getElementById('pf_desig').textContent   = currentUser.designation || '—';
+  document.getElementById('pf_dept').textContent    = currentUser.department || '—';
+  document.getElementById('pf_email').textContent   = currentUser.email || '—';
+  document.getElementById('pf_joining').textContent = currentUser.joiningDate || '—';
+  const personal = load('profilePersonal_' + currentUser.id, {});
+  document.getElementById('pf_blood').textContent   = personal.blood || '—';
+  document.getElementById('pf_phone').value         = personal.phone || '';
+  document.getElementById('pf_emergency').value     = personal.emergency || '';
+  document.getElementById('pf_address').value       = personal.address || '';
+}
 
+function saveProfile() {
+  const personal = {
+    phone:     document.getElementById('pf_phone').value.trim(),
+    emergency: document.getElementById('pf_emergency').value.trim(),
+    address:   document.getElementById('pf_address').value.trim(),
+  };
+  store('profilePersonal_' + currentUser.id, personal);
+  const msg = document.getElementById('pfSaveMsg');
+  msg.innerHTML = '<div class="alert-success">✅ Profile updated successfully.</div>';
+  setTimeout(() => msg.innerHTML = '', 3000);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SETTINGS
+// ══════════════════════════════════════════════════════════════
+function toggleDarkMode(on) {
+  store('darkMode', on);
+  applyDarkMode(on);
+  const track = document.getElementById('darkModeTrack');
+  const thumb = document.getElementById('darkModeThumb');
+  track.style.background = on ? 'var(--gold)' : 'var(--border2)';
+  thumb.style.left = on ? '25px' : '3px';
+}
+
+function applyDarkMode(on) {
+  const r = document.documentElement.style;
+  if (on) {
+    r.setProperty('--bg',      '#1A1714');
+    r.setProperty('--bg2',     '#2D2520');
+    r.setProperty('--surface', '#242018');
+    r.setProperty('--border',  '#3D3830');
+    r.setProperty('--border2', '#4D4840');
+    r.setProperty('--text',    '#F4F1EC');
+    r.setProperty('--text-mid','#C4BDB5');
+    r.setProperty('--text-muted','#7A746C');
+  } else {
+    r.setProperty('--bg',      '#F4F1EC');
+    r.setProperty('--bg2',     '#EDE9E1');
+    r.setProperty('--surface', '#FFFFFF');
+    r.setProperty('--border',  '#E8E3DA');
+    r.setProperty('--border2', '#D9D3C8');
+    r.setProperty('--text',    '#1A1714');
+    r.setProperty('--text-mid','#5A5550');
+    r.setProperty('--text-muted','#9B958D');
+  }
+}
+
+async function requestPasswordChange() {
+  const msg = document.getElementById('settingsMsg');
+  const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSevY4X0yLHL3tufLPc93DckYXvYAwR2aCU9bxzVp6LBsUtZTw/formResponse';
+  const body = new URLSearchParams({ 'entry.93033223': currentUser.id + ' (password change request)' });
+  try { await fetch(FORM_URL, { method: 'POST', mode: 'no-cors', body }); } catch(e) {}
+  msg.innerHTML = '<div class="alert-success">✅ Password change request submitted. You\'ll receive your new password via company email.</div>';
+  setTimeout(() => msg.innerHTML = '', 5000);
+}
 function renderAdmin() {
   if (!currentUser || !currentUser.isAdmin) return;
   renderAdminAttendance();
   renderAdminLeaves();
+  renderAdminAccess();
+}
+
+function renderAdminAccess() {
+  const el = document.getElementById('adminAccessContent');
+  if (!el) return;
+  let html = '<div class="card-box"><div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;margin-bottom:20px;">Email Sender Access</div>';
+  Object.entries(EMPLOYEES).forEach(([id, emp]) => {
+    const hasAccess = load('emailAccess_' + id, emp.hasEmailAccess);
+    html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">${emp.name}</div>
+        <div style="font-size:12px;color:var(--text-muted);">${id} · ${emp.designation || ''}</div>
+      </div>
+      <label style="position:relative;display:inline-block;width:48px;height:26px;cursor:pointer;">
+        <input type="checkbox" onchange="toggleEmailAccess('${id}', this.checked)" ${hasAccess ? 'checked' : ''} style="opacity:0;width:0;height:0;">
+        <span style="position:absolute;inset:0;background:${hasAccess ? 'var(--gold)' : 'var(--border2)'};border-radius:26px;transition:0.3s;" id="eat_${id}"></span>
+        <span style="position:absolute;left:${hasAccess ? '25px' : '3px'};top:3px;width:20px;height:20px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.2);" id="eathumb_${id}"></span>
+      </label>
+    </div>`;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function toggleEmailAccess(empId, granted) {
+  store('emailAccess_' + empId, granted);
+  const track = document.getElementById('eat_' + empId);
+  const thumb = document.getElementById('eathumb_' + empId);
+  if (track) track.style.background = granted ? 'var(--gold)' : 'var(--border2)';
+  if (thumb) thumb.style.left = granted ? '25px' : '3px';
+  // If toggling for currently logged-in user, update their card live
+  if (empId === currentUser.id) {
+    document.getElementById('emailCard').style.display = granted ? '' : 'none';
+  }
 }
 
 function renderAdminAttendance() {
