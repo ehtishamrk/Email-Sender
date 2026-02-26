@@ -167,7 +167,7 @@
     textarea.field-input { resize: vertical; min-height: 88px; padding-top: 12px; }
 
     .btn-primary {
-      width: 100%; background: var(--text); color: var(--bg);
+      width: 100%; background: var(--btn-primary-bg, var(--text)); color: var(--btn-primary-color, var(--bg));
       font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
       padding: 14px; border: none; border-radius: 12px; cursor: pointer;
       transition: all 0.2s; letter-spacing: 0.3px;
@@ -864,7 +864,7 @@
             <div class="nav-card-title">Email Sender</div>
             <div class="nav-card-desc">Send personalized prospect outreach — all 5 sequence types.</div>
           </div>
-          <div class="nav-card" onclick="showView('viewVoice')">
+        <div class="nav-card" id="voiceCard" style="display:none;" onclick="showView('viewVoice')">
             <div class="nav-card-icon icon-teal">📞</div>
             <div class="nav-card-title">Google Voice</div>
             <div class="nav-card-desc">Launch your team line, access voicemail, messages and call history.</div>
@@ -964,8 +964,8 @@
        <div class="tab-strip">
           <button class="tab-item active" onclick="switchAdminTab('tabAttendance', this)">Attendance Reports</button>
           <button class="tab-item" onclick="switchAdminTab('tabLeaves', this)">Leave Management</button>
-          <button class="tab-item" onclick="switchAdminTab('tabAccess', this)">Tool Access</button>
-        </div>
+<button class="tab-item" onclick="switchAdminTab('tabAccess', this)">Tool Access</button>
+          <button class="tab-item" onclick="switchAdminTab('tabLive', this)">Live Status</button>        </div>
 
         <!-- Attendance Reports Tab -->
         <div id="tabAttendance">
@@ -980,6 +980,11 @@
         <!-- Tool Access Tab -->
         <div id="tabAccess" style="display:none;">
           <div id="adminAccessContent"></div>
+        </div>
+
+        <!-- Live Status Tab -->
+        <div id="tabLive" style="display:none;">
+          <div id="adminLiveContent"></div>
         </div>
 
       </div>
@@ -1211,12 +1216,13 @@
 //  CONFIG
 // ══════════════════════════════════════════════════════════════
 const EMPLOYEES = {
-  'HX-0001': { password: 'Some,What1@',   name: 'Ehtisham Rana Khan',  isAdmin: true,  designation: 'Founder & CEO',     department: 'Leadership',  email: 'founder@haulxify.com',  joiningDate: '2024-01-01', hasEmailAccess: true  },
-  'HX-0002': { password: 'Somewhat786@1', name: 'Zaighaum Rana Khan',  isAdmin: true,  designation: 'Co-Founder & COO',     department: 'Leadership',  email: 'muhammadzaighum@haulxify.com',  joiningDate: '2024-01-01', hasEmailAccess: true  },
-  'HX-0003': { password: 'mombalogistics',name: 'Rana Nouman Ahmad',   isAdmin: false, designation: 'Freight Coordinator',    department: 'Dispatch',    email: 'nouman@haulxify.com',    joiningDate: '2024-02-01', hasEmailAccess: true  },
-  'HX-0004': { password: 'kingans',       name: 'Muhammad Ans',        isAdmin: false, designation: 'Business Development Associate - Prob',         department: 'Sales',    email: 'ans.haulxify@gmail.com',       joiningDate: '2024-03-01', hasEmailAccess: true  },
-  'HX-0005': { password: '25feb2026',     name: 'Sania Rafi',          isAdmin: false, designation: 'Business Development Associate - Prob',        department: 'Sales',    email: 'sania.haulxify@gmail.com',     joiningDate: '2025-02-25', hasEmailAccess: false },
-  'HX-0006': { password: 'faru@123',      name: 'Farwa Qamar',         isAdmin: false, designation: 'Email Marketer',  department: 'Sales',  email: 'farwaqamar91@gmail.com',     joiningDate: '2025-02-25', hasEmailAccess: false },
+const EMPLOYEES = {
+  'HX-0001': { password: 'Some,What1@',   name: 'Ehtisham Rana Khan',  isAdmin: true,  designation: 'Operations Manager',    department: 'Operations', email: 'ehtisham@haulxify.com', joiningDate: '2024-01-01', hasEmailAccess: true,  hasVoiceAccess: true  },
+  'HX-0002': { password: 'Somewhat786@1', name: 'Zaighaum Rana Khan',  isAdmin: true,  designation: 'Operations Manager',    department: 'Operations', email: 'zaighaum@haulxify.com', joiningDate: '2024-01-01', hasEmailAccess: true,  hasVoiceAccess: true  },
+  'HX-0003': { password: 'mombalogistics',name: 'Rana Nouman Ahmad',   isAdmin: false, designation: 'Freight Coordinator',   department: 'Dispatch',   email: 'nouman@haulxify.com',   joiningDate: '2024-02-01', hasEmailAccess: true,  hasVoiceAccess: true  },
+  'HX-0004': { password: 'kingans',       name: 'Muhammad Ans',        isAdmin: false, designation: 'Dispatch Agent',        department: 'Dispatch',   email: 'ans@haulxify.com',       joiningDate: '2024-03-01', hasEmailAccess: true,  hasVoiceAccess: true  },
+  'HX-0005': { password: '25feb2026',     name: 'Sania Rafi',          isAdmin: false, designation: 'Account Manager',       department: 'Accounts',   email: 'sania@haulxify.com',     joiningDate: '2025-02-25', hasEmailAccess: false, hasVoiceAccess: false },
+  'HX-0006': { password: 'faru@123',      name: 'Farwa Qamar',         isAdmin: false, designation: 'Compliance Specialist', department: 'Compliance', email: 'farwa@haulxify.com',     joiningDate: '2025-02-25', hasEmailAccess: false, hasVoiceAccess: false },
 };
 const EMAIL_SENDER_URL = 'email-sender.html';
 
@@ -1233,8 +1239,6 @@ let currentUser = null;
 let clockInterval = null;
 let clockedIn = false;
 let clockInTimestamp = null;
-// Restore dark mode on load
-applyDarkMode(load('darkMode', false));
 // ── AUTO-RESTORE SESSION ON REFRESH ──
 (function restoreSession() {
   const saved = load('session', null);
@@ -1364,6 +1368,11 @@ function enterPortal() {
   // Email sender card — based on hasEmailAccess flag (admin can toggle)
   const emailAccess = load('emailAccess_' + currentUser.id, currentUser.hasEmailAccess);
   document.getElementById('emailCard').style.display = emailAccess ? '' : 'none';
+  const voiceAccess = load('voiceAccess_' + currentUser.id, currentUser.hasVoiceAccess);
+  document.getElementById('voiceCard').style.display = voiceAccess ? '' : 'none';
+  // Restore this user's dark mode preference
+  const isDark = load('darkMode_' + currentUser.id, false);
+  applyDarkMode(isDark);
   updateDashHeader();
   startClock();
   resumeClockState();
@@ -1384,9 +1393,9 @@ function showView(id) {
   if (id === 'viewAttendance') renderAttReport();
   if (id === 'viewLeave') { refreshLeaveHistory(); }
   if (id === 'viewAdmin') renderAdmin();
-  if (id === 'viewProfile') loadProfile();
+if (id === 'viewProfile') { loadProfile(); }
   if (id === 'viewSettings') {
-    const isDark = load('darkMode', false);
+    const isDark = load('darkMode_' + currentUser.id, false);
     document.getElementById('darkModeToggle').checked = isDark;
     const track = document.getElementById('darkModeTrack');
     const thumb = document.getElementById('darkModeThumb');
@@ -1397,7 +1406,7 @@ function showView(id) {
 }
 
 function switchAdminTab(tabId, btn) {
-  document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess').forEach(t => t.style.display = 'none');
+document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive').forEach(t => t.style.display = 'none');
   document.getElementById(tabId).style.display = '';
   document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -1449,7 +1458,7 @@ function toggleClock() {
     log.push({ type: 'in', ts: clockInTimestamp.toISOString(), date: today() });
     store('attLog_' + currentUser.id, log);
     updateClockUI(true);
-    pushAttendanceToSheet('CLOCK_IN', clockInTimestamp, null);
+    // Don't push to sheet on clock-in — wait for clock-out to send the full row
   } else {
     performClockOut('manual');
   }
@@ -1458,6 +1467,7 @@ function toggleClock() {
 function performClockOut(reason) {
   if (!clockedIn) return;
   const outTime = new Date();
+  const inTime = clockInTimestamp || outTime;
   const log = load('attLog_' + currentUser.id, []);
   let durMins = 0;
   for (let i = log.length - 1; i >= 0; i--) {
@@ -1474,24 +1484,22 @@ function performClockOut(reason) {
   clockedIn = false; clockInTimestamp = null;
   updateClockUI(false);
   refreshStats();
-  pushAttendanceToSheet('CLOCK_OUT', outTime, durMins);
+  // Now push the complete session as one row
+  pushSessionToSheet(inTime, outTime, durMins, reason);
 }
 
-async function pushAttendanceToSheet(eventType, timestamp, durationMins) {
+async function pushSessionToSheet(inTime, outTime, durationMins, reason) {
   const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdl9bB9vbv4wslZElGNmVEOfMk0yksfX6hr1bitKMPwVS-7rw/formResponse';
-  const d = timestamp;
-  const yr  = String(d.getFullYear());
-  const mo  = String(d.getMonth() + 1);
-  const dy  = String(d.getDate());
+  const d = inTime;
   const body = new URLSearchParams({
     'entry.659033920':      currentUser.id,
     'entry.1523580971':     currentUser.name,
-    'entry.313045477':      eventType,
-    'entry.1473279511':     d.toLocaleString('en-US'),
-    'entry.72683249_year':  yr,
-    'entry.72683249_month': mo,
-    'entry.72683249_day':   dy,
-    'entry.146806779':      durationMins != null ? String(durationMins) : '',
+    'entry.313045477':      reason === 'auto' ? 'AUTO_CLOCKOUT' : 'MANUAL',
+    'entry.1473279511':     inTime.toLocaleString('en-US') + ' → ' + outTime.toLocaleString('en-US'),
+    'entry.72683249_year':  String(d.getFullYear()),
+    'entry.72683249_month': String(d.getMonth() + 1),
+    'entry.72683249_day':   String(d.getDate()),
+    'entry.146806779':      String(durationMins) + ' mins (' + Math.floor(durationMins/60) + 'h ' + (durationMins%60) + 'm)',
   });
   try { await fetch(FORM_URL, { method: 'POST', mode: 'no-cors', body }); } catch(e) {}
 }
@@ -1532,9 +1540,12 @@ function today() {
 // which would incorrectly wipe mid-session data when employees switch browser tabs.
 window.addEventListener('beforeunload', () => {
   if (clockedIn && currentUser) performClockOut('auto');
+  // Clear session on tab/browser close so user must re-login
+  store('session', null);
 });
 window.addEventListener('pagehide', () => {
   if (clockedIn && currentUser) performClockOut('auto');
+  store('session', null);
 });
 
 // ══════════════════════════════════════════════════════════════
@@ -1688,34 +1699,40 @@ function saveProfile() {
 //  SETTINGS
 // ══════════════════════════════════════════════════════════════
 function toggleDarkMode(on) {
-  store('darkMode', on);
+  // Save per-user, not globally
+  if (currentUser) store('darkMode_' + currentUser.id, on);
   applyDarkMode(on);
   const track = document.getElementById('darkModeTrack');
   const thumb = document.getElementById('darkModeThumb');
-  track.style.background = on ? 'var(--gold)' : 'var(--border2)';
-  thumb.style.left = on ? '25px' : '3px';
+  if (track) track.style.background = on ? 'var(--gold)' : 'var(--border2)';
+  if (thumb) thumb.style.left = on ? '25px' : '3px';
 }
 
 function applyDarkMode(on) {
   const r = document.documentElement.style;
   if (on) {
-    r.setProperty('--bg',      '#1A1714');
-    r.setProperty('--bg2',     '#2D2520');
-    r.setProperty('--surface', '#242018');
-    r.setProperty('--border',  '#3D3830');
-    r.setProperty('--border2', '#4D4840');
-    r.setProperty('--text',    '#F4F1EC');
-    r.setProperty('--text-mid','#C4BDB5');
-    r.setProperty('--text-muted','#7A746C');
+    r.setProperty('--bg',         '#1A1714');
+    r.setProperty('--bg2',        '#2D2520');
+    r.setProperty('--surface',    '#242018');
+    r.setProperty('--border',     '#3D3830');
+    r.setProperty('--border2',    '#4D4840');
+    r.setProperty('--text',       '#F4F1EC');
+    r.setProperty('--text-mid',   '#C4BDB5');
+    r.setProperty('--text-muted', '#7A746C');
+    // Fix buttons that use hardcoded dark colors
+    document.documentElement.style.setProperty('--btn-primary-bg',   '#F4F1EC');
+    document.documentElement.style.setProperty('--btn-primary-color','#1A1714');
   } else {
-    r.setProperty('--bg',      '#F4F1EC');
-    r.setProperty('--bg2',     '#EDE9E1');
-    r.setProperty('--surface', '#FFFFFF');
-    r.setProperty('--border',  '#E8E3DA');
-    r.setProperty('--border2', '#D9D3C8');
-    r.setProperty('--text',    '#1A1714');
-    r.setProperty('--text-mid','#5A5550');
-    r.setProperty('--text-muted','#9B958D');
+    r.setProperty('--bg',         '#F4F1EC');
+    r.setProperty('--bg2',        '#EDE9E1');
+    r.setProperty('--surface',    '#FFFFFF');
+    r.setProperty('--border',     '#E8E3DA');
+    r.setProperty('--border2',    '#D9D3C8');
+    r.setProperty('--text',       '#1A1714');
+    r.setProperty('--text-mid',   '#5A5550');
+    r.setProperty('--text-muted', '#9B958D');
+    document.documentElement.style.setProperty('--btn-primary-bg',   '#1A1714');
+    document.documentElement.style.setProperty('--btn-primary-color','#F4F1EC');
   }
 }
 
@@ -1731,29 +1748,80 @@ function renderAdmin() {
   if (!currentUser || !currentUser.isAdmin) return;
   renderAdminAttendance();
   renderAdminLeaves();
-  renderAdminAccess();
+ renderAdminAccess();
+  renderAdminLiveStatus();
+}
+
+function renderAdminLiveStatus() {
+  const el = document.getElementById('adminLiveContent');
+  if (!el) return;
+  let clockedInList = '', clockedOutList = '';
+  Object.entries(EMPLOYEES).forEach(([id, emp]) => {
+    const state = load('clockState_' + id, null);
+    const isIn = state && state.clockedIn;
+    const since = isIn ? new Date(state.timestamp).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : null;
+    const card = `<div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);">
+      <div style="width:10px;height:10px;border-radius:50%;background:${isIn ? 'var(--green)' : 'var(--red)'};flex-shrink:0;"></div>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:600;color:var(--text);">${emp.name}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${id} · ${emp.designation || ''}</div>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:${isIn ? 'var(--green)' : 'var(--text-muted)'};">
+        ${isIn ? '🟢 Clocked in since ' + since : '⚪ Not clocked in'}
+      </div>
+    </div>`;
+    if (isIn) clockedInList += card;
+    else clockedOutList += card;
+  });
+  el.innerHTML = `<div class="card-box">
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;margin-bottom:4px;">Team Live Status</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Updates when you open this tab. Refresh to get latest.</div>
+    ${clockedInList || '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;">No one currently clocked in.</div>'}
+    ${clockedOutList}
+  </div>`;
 }
 
 function renderAdminAccess() {
   const el = document.getElementById('adminAccessContent');
   if (!el) return;
-  let html = '<div class="card-box"><div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;margin-bottom:20px;">Email Sender Access</div>';
+  let html = '<div class="card-box"><div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Tool Access Control</div><div style="font-size:12px;color:var(--text-muted);margin-bottom:24px;">HX-0001 settings are locked and cannot be changed.</div>';
+  html += `<div style="display:grid;grid-template-columns:1fr 80px 80px;gap:0;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;">Employee</div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Email</div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Voice</div></div>`;
   Object.entries(EMPLOYEES).forEach(([id, emp]) => {
-    const hasAccess = load('emailAccess_' + id, emp.hasEmailAccess);
-    html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">
+    const locked = id === 'HX-0001';
+    const hasEmail = load('emailAccess_' + id, emp.hasEmailAccess);
+    const hasVoice = load('voiceAccess_' + id, emp.hasVoiceAccess);
+    const toggle = (type, checked, empId) => {
+      if (locked) return `<div style="text-align:center;font-size:18px;">${checked ? '✅' : '—'}</div>`;
+      return `<label style="display:flex;justify-content:center;position:relative;width:48px;height:26px;cursor:pointer;margin:auto;">
+        <input type="checkbox" onchange="toggleToolAccess('${empId}','${type}',this.checked)" ${checked ? 'checked' : ''} style="opacity:0;width:0;height:0;">
+        <span style="position:absolute;inset:0;background:${checked ? 'var(--gold)' : 'var(--border2)'};border-radius:26px;transition:0.3s;" id="tgt_${type}_${empId}"></span>
+        <span style="position:absolute;left:${checked ? '25px' : '3px'};top:3px;width:20px;height:20px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.2);" id="tgthumb_${type}_${empId}"></span>
+      </label>`;
+    };
+    html += `<div style="display:grid;grid-template-columns:1fr 80px 80px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
       <div>
-        <div style="font-size:14px;font-weight:600;color:var(--text);">${emp.name}</div>
-        <div style="font-size:12px;color:var(--text-muted);">${id} · ${emp.designation || ''}</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">${emp.name} ${locked ? '<span style="font-size:10px;color:var(--gold);background:var(--gold-light);padding:2px 8px;border-radius:20px;margin-left:6px;">LOCKED</span>' : ''}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${id} · ${emp.designation || ''}</div>
       </div>
-      <label style="position:relative;display:inline-block;width:48px;height:26px;cursor:pointer;">
-        <input type="checkbox" onchange="toggleEmailAccess('${id}', this.checked)" ${hasAccess ? 'checked' : ''} style="opacity:0;width:0;height:0;">
-        <span style="position:absolute;inset:0;background:${hasAccess ? 'var(--gold)' : 'var(--border2)'};border-radius:26px;transition:0.3s;" id="eat_${id}"></span>
-        <span style="position:absolute;left:${hasAccess ? '25px' : '3px'};top:3px;width:20px;height:20px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.2);" id="eathumb_${id}"></span>
-      </label>
+      ${toggle('email', hasEmail, id)}
+      ${toggle('voice', hasVoice, id)}
     </div>`;
   });
   html += '</div>';
   el.innerHTML = html;
+}
+
+function toggleToolAccess(empId, type, granted) {
+  if (empId === 'HX-0001') return; // locked
+  store(type + 'Access_' + empId, granted);
+  const track = document.getElementById('tgt_' + type + '_' + empId);
+  const thumb = document.getElementById('tgthumb_' + type + '_' + empId);
+  if (track) track.style.background = granted ? 'var(--gold)' : 'var(--border2)';
+  if (thumb) thumb.style.left = granted ? '25px' : '3px';
+  if (empId === currentUser.id) {
+    if (type === 'email') document.getElementById('emailCard').style.display = granted ? '' : 'none';
+    if (type === 'voice') document.getElementById('voiceCard').style.display = granted ? '' : 'none';
+  }
 }
 
 function toggleEmailAccess(empId, granted) {
