@@ -1224,12 +1224,33 @@ const EMPLOYEES = {
   'HX-0006': { password: 'faru@123',      name: 'Farwa Qamar',         isAdmin: false, designation: 'Compliance Specialist', department: 'Compliance', email: 'farwa@haulxify.com',     joiningDate: '2025-02-25', hasEmailAccess: false, hasVoiceAccess: false },
 };
 const EMAIL_SENDER_URL = 'email-sender.html';
+  const API = 'https://script.google.com/macros/s/AKfycbxkVYnxV3FmWq52UFipohgUXGV2RBC9S0EuZ_Wgj1xMn8pkY7WWfBZHtR9KeocPELC7/exec';
 
 // ══════════════════════════════════════════════════════════════
 //  STORAGE HELPERS (localStorage — GitHub Pages compatible)
 // ══════════════════════════════════════════════════════════════
 function store(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){} }
 function load(key, def)  { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch(e){ return def; } }
+  // ══════════════════════════════════════════════════════════════
+//  API HELPERS
+// ══════════════════════════════════════════════════════════════
+async function apiGet(params) {
+  try {
+    const url = API + '?' + new URLSearchParams(params).toString();
+    const res = await fetch(url);
+    return await res.json();
+  } catch(e) { return null; }
+}
+
+async function apiPost(data) {
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    return await res.json();
+  } catch(e) { return null; }
+}
 
 // ══════════════════════════════════════════════════════════════
 //  STATE
@@ -1241,9 +1262,15 @@ let clockInTimestamp = null;
 // ── AUTO-RESTORE SESSION ON REFRESH ──
 (function restoreSession() {
   const saved = load('session', null);
-  if (saved && EMPLOYEES[saved.id]) {
+  const tabWasAlive = sessionStorage.getItem('tabAlive') === '1';
+  if (saved && saved.id && EMPLOYEES[saved.id] && tabWasAlive) {
+    // Re-save session immediately so it survives the next refresh
+    store('session', { id: saved.id });
     currentUser = { id: saved.id, ...EMPLOYEES[saved.id] };
     document.addEventListener('DOMContentLoaded', () => enterPortal());
+  } else if (!tabWasAlive) {
+    // Real tab close happened — session already cleared, nothing to restore
+    store('session', null);
   }
 })();
 
@@ -1365,10 +1392,22 @@ function enterPortal() {
 // Admin card
   document.getElementById('adminCard').style.display = currentUser.isAdmin ? '' : 'none';
   // Email sender card — based on hasEmailAccess flag (admin can toggle)
-  const emailAccess = load('emailAccess_' + currentUser.id, currentUser.hasEmailAccess);
-  document.getElementById('emailCard').style.display = emailAccess ? '' : 'none';
-  const voiceAccess = load('voiceAccess_' + currentUser.id, currentUser.hasVoiceAccess);
-  document.getElementById('voiceCard').style.display = voiceAccess ? '' : 'none';
+// Show cards based on local cache first (instant), then sync from sheet
+  const emailAccessLocal = load('emailAccess_' + currentUser.id, currentUser.hasEmailAccess);
+  const voiceAccessLocal = load('voiceAccess_' + currentUser.id, currentUser.hasVoiceAccess);
+  document.getElementById('emailCard').style.display = emailAccessLocal ? '' : 'none';
+  document.getElementById('voiceCard').style.display = voiceAccessLocal ? '' : 'none';
+
+  // Then fetch latest from sheet and update
+  apiGet({ action: 'getToolAccess', empId: currentUser.id }).then(data => {
+    if (!data) return;
+    const emailOk = data.emailAccess !== null ? data.emailAccess : currentUser.hasEmailAccess;
+    const voiceOk = data.voiceAccess !== null ? data.voiceAccess : currentUser.hasVoiceAccess;
+    store('emailAccess_' + currentUser.id, emailOk);
+    store('voiceAccess_' + currentUser.id, voiceOk);
+    document.getElementById('emailCard').style.display = emailOk ? '' : 'none';
+    document.getElementById('voiceCard').style.display = voiceOk ? '' : 'none';
+  });
   // Restore this user's dark mode preference
   const isDark = load('darkMode_' + currentUser.id, false);
   applyDarkMode(isDark);
@@ -1457,7 +1496,8 @@ function toggleClock() {
     log.push({ type: 'in', ts: clockInTimestamp.toISOString(), date: today() });
     store('attLog_' + currentUser.id, log);
     updateClockUI(true);
-    // Don't push to sheet on clock-in — wait for clock-out to send the full row
+    // Sync to sheet
+    apiPost({ action: 'setClockState', empId: currentUser.id, clockedIn: true, timestamp: clockInTimestamp.toISOString() });
   } else {
     performClockOut('manual');
   }
@@ -1483,7 +1523,9 @@ function performClockOut(reason) {
   clockedIn = false; clockInTimestamp = null;
   updateClockUI(false);
   refreshStats();
-  // Now push the complete session as one row
+  // Sync clock-out to sheet
+  apiPost({ action: 'setClockState', empId: currentUser.id, clockedIn: false, timestamp: null });
+  // Push full session row to attendance sheet
   pushSessionToSheet(inTime, outTime, durMins, reason);
 }
 
@@ -1537,14 +1579,19 @@ function today() {
 // Only auto clock-out on actual page unload (browser close / navigation away).
 // visibilitychange is intentionally NOT used — it fires on every tab switch,
 // which would incorrectly wipe mid-session data when employees switch browser tabs.
+// Mark that page is actively loaded (survives refresh, dies on tab close)
+sessionStorage.setItem('tabAlive', '1');
+
 window.addEventListener('beforeunload', () => {
   if (clockedIn && currentUser) performClockOut('auto');
-  // Clear session on tab/browser close so user must re-login
-  store('session', null);
+  // sessionStorage clears automatically on tab close but NOT on refresh
+  // So we use a flag to detect real close vs refresh
+  sessionStorage.setItem('tabAlive', '1');
+  store('session', null); // always clear — restoreSession below re-sets it if tab is still alive
 });
+
 window.addEventListener('pagehide', () => {
   if (clockedIn && currentUser) performClockOut('auto');
-  store('session', null);
 });
 
 // ══════════════════════════════════════════════════════════════
@@ -1751,30 +1798,41 @@ function renderAdmin() {
   renderAdminLiveStatus();
 }
 
-function renderAdminLiveStatus() {
+async function renderAdminLiveStatus() {
   const el = document.getElementById('adminLiveContent');
   if (!el) return;
+  el.innerHTML = `<div class="card-box"><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center;">Loading live status...</div></div>`;
+
+  const data = await apiGet({ action: 'getAllClock' });
+
   let clockedInList = '', clockedOutList = '';
   Object.entries(EMPLOYEES).forEach(([id, emp]) => {
-    const state = load('clockState_' + id, null);
+    // Use sheet data if available, fall back to localStorage
+    const sheetState = data ? data[id] : null;
+    const localState = load('clockState_' + id, null);
+    const state = sheetState || localState;
     const isIn = state && state.clockedIn;
-    const since = isIn ? new Date(state.timestamp).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : null;
+    const since = isIn && state.timestamp ? new Date(state.timestamp).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : null;
     const card = `<div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);">
-      <div style="width:10px;height:10px;border-radius:50%;background:${isIn ? 'var(--green)' : 'var(--red)'};flex-shrink:0;"></div>
+      <div style="width:10px;height:10px;border-radius:50%;background:${isIn ? 'var(--green)' : 'var(--red)'};flex-shrink:0;margin-top:2px;"></div>
       <div style="flex:1;">
         <div style="font-size:14px;font-weight:600;color:var(--text);">${emp.name}</div>
         <div style="font-size:11px;color:var(--text-muted);">${id} · ${emp.designation || ''}</div>
       </div>
       <div style="font-size:12px;font-weight:600;color:${isIn ? 'var(--green)' : 'var(--text-muted)'};">
-        ${isIn ? '🟢 Clocked in since ' + since : '⚪ Not clocked in'}
+        ${isIn ? '🟢 Since ' + since : '⚪ Not clocked in'}
       </div>
     </div>`;
     if (isIn) clockedInList += card;
     else clockedOutList += card;
   });
+
   el.innerHTML = `<div class="card-box">
-    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;margin-bottom:4px;">Team Live Status</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Updates when you open this tab. Refresh to get latest.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;">Team Live Status</div>
+      <button class="btn-sm" onclick="renderAdminLiveStatus()" style="font-size:12px;padding:7px 16px;">↺ Refresh</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Live data from Google Sheets. Click refresh for latest.</div>
     ${clockedInList || '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;">No one currently clocked in.</div>'}
     ${clockedOutList}
   </div>`;
@@ -1810,13 +1868,28 @@ function renderAdminAccess() {
   el.innerHTML = html;
 }
 
-function toggleToolAccess(empId, type, granted) {
+async function toggleToolAccess(empId, type, granted) {
   if (empId === 'HX-0001') return; // locked
-  store(type + 'Access_' + empId, granted);
+
+  // Read current values from sheet first so we don't overwrite the other field
+  const current = await apiGet({ action: 'getToolAccess', empId });
+  const emailVal = type === 'email' ? granted : (current ? current.emailAccess : load('emailAccess_' + empId, EMPLOYEES[empId]?.hasEmailAccess));
+  const voiceVal = type === 'voice' ? granted : (current ? current.voiceAccess : load('voiceAccess_' + empId, EMPLOYEES[empId]?.hasVoiceAccess));
+
+  // Save to sheet
+  await apiPost({ action: 'setToolAccess', empId, emailAccess: emailVal, voiceAccess: voiceVal });
+
+  // Also save locally as cache
+  store('emailAccess_' + empId, emailVal);
+  store('voiceAccess_' + empId, voiceVal);
+
+  // Update toggle UI
   const track = document.getElementById('tgt_' + type + '_' + empId);
   const thumb = document.getElementById('tgthumb_' + type + '_' + empId);
   if (track) track.style.background = granted ? 'var(--gold)' : 'var(--border2)';
   if (thumb) thumb.style.left = granted ? '25px' : '3px';
+
+  // If toggling the currently logged-in user update their cards live
   if (empId === currentUser.id) {
     if (type === 'email') document.getElementById('emailCard').style.display = granted ? '' : 'none';
     if (type === 'voice') document.getElementById('voiceCard').style.display = granted ? '' : 'none';
