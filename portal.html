@@ -1262,15 +1262,9 @@ let clockInTimestamp = null;
 // ── AUTO-RESTORE SESSION ON REFRESH ──
 (function restoreSession() {
   const saved = load('session', null);
-  const tabWasAlive = sessionStorage.getItem('tabAlive') === '1';
-  if (saved && saved.id && EMPLOYEES[saved.id] && tabWasAlive) {
-    // Re-save session immediately so it survives the next refresh
-    store('session', { id: saved.id });
+  if (saved && saved.id && EMPLOYEES[saved.id]) {
     currentUser = { id: saved.id, ...EMPLOYEES[saved.id] };
     document.addEventListener('DOMContentLoaded', () => enterPortal());
-  } else if (!tabWasAlive) {
-    // Real tab close happened — session already cleared, nothing to restore
-    store('session', null);
   }
 })();
 
@@ -1491,13 +1485,14 @@ function toggleClock() {
   if (!clockedIn) {
     clockedIn = true;
     clockInTimestamp = new Date();
-    store('clockState_' + currentUser.id, { clockedIn: true, timestamp: clockInTimestamp.toISOString() });
+    const tsStr = clockInTimestamp.toISOString();
+    store('clockState_' + currentUser.id, { clockedIn: true, timestamp: tsStr });
     const log = load('attLog_' + currentUser.id, []);
-    log.push({ type: 'in', ts: clockInTimestamp.toISOString(), date: today() });
+    log.push({ type: 'in', ts: tsStr, date: today() });
     store('attLog_' + currentUser.id, log);
     updateClockUI(true);
-    // Sync to sheet
-    apiPost({ action: 'setClockState', empId: currentUser.id, clockedIn: true, timestamp: clockInTimestamp.toISOString() });
+    apiPost({ action: 'setClockState', empId: currentUser.id, clockedIn: true, timestamp: tsStr });
+    apiPost({ action: 'addAttEntry', empId: currentUser.id, ts: tsStr, date: today() });
   } else {
     performClockOut('manual');
   }
@@ -1505,16 +1500,18 @@ function toggleClock() {
 
 function performClockOut(reason) {
   if (!clockedIn) return;
-  const outTime = new Date();
-  const inTime = clockInTimestamp || outTime;
+  const outTime  = new Date();
+  const inTime   = clockInTimestamp || outTime;
+  const inTsStr  = inTime.toISOString();
+  const outTsStr = outTime.toISOString();
   const log = load('attLog_' + currentUser.id, []);
   let durMins = 0;
   for (let i = log.length - 1; i >= 0; i--) {
     if (log[i].type === 'in' && !log[i].outTs) {
-      log[i].outTs = outTime.toISOString();
-      durMins = Math.round((outTime - new Date(log[i].ts)) / 60000);
+      log[i].outTs    = outTsStr;
+      durMins         = Math.round((outTime - new Date(log[i].ts)) / 60000);
       log[i].duration = durMins;
-      log[i].autoOut = reason === 'auto';
+      log[i].autoOut  = reason === 'auto';
       break;
     }
   }
@@ -1523,9 +1520,8 @@ function performClockOut(reason) {
   clockedIn = false; clockInTimestamp = null;
   updateClockUI(false);
   refreshStats();
-  // Sync clock-out to sheet
   apiPost({ action: 'setClockState', empId: currentUser.id, clockedIn: false, timestamp: null });
-  // Push full session row to attendance sheet
+  apiPost({ action: 'updateAttClockOut', empId: currentUser.id, ts: inTsStr, outTs: outTsStr, duration: durMins, autoOut: reason === 'auto' });
   pushSessionToSheet(inTime, outTime, durMins, reason);
 }
 
@@ -1580,19 +1576,9 @@ function today() {
 // visibilitychange is intentionally NOT used — it fires on every tab switch,
 // which would incorrectly wipe mid-session data when employees switch browser tabs.
 // Mark that page is actively loaded (survives refresh, dies on tab close)
-sessionStorage.setItem('tabAlive', '1');
-
 window.addEventListener('beforeunload', () => {
   if (clockedIn && currentUser) performClockOut('auto');
-  // sessionStorage clears automatically on tab close but NOT on refresh
-  // So we use a flag to detect real close vs refresh
-  sessionStorage.setItem('tabAlive', '1');
-  store('session', null); // always clear — restoreSession below re-sets it if tab is still alive
-});
-
-window.addEventListener('pagehide', () => {
-  if (clockedIn && currentUser) performClockOut('auto');
-});
+});;
 
 // ══════════════════════════════════════════════════════════════
 //  STATS
@@ -1610,18 +1596,21 @@ function refreshStats() {
 // ══════════════════════════════════════════════════════════════
 //  ATTENDANCE REPORT RENDER
 // ══════════════════════════════════════════════════════════════
-function renderAttReport() {
+async function renderAttReport() {
   if (!currentUser) return;
-  const log = load('attLog_' + currentUser.id, []);
   const el = document.getElementById('attReportContent');
+  el.innerHTML = '<div class="empty-state"><div class="empty-icon">🕐</div><div class="empty-text">Loading attendance...</div></div>';
+  const sheetLog = await apiGet({ action: 'getAttLog', empId: currentUser.id });
+  const log = (sheetLog && sheetLog.length) ? sheetLog : load('attLog_' + currentUser.id, []);
+  if (sheetLog && sheetLog.length) store('attLog_' + currentUser.id, log);
   if (!log.length) {
     el.innerHTML = '<div class="empty-state"><div class="empty-icon">🕐</div><div class="empty-text">No attendance records yet. Clock in from the dashboard!</div></div>';
     return;
   }
   const rows = [...log].reverse().map(e => {
-    const inT = new Date(e.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-    const outT = e.outTs ? new Date(e.outTs).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—';
-    const dur = e.duration ? Math.floor(e.duration/60)+'h '+(e.duration%60)+'m' : '—';
+    const inT     = new Date(e.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    const outT    = e.outTs ? new Date(e.outTs).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—';
+    const dur     = e.duration ? Math.floor(e.duration/60)+'h '+(e.duration%60)+'m' : '—';
     const dateStr = new Date(e.ts).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
     const autoTag = e.autoOut ? ' <span style="font-size:10px;color:var(--text-muted);">(auto)</span>' : '';
     return `<tr>
@@ -1790,11 +1779,11 @@ async function requestPasswordChange() {
   msg.innerHTML = '<div class="alert-success">✅ Password change request submitted. You\'ll receive your new password via company email.</div>';
   setTimeout(() => msg.innerHTML = '', 5000);
 }
-function renderAdmin() {
+async function renderAdmin() {
   if (!currentUser || !currentUser.isAdmin) return;
   renderAdminAttendance();
   renderAdminLeaves();
- renderAdminAccess();
+  renderAdminAccess();
   renderAdminLiveStatus();
 }
 
@@ -1838,15 +1827,30 @@ async function renderAdminLiveStatus() {
   </div>`;
 }
 
-function renderAdminAccess() {
+async function renderAdminAccess() {
   const el = document.getElementById('adminAccessContent');
   if (!el) return;
-  let html = '<div class="card-box"><div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Tool Access Control</div><div style="font-size:12px;color:var(--text-muted);margin-bottom:24px;">HX-0001 settings are locked and cannot be changed.</div>';
-  html += `<div style="display:grid;grid-template-columns:1fr 80px 80px;gap:0;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;">Employee</div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Email</div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Voice</div></div>`;
+  el.innerHTML = '<div class="card-box"><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center;">Loading access settings...</div></div>';
+
+  const sheetAccess = await apiGet({ action: 'getAllAccess' }) || {};
+
+  let html = '<div class="card-box">';
+  html += '<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Tool Access Control</div>';
+  html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">HX-0001 settings are locked and cannot be changed.</div>';
+  html += '<div style="font-size:12px;background:var(--gold-light);color:#8B5200;padding:10px 14px;border-radius:10px;margin-bottom:20px;">⚠️ Changes apply immediately. Employee will see updated access on their next login or page refresh.</div>';
+  html += `<div style="display:grid;grid-template-columns:1fr 80px 80px;gap:0;">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;">Employee</div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Email</div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Voice</div>
+  </div>`;
+
   Object.entries(EMPLOYEES).forEach(([id, emp]) => {
-    const locked = id === 'HX-0001';
-    const hasEmail = load('emailAccess_' + id, emp.hasEmailAccess);
-    const hasVoice = load('voiceAccess_' + id, emp.hasVoiceAccess);
+    const locked    = id === 'HX-0001';
+    const sheetRow  = sheetAccess[id];
+    // Sheet value takes priority over EMPLOYEES default
+    const hasEmail  = sheetRow ? Boolean(sheetRow.emailAccess) : emp.hasEmailAccess;
+    const hasVoice  = sheetRow ? Boolean(sheetRow.voiceAccess) : emp.hasVoiceAccess;
+
     const toggle = (type, checked, empId) => {
       if (locked) return `<div style="text-align:center;font-size:18px;">${checked ? '✅' : '—'}</div>`;
       return `<label style="display:flex;justify-content:center;position:relative;width:48px;height:26px;cursor:pointer;margin:auto;">
@@ -1855,6 +1859,7 @@ function renderAdminAccess() {
         <span style="position:absolute;left:${checked ? '25px' : '3px'};top:3px;width:20px;height:20px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.2);" id="tgthumb_${type}_${empId}"></span>
       </label>`;
     };
+
     html += `<div style="display:grid;grid-template-columns:1fr 80px 80px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
       <div>
         <div style="font-size:14px;font-weight:600;color:var(--text);">${emp.name} ${locked ? '<span style="font-size:10px;color:var(--gold);background:var(--gold-light);padding:2px 8px;border-radius:20px;margin-left:6px;">LOCKED</span>' : ''}</div>
@@ -1864,6 +1869,7 @@ function renderAdminAccess() {
       ${toggle('voice', hasVoice, id)}
     </div>`;
   });
+
   html += '</div>';
   el.innerHTML = html;
 }
@@ -1908,23 +1914,16 @@ function toggleEmailAccess(empId, granted) {
   }
 }
 
-function renderAdminAttendance() {
+async function renderAdminAttendance() {
   const el = document.getElementById('adminAttContent');
   if (!el) return;
-  // Ensure the container is always visible with correct background
-  el.style.background = 'transparent';
-  el.style.color = 'var(--text)';
+  el.innerHTML = '<div class="card-box"><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center;">Loading attendance data...</div></div>';
   let html = '';
   try {
-    const empEntries = Object.entries(EMPLOYEES);
-    if (!empEntries.length) {
-      el.innerHTML = '<div class="card-box"><div class="empty-state"><div class="empty-text">No employees found.</div></div></div>';
-      return;
-    }
-    empEntries.forEach(([id, emp]) => {
-      const rawLog = load('attLog_' + id, []);
-      // Defensive: filter only valid entries
-      const log = Array.isArray(rawLog) ? rawLog.filter(e => e && e.ts) : [];
+    for (const [id, emp] of Object.entries(EMPLOYEES)) {
+      const sheetLog = await apiGet({ action: 'getAttLog', empId: id });
+      const rawLog   = (sheetLog && sheetLog.length) ? sheetLog : load('attLog_' + id, []);
+      const log      = Array.isArray(rawLog) ? rawLog.filter(e => e && e.ts) : [];
       if (!log.length) {
         html += `<div class="card-box" style="margin-bottom:16px;">
           <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);margin-bottom:12px;">
@@ -1932,24 +1931,23 @@ function renderAdminAttendance() {
           </div>
           <div class="empty-state" style="padding:16px 0;"><div class="empty-text">No records yet.</div></div>
         </div>`;
-        return;
+        continue;
       }
       const allRows = [...log].reverse();
-      // Compute total hours this month
       const thisMonth = new Date().toISOString().substring(0,7);
-      let totalMinThisMonth = 0;
-      allRows.forEach(e => { if (e.ts && e.ts.startsWith(thisMonth) && e.duration) totalMinThisMonth += e.duration; });
-      const totalHrsStr = totalMinThisMonth ? Math.floor(totalMinThisMonth/60)+'h '+(totalMinThisMonth%60)+'m this month' : '';
+      let totalMin = 0;
+      allRows.forEach(e => { if (e.ts && e.ts.startsWith(thisMonth) && e.duration) totalMin += Number(e.duration); });
+      const totalHrsStr = totalMin ? Math.floor(totalMin/60)+'h '+(totalMin%60)+'m this month' : '';
       const rows = allRows.map(e => {
         try {
-          const inT  = new Date(e.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-          const outT = e.outTs ? new Date(e.outTs).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—';
-          const dur  = e.duration != null ? Math.floor(e.duration/60)+'h '+(e.duration%60)+'m' : '—';
+          const inT     = new Date(e.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+          const outT    = e.outTs ? new Date(e.outTs).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—';
+          const dur     = e.duration != null ? Math.floor(e.duration/60)+'h '+(e.duration%60)+'m' : '—';
           const dateStr = new Date(e.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
           const autoFlag = e.autoOut ? ' <span style="font-size:10px;color:var(--text-muted);">(auto)</span>' : '';
           const outCell = e.outTs ? `<span class="tag tag-out">↓ ${outT}</span>${autoFlag}` : '<span style="color:var(--text-muted);">Still clocked in</span>';
           return `<tr><td>${dateStr}</td><td><span class="tag tag-in">↑ ${inT}</span></td><td>${outCell}</td><td>${dur}</td></tr>`;
-        } catch(rowErr) { return ''; }
+        } catch(e) { return ''; }
       }).join('');
       html += `<div class="card-box" style="margin-bottom:16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
@@ -1966,11 +1964,11 @@ function renderAdminAttendance() {
           <tbody>${rows}</tbody>
         </table>
       </div>`;
-    });
+    }
   } catch(err) {
-    html = `<div class="card-box"><div class="empty-state"><div class="empty-text" style="color:var(--text);">Error loading attendance data. Please refresh the page.<br><small style="color:var(--text-muted);">${err.message||''}</small></div></div></div>`;
+    html = `<div class="card-box"><div class="empty-state"><div class="empty-text">Error loading data: ${err.message}</div></div></div>`;
   }
-  el.innerHTML = html || '<div class="card-box"><div class="empty-state"><div class="empty-text">No attendance data recorded yet.</div></div></div>';
+  el.innerHTML = html || '<div class="card-box"><div class="empty-state"><div class="empty-text">No attendance data yet.</div></div></div>';
 }
 
 function renderAdminLeaves() {
