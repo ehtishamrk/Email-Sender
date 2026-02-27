@@ -1239,7 +1239,7 @@ function startHeartbeat() {
   localStorage.setItem('hb_ts', Date.now().toString());
   heartbeatInterval = setInterval(() => {
     localStorage.setItem('hb_ts', Date.now().toString());
-  }, 30000);
+  }, 5000);
 }
 function stopHeartbeat() {
   clearInterval(heartbeatInterval);
@@ -1280,7 +1280,7 @@ let clockInTimestamp = null;
   const saved       = load('session', null);
   const lastHb      = parseInt(localStorage.getItem('hb_ts') || '0');
   const hbAge       = Date.now() - lastHb;
-  const tabWasClosed = lastHb === 0 || hbAge > 60000; // no heartbeat or stale = tab was closed
+  const tabWasClosed = lastHb === 0 || hbAge > 10000; // no heartbeat or stale = tab was closed
 
   // CASE 1: Normal refresh — pendingSession exists AND heartbeat is fresh
   if (pending && pending.id && EMPLOYEES[pending.id] && !tabWasClosed) {
