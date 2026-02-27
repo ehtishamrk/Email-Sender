@@ -1232,6 +1232,19 @@ const EMAIL_SENDER_URL = 'email-sender.html';
 // ══════════════════════════════════════════════════════════════
 function store(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){} }
 function load(key, def)  { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch(e){ return def; } }
+  // Heartbeat — updates every 30 seconds while tab is open
+// If last heartbeat is older than 60 seconds on next load = tab was closed
+let heartbeatInterval = null;
+function startHeartbeat() {
+  localStorage.setItem('hb_ts', Date.now().toString());
+  heartbeatInterval = setInterval(() => {
+    localStorage.setItem('hb_ts', Date.now().toString());
+  }, 30000);
+}
+function stopHeartbeat() {
+  clearInterval(heartbeatInterval);
+  localStorage.removeItem('hb_ts');
+}
   // ══════════════════════════════════════════════════════════════
 //  API HELPERS
 // ══════════════════════════════════════════════════════════════
@@ -1263,49 +1276,52 @@ let clockedIn = false;
 let clockInTimestamp = null;
 // ── AUTO-RESTORE SESSION ON REFRESH ──
 (function restoreSession() {
-  const pending = load('pendingSession', null);
-  const saved   = load('session', null);
+  const pending     = load('pendingSession', null);
+  const saved       = load('session', null);
+  const lastHb      = parseInt(localStorage.getItem('hb_ts') || '0');
+  const hbAge       = Date.now() - lastHb;
+  const tabWasClosed = lastHb === 0 || hbAge > 60000; // no heartbeat or stale = tab was closed
 
-  // If pendingSession exists, page was refreshed — restore exactly as was
-  if (pending && pending.id && EMPLOYEES[pending.id]) {
-    store('pendingSession', null); // consume it
-    store('session', { id: pending.id }); // keep session alive
-
-    // If they were clocked in, keep them clocked in — DO NOT clock out
-    if (pending.clockedIn && pending.clockInTs) {
-      // clockState is already in localStorage from when they clocked in
-      // resumeClockState() will pick it up automatically in enterPortal()
-    }
-
+  // CASE 1: Normal refresh — pendingSession exists AND heartbeat is fresh
+  if (pending && pending.id && EMPLOYEES[pending.id] && !tabWasClosed) {
+    store('pendingSession', null);
+    store('session', { id: pending.id });
     currentUser = { id: pending.id, ...EMPLOYEES[pending.id] };
     document.addEventListener('DOMContentLoaded', () => enterPortal());
     return;
   }
 
-  // No pendingSession = real tab/browser close happened
-  // Clock out any active session and clear login
-  if (saved && saved.id && EMPLOYEES[saved.id]) {
-    // They closed the tab — fire clock-out to sheet silently
-    const clockState = JSON.parse(localStorage.getItem('clockState_' + saved.id) || 'null');
+  // CASE 2: Tab was closed — force clockout + logout
+  if (tabWasClosed && saved && saved.id) {
+    const empId     = saved.id;
+    const clockState = JSON.parse(localStorage.getItem('clockState_' + empId) || 'null');
     if (clockState && clockState.clockedIn && clockState.timestamp) {
       const inTs    = clockState.timestamp;
       const outTs   = new Date().toISOString();
       const durMins = Math.round((new Date(outTs) - new Date(inTs)) / 60000);
-      // Push to sheet
-      fetch(API, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ action:'setClockState', empId: saved.id, clockedIn: false, timestamp: null }) }).catch(()=>{});
-      fetch(API, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ action:'updateAttClockOut', empId: saved.id, ts: inTs, outTs, duration: durMins, autoOut: true }) }).catch(()=>{});
-      // Update localStorage
-      const log = JSON.parse(localStorage.getItem('attLog_' + saved.id) || '[]');
+      // Push clockout to sheet
+      fetch(API, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ action:'setClockState', empId, clockedIn: false, timestamp: null }) }).catch(()=>{});
+      fetch(API, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ action:'updateAttClockOut', empId, ts: inTs, outTs, duration: durMins, autoOut: true }) }).catch(()=>{});
+      // Update localStorage clockstate and attLog
+      localStorage.setItem('clockState_' + empId, JSON.stringify({ clockedIn: false }));
+      const log = JSON.parse(localStorage.getItem('attLog_' + empId) || '[]');
       for (let i = log.length-1; i >= 0; i--) {
         if (log[i].type === 'in' && !log[i].outTs) {
           log[i].outTs = outTs; log[i].duration = durMins; log[i].autoOut = true; break;
         }
       }
-      localStorage.setItem('attLog_' + saved.id, JSON.stringify(log));
-      localStorage.setItem('clockState_' + saved.id, JSON.stringify({ clockedIn: false }));
+      localStorage.setItem('attLog_' + empId, JSON.stringify(log));
     }
-    store('session', null); // force re-login after tab close
+    // Force logout — clear everything
+    store('session', null);
+    store('pendingSession', null);
+    localStorage.removeItem('hb_ts');
+    // Show login screen (default — do nothing, page loads to login)
+    return;
   }
+
+  // CASE 3: No session at all — show login (default)
+  store('pendingSession', null);
 })();
 
 // ══════════════════════════════════════════════════════════════
@@ -1399,6 +1415,7 @@ function doLogin() {
 }
 
 function doLogout() {
+  stopHeartbeat();
   // Auto-clock-out if still clocked in
   if (clockedIn) performClockOut('auto');
   currentUser = null; clockedIn = false; clockInTimestamp = null;
@@ -1450,6 +1467,7 @@ function enterPortal() {
   resumeClockState();
   refreshStats();
   refreshLeaveHistory();
+  startHeartbeat();
 }
 
 // ══════════════════════════════════════════════════════════════
