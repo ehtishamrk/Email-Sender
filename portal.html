@@ -1247,6 +1247,7 @@ async function apiPost(data) {
   try {
     const res = await fetch(API, {
       method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(data)
     });
     return await res.json();
@@ -1262,10 +1263,48 @@ let clockedIn = false;
 let clockInTimestamp = null;
 // ── AUTO-RESTORE SESSION ON REFRESH ──
 (function restoreSession() {
-  const saved = load('session', null);
-  if (saved && saved.id && EMPLOYEES[saved.id]) {
-    currentUser = { id: saved.id, ...EMPLOYEES[saved.id] };
+  const pending = load('pendingSession', null);
+  const saved   = load('session', null);
+
+  // If pendingSession exists, page was refreshed — restore exactly as was
+  if (pending && pending.id && EMPLOYEES[pending.id]) {
+    store('pendingSession', null); // consume it
+    store('session', { id: pending.id }); // keep session alive
+
+    // If they were clocked in, keep them clocked in — DO NOT clock out
+    if (pending.clockedIn && pending.clockInTs) {
+      // clockState is already in localStorage from when they clocked in
+      // resumeClockState() will pick it up automatically in enterPortal()
+    }
+
+    currentUser = { id: pending.id, ...EMPLOYEES[pending.id] };
     document.addEventListener('DOMContentLoaded', () => enterPortal());
+    return;
+  }
+
+  // No pendingSession = real tab/browser close happened
+  // Clock out any active session and clear login
+  if (saved && saved.id && EMPLOYEES[saved.id]) {
+    // They closed the tab — fire clock-out to sheet silently
+    const clockState = JSON.parse(localStorage.getItem('clockState_' + saved.id) || 'null');
+    if (clockState && clockState.clockedIn && clockState.timestamp) {
+      const inTs    = clockState.timestamp;
+      const outTs   = new Date().toISOString();
+      const durMins = Math.round((new Date(outTs) - new Date(inTs)) / 60000);
+      // Push to sheet
+      fetch(API, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ action:'setClockState', empId: saved.id, clockedIn: false, timestamp: null }) }).catch(()=>{});
+      fetch(API, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ action:'updateAttClockOut', empId: saved.id, ts: inTs, outTs, duration: durMins, autoOut: true }) }).catch(()=>{});
+      // Update localStorage
+      const log = JSON.parse(localStorage.getItem('attLog_' + saved.id) || '[]');
+      for (let i = log.length-1; i >= 0; i--) {
+        if (log[i].type === 'in' && !log[i].outTs) {
+          log[i].outTs = outTs; log[i].duration = durMins; log[i].autoOut = true; break;
+        }
+      }
+      localStorage.setItem('attLog_' + saved.id, JSON.stringify(log));
+      localStorage.setItem('clockState_' + saved.id, JSON.stringify({ clockedIn: false }));
+    }
+    store('session', null); // force re-login after tab close
   }
 })();
 
@@ -1578,8 +1617,15 @@ function today() {
 // which would incorrectly wipe mid-session data when employees switch browser tabs.
 // Mark that page is actively loaded (survives refresh, dies on tab close)
 window.addEventListener('beforeunload', () => {
-  if (clockedIn && currentUser) performClockOut('auto');
-});;
+  // Save pending state — resolved on next page load
+  if (currentUser) {
+    store('pendingSession', {
+      id: currentUser.id,
+      clockedIn: clockedIn,
+      clockInTs: clockInTimestamp ? clockInTimestamp.toISOString() : null
+    });
+  }
+});
 
 // ══════════════════════════════════════════════════════════════
 //  STATS
