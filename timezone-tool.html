@@ -1282,16 +1282,16 @@ function parseCSV(text){
   for(var i=start;i<lines.length;i++){
     var parts = lines[i].split(',').map(function(s){return s.trim().replace(/^"|"$/g,'');});
     if(parts.length < 2) continue;
-    results.push({
-      mc: parts[0]||'',
-      entityStatus: parts[1]||'',
-      power: parts[2]||'',
-      driver: parts[3]||'',
-      company: parts[4]||'',
-      address: parts[5]||'',
-      phone: parts[6]||'',
-      email: parts[7]||''
-    });
+   results.push({
+  mc:       p[0]||'',
+  entity:   p[1]||'',
+  status:   p[2]||'',
+  power:    p[3]||'',
+  company:  p[4]||'',
+  address:  p[5]||'',
+  phone:    p[6]||'',
+  email:    p[7]||''
+});
   }
   return results;
 }
