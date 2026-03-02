@@ -3,410 +3,663 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Haulxify — US Time Tool</title>
+  <title>Haulxify — Dispatch Tool</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --gold: #F5A623; --gold-light: #FFF3DC;
+      --gold: #F5A623; --gold-light: #FFF3DC; --gold-dark: #C87D0A;
       --bg: #F4F1EC; --bg2: #EDE9E1; --surface: #FFFFFF;
       --border: #E8E3DA; --border2: #D9D3C8;
       --text: #1A1714; --text-mid: #5A5550; --text-muted: #9B958D;
-      --red: #E84545; --green: #22C55E;
+      --red: #E84545; --green: #22C55E; --blue: #3B82F6;
       --shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
       --shadow-lg: 0 12px 48px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.06);
+      --radius: 16px;
     }
+    html { scroll-behavior: smooth; }
     body { background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); min-height: 100vh; }
     body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; }
 
-    .topnav { background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 64px; position: sticky; top: 0; z-index: 200; }
-    .nav-left { display: flex; align-items: center; gap: 14px; }
-    .nav-logo-mark { width: 36px; height: 36px; background: var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800; color: #111; }
-    .nav-logo-text { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; }
-    .nav-badge { font-size: 10px; background: var(--gold-light); color: var(--gold); border-radius: 20px; padding: 3px 10px; font-weight: 600; }
-    .nav-back { background: var(--bg2); border: 1.5px solid var(--border2); border-radius: 10px; padding: 8px 16px; font-size: 12px; font-weight: 600; color: var(--text-mid); text-decoration: none; transition: all 0.18s; }
-    .nav-back:hover { border-color: var(--gold); color: var(--gold); }
+    /* ═══════════════════════════════════════════
+       NAV
+    ═══════════════════════════════════════════ */
+    .nav {
+      background: rgba(26,23,20,0.96);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding: 0 28px;
+      display: flex; align-items: center; gap: 0;
+      height: 58px; position: sticky; top: 0; z-index: 300;
+    }
+    .nav-brand { display: flex; align-items: center; gap: 10px; margin-right: 28px; flex-shrink: 0; }
+    .nav-mark { width: 30px; height: 30px; background: var(--gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 800; color: #111; }
+    .nav-name { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; color: #FFF; }
+    .nav-sep { width: 1px; height: 24px; background: rgba(255,255,255,0.1); margin: 0 20px; flex-shrink: 0; }
 
-    .hero { background: linear-gradient(135deg, #1A1714 0%, #2D2520 50%, #1A1714 100%); padding: 48px 40px 44px; position: relative; overflow: hidden; }
-    .hero::before { content: ''; position: absolute; top: -60px; right: -60px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(245,166,35,0.15) 0%, transparent 70%); pointer-events: none; }
-    .hero-inner { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; }
-    .hero-eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: rgba(245,166,35,0.7); margin-bottom: 10px; }
-    .hero-title { font-family: 'Syne', sans-serif; font-size: clamp(28px,4vw,44px); font-weight: 800; color: #FFF; line-height: 1.1; margin-bottom: 10px; letter-spacing: -1px; }
-    .hero-title .gold { color: var(--gold); }
-    .hero-sub { font-size: 14px; color: rgba(255,255,255,0.45); max-width: 480px; }
+    /* Clock strip */
+    .nav-clocks { display: flex; align-items: center; gap: 4px; flex: 1; overflow-x: auto; scrollbar-width: none; }
+    .nav-clocks::-webkit-scrollbar { display: none; }
+    .nav-clock {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 12px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.07);
+      transition: background 0.18s; flex-shrink: 0; cursor: default;
+    }
+    .nav-clock:hover { background: rgba(255,255,255,0.06); }
+    .nav-clock-zone { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(255,255,255,0.35); }
+    .nav-clock-time { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: #FFF; letter-spacing: -0.3px; }
+    .nav-clock.pkt { border-color: rgba(245,166,35,0.25); background: rgba(245,166,35,0.08); }
+    .nav-clock.pkt .nav-clock-zone { color: rgba(245,166,35,0.6); }
+    .nav-clock.pkt .nav-clock-time { color: var(--gold); }
 
-    .main { max-width: 1100px; margin: 0 auto; padding: 36px 40px 60px; position: relative; z-index: 1; }
-    .card-box { background: var(--surface); border-radius: 20px; border: 1.5px solid var(--border); padding: 32px; box-shadow: var(--shadow); margin-bottom: 20px; }
-    .section-label { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 20px; }
+    .nav-right { display: flex; align-items: center; gap: 10px; margin-left: 16px; flex-shrink: 0; }
+    .nav-emp { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.35); padding: 5px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; }
+    .nav-back { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.5); text-decoration: none; padding: 6px 14px; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; transition: all 0.18s; white-space: nowrap; }
+    .nav-back:hover { color: #FFF; border-color: rgba(255,255,255,0.3); }
 
-    /* ZONES */
-    .zones-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
-    .zone-card { background: var(--bg2); border-radius: 16px; border: 1.5px solid var(--border); padding: 20px 22px; transition: all 0.2s; }
-    .zone-card:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
-    .zone-name { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--text-mid); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-    .zone-time { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -1.5px; line-height: 1; margin-bottom: 4px; }
-    .zone-date { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
-    .zone-states { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
-    .zone-offset { display: inline-block; font-size: 10px; font-weight: 600; background: var(--gold-light); color: #8B5200; padding: 2px 8px; border-radius: 20px; margin-bottom: 8px; }
-    .pkt-card { background: linear-gradient(135deg, #1A1714, #2D2520); border: 1.5px solid #3D3830; }
-    .pkt-card .zone-name { color: rgba(245,166,35,0.7); }
-    .pkt-card .zone-time { color: #FFF; }
-    .pkt-card .zone-date { color: rgba(255,255,255,0.4); }
-    .pkt-card .zone-offset { background: rgba(245,166,35,0.15); color: var(--gold); }
+    /* ═══════════════════════════════════════════
+       PAGE LAYOUT
+    ═══════════════════════════════════════════ */
+    .page { max-width: 1060px; margin: 0 auto; padding: 32px 28px 80px; position: relative; z-index: 1; }
 
-    /* INPUTS */
-    .field-label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-mid); margin-bottom: 8px; }
-    .field-input { width: 100%; background: var(--bg2); border: 1.5px solid var(--border); border-radius: 12px; padding: 13px 16px; font-size: 14px; color: var(--text); outline: none; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
+    /* TAB BAR */
+    .tab-bar { display: flex; gap: 6px; margin-bottom: 28px; background: var(--bg2); padding: 5px; border-radius: 14px; width: fit-content; }
+    .tab-btn { padding: 9px 22px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: none; color: var(--text-muted); font-family: 'DM Sans', sans-serif; transition: all 0.18s; }
+    .tab-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ═══════════════════════════════════════════
+       CARDS
+    ═══════════════════════════════════════════ */
+    .card { background: var(--surface); border-radius: 20px; border: 1.5px solid var(--border); padding: 28px 32px; box-shadow: var(--shadow); margin-bottom: 18px; }
+    .card-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+
+    /* ═══════════════════════════════════════════
+       INPUTS
+    ═══════════════════════════════════════════ */
+    .field { margin-bottom: 16px; }
+    .field-label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: var(--text-muted); margin-bottom: 7px; }
+    .field-input {
+      width: 100%; background: var(--bg2); border: 1.5px solid var(--border);
+      border-radius: 11px; padding: 12px 15px; font-size: 14px; color: var(--text);
+      outline: none; font-family: 'DM Sans', sans-serif; transition: all 0.2s;
+    }
     .field-input::placeholder { color: var(--text-muted); }
-    .field-input:focus { border-color: var(--gold); background: var(--surface); box-shadow: 0 0 0 4px rgba(245,166,35,0.12); }
+    .field-input:focus { border-color: var(--gold); background: #FFF; box-shadow: 0 0 0 3px rgba(245,166,35,0.1); }
+    textarea.field-input { resize: vertical; min-height: 80px; }
+    select.field-input { cursor: pointer; }
 
-    /* AUTOCOMPLETE */
+    /* BUTTONS */
+    .btn-gold { background: var(--gold); color: #111; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; padding: 12px 22px; border: none; border-radius: 11px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .btn-gold:hover { background: #FFB83A; transform: translateY(-1px); }
+    .btn-dark { background: var(--text); color: #FFF; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; padding: 12px 22px; border: none; border-radius: 11px; cursor: pointer; transition: all 0.2s; }
+    .btn-dark:hover { background: #2D2926; }
+    .btn-outline { background: transparent; color: var(--text-mid); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; padding: 11px 20px; border: 1.5px solid var(--border2); border-radius: 11px; cursor: pointer; transition: all 0.18s; }
+    .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* GRID */
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+    /* ═══════════════════════════════════════════
+       AUTOCOMPLETE
+    ═══════════════════════════════════════════ */
     .ac-wrap { position: relative; }
-    .ac-dd { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); z-index: 500; max-height: 280px; overflow-y: auto; display: none; }
+    .ac-dd { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); z-index: 500; max-height: 260px; overflow-y: auto; display: none; }
     .ac-dd.open { display: block; }
-    .ac-item { padding: 11px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); transition: background 0.12s; }
+    .ac-item { padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
     .ac-item:last-child { border-bottom: none; }
     .ac-item:hover, .ac-item.hi { background: var(--gold-light); }
-    .ac-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .ac-name { font-size: 13px; font-weight: 600; color: var(--text); }
     .ac-meta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
     .ac-abbr { color: var(--gold); font-weight: 700; }
-    .ac-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
+    .ac-badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
     .ac-badge.et  { background:#EFF6FF; color:#1D4ED8; }
     .ac-badge.ct  { background:#F0FFF5; color:#15803D; }
     .ac-badge.mt  { background:#FFF7ED; color:#C2410C; }
     .ac-badge.pt  { background:#F5F3FF; color:#7C3AED; }
     .ac-badge.az  { background:#FFF3DC; color:#8B5200; }
-    .ac-badge.akt { background:#F0F9FF; color:#0369A1; }
-    .ac-badge.hst { background:#FDF4FF; color:#86198F; }
-    .ac-none { padding: 16px; font-size: 13px; color: var(--text-muted); text-align: center; }
+    .ac-none { padding: 14px; font-size: 12px; color: var(--text-muted); text-align: center; }
 
-    /* BUTTONS */
-    .btn-gold { background: var(--gold); color: #111; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; padding: 13px 24px; border: none; border-radius: 12px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
-    .btn-gold:hover { background: #FFB83A; }
-    .btn-dark { background: var(--text); color: #FFF; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; padding: 13px 24px; border: none; border-radius: 12px; cursor: pointer; transition: all 0.2s; width: 100%; margin-top: 16px; }
-    .btn-dark:hover { background: #2D2926; }
+    /* ═══════════════════════════════════════════
+       TIME LOOKUP PANEL
+    ═══════════════════════════════════════════ */
+    .lookup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+    .lookup-left { }
+    .lookup-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+    .chip { background: var(--bg2); border: 1.5px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 11px; font-weight: 600; color: var(--text-mid); cursor: pointer; transition: all 0.15s; }
+    .chip:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-light); }
 
-    /* SEARCH */
-    .search-row { display: flex; gap: 10px; margin-bottom: 20px; }
-    .search-row .ac-wrap { flex: 1; }
-    .quick-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-    .qchip { background: var(--bg2); border: 1.5px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: 12px; font-weight: 600; color: var(--text-mid); cursor: pointer; transition: all 0.18s; }
-    .qchip:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-light); }
+    .lookup-result {
+      background: linear-gradient(135deg, #1A1714, #2D2520);
+      border-radius: 18px; padding: 24px 26px; display: none;
+    }
+    .lookup-result.show { display: block; }
+    .lr-location { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: #FFF; margin-bottom: 3px; }
+    .lr-tz { font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 20px; }
+    .lr-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .lr-block-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: rgba(255,255,255,0.35); margin-bottom: 6px; }
+    .lr-time { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; letter-spacing: -1px; }
+    .lr-time.us { color: #FFF; }
+    .lr-time.pk { color: var(--gold); }
+    .lr-date { font-size: 11px; margin-top: 3px; color: rgba(255,255,255,0.35); }
+    .lr-div { width: 1px; background: rgba(255,255,255,0.08); margin: 0 4px; }
 
-    .search-result { background: var(--bg2); border-radius: 14px; border: 1.5px solid var(--border); padding: 20px 24px; display: none; margin-top: 16px; }
-    .search-result.show { display: block; }
-    .res-location { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; margin-bottom: 4px; }
-    .res-tz { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
-    .res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .res-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted); margin-bottom: 6px; }
-    .res-time { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -1px; }
-    .res-date { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-
-    /* CONVERTER */
-    .conv-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: end; }
-    .conv-arrow { display: flex; align-items: center; justify-content: center; }
-    .conv-arrow-icon { width: 40px; height: 40px; background: var(--gold-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--gold); }
-    .conv-result { margin-top: 16px; padding: 20px 24px; background: linear-gradient(135deg, #1A1714, #2D2520); border-radius: 14px; display: none; }
+    /* ═══════════════════════════════════════════
+       CONVERTER PANEL
+    ═══════════════════════════════════════════ */
+    .conv-wrap { display: grid; grid-template-columns: 1fr auto 1fr; gap: 18px; align-items: end; margin-bottom: 18px; }
+    .conv-arrow { display: flex; align-items: center; justify-content: center; padding-bottom: 2px; }
+    .arrow-icon { width: 36px; height: 36px; background: var(--gold-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--gold); }
+    .conv-result { background: linear-gradient(135deg, #1A1714, #2D2520); border-radius: 18px; padding: 24px 28px; display: none; }
     .conv-result.show { display: block; }
-    .conv-res-lbl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(245,166,35,0.6); margin-bottom: 8px; }
-    .conv-res-time { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; color: #FFF; letter-spacing: -1.5px; margin-bottom: 4px; }
-    .conv-res-date { font-size: 13px; color: rgba(255,255,255,0.4); }
-    .conv-res-sum { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 12px; color: rgba(255,255,255,0.35); }
+    .cr-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: rgba(245,166,35,0.5); margin-bottom: 10px; }
+    .cr-time { font-family: 'Syne', sans-serif; font-size: 44px; font-weight: 800; color: #FFF; letter-spacing: -2px; line-height: 1; margin-bottom: 6px; }
+    .cr-date { font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 14px; }
+    .cr-sum { font-size: 12px; color: rgba(255,255,255,0.3); padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); }
+    .sel-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--gold-light); border: 1.5px solid rgba(245,166,35,0.4); border-radius: 20px; padding: 4px 12px; font-size: 11px; font-weight: 600; color: #8B5200; margin-bottom: 8px; }
+    .sel-x { cursor: pointer; font-size: 15px; color: var(--gold); line-height: 1; }
 
-    /* SELECTED TAG */
-    .sel-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--gold-light); border: 1.5px solid var(--gold); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; color: #8B5200; margin-bottom: 8px; }
-    .sel-tag-x { cursor: pointer; font-size: 16px; line-height: 1; color: var(--gold); }
+    .err { color: var(--red); font-size: 12px; margin-top: 8px; display: none; }
+    .err.show { display: block; }
 
-    .err-msg { color: var(--red); font-size: 13px; margin-top: 10px; display: none; }
-    .err-msg.show { display: block; }
+    /* ═══════════════════════════════════════════
+       APPOINTMENT PANEL
+    ═══════════════════════════════════════════ */
+    .appt-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+    .appt-top-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; }
+    .appt-top-sub { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
 
-    @media (max-width: 640px) {
-      .hero { padding: 32px 24px; } .main { padding: 24px 20px 48px; }
-      .conv-row { grid-template-columns: 1fr; } .conv-arrow { display: none; }
-      .res-grid { grid-template-columns: 1fr; } .zones-grid { grid-template-columns: 1fr 1fr; }
-      .topnav { padding: 0 20px; } .search-row { flex-direction: column; }
+    /* TODAY strip */
+    .today-strip { background: linear-gradient(135deg, #1A1714, #2D2520); border-radius: 18px; padding: 20px 24px; margin-bottom: 18px; }
+    .today-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: rgba(245,166,35,0.6); margin-bottom: 12px; }
+    .today-empty { font-size: 13px; color: rgba(255,255,255,0.3); }
+    .today-list { display: flex; flex-direction: column; gap: 10px; }
+    .today-card {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px; padding: 14px 18px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .tc-time { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: var(--gold); min-width: 80px; }
+    .tc-info { flex: 1; }
+    .tc-name { font-size: 14px; font-weight: 600; color: #FFF; }
+    .tc-meta { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+    .tc-badge { font-size: 10px; font-weight: 700; background: rgba(245,166,35,0.15); color: var(--gold); padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+
+    /* Search + list */
+    .appt-search-row { display: flex; gap: 10px; margin-bottom: 18px; }
+    .appt-search-row .field-input { flex: 1; }
+
+    .appt-list { display: flex; flex-direction: column; gap: 10px; }
+    .appt-card {
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: 14px; padding: 16px 20px;
+      display: flex; align-items: center; gap: 16px;
+      transition: border-color 0.18s;
+    }
+    .appt-card:hover { border-color: var(--gold); }
+    .appt-date-badge { min-width: 52px; text-align: center; background: var(--bg2); border-radius: 10px; padding: 8px; }
+    .adb-month { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+    .adb-day { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: var(--text); line-height: 1; }
+    .appt-info { flex: 1; }
+    .ai-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .ai-meta { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+    .ai-comment { font-size: 11px; color: var(--text-mid); margin-top: 4px; font-style: italic; }
+    .appt-time { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); text-align: right; }
+    .appt-time-tz { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+    /* NEW APPT FORM */
+    .form-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: var(--text-muted); margin: 20px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .form-section-title:first-child { margin-top: 0; }
+
+    /* MODAL */
+    .modal-bg { display: none; position: fixed; inset: 0; background: rgba(26,23,20,0.5); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 24px; }
+    .modal-bg.show { display: flex; }
+    .modal { background: var(--surface); border-radius: 24px; padding: 36px; width: 100%; max-width: 580px; box-shadow: var(--shadow-lg); max-height: 90vh; overflow-y: auto; }
+    .modal-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+    .modal-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+
+    /* SUCCESS */
+    .success-banner { background: #F0FFF5; border: 1.5px solid #BBF7D0; border-radius: 12px; padding: 14px 18px; font-size: 13px; color: #15803D; display: none; margin-top: 14px; }
+    .success-banner.show { display: block; }
+
+    /* EMPTY STATE */
+    .empty { text-align: center; padding: 40px 24px; color: var(--text-muted); }
+    .empty-icon { font-size: 32px; margin-bottom: 10px; opacity: 0.4; }
+    .empty-txt { font-size: 13px; }
+
+    /* PKT badge */
+    .pkt-note { display: inline-flex; align-items: center; gap: 5px; background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.3); border-radius: 8px; padding: 6px 12px; font-size: 11px; color: var(--gold-dark); font-weight: 600; margin-top: 8px; }
+
+    @media (max-width: 700px) {
+      .lookup-grid { grid-template-columns: 1fr; }
+      .conv-wrap { grid-template-columns: 1fr; }
+      .conv-arrow { display: none; }
+      .g2, .g3 { grid-template-columns: 1fr; }
+      .lr-row { grid-template-columns: 1fr; }
+      .page { padding: 20px 16px 60px; }
+      .nav { padding: 0 16px; }
+      .nav-clocks { gap: 2px; }
+      .nav-clock { padding: 5px 8px; }
     }
   </style>
 </head>
 <body>
 
-<div class="topnav">
-  <div class="nav-left">
-    <div class="nav-logo-mark">H</div>
-    <div class="nav-logo-text">Haulxify</div>
-    <div class="nav-badge">US Time Tool</div>
+<!-- ═══════════════════════════════════════════
+     NAV
+═══════════════════════════════════════════ -->
+<nav class="nav">
+  <div class="nav-brand">
+    <div class="nav-mark">H</div>
+    <span class="nav-name">Haulxify</span>
   </div>
-  <a href="portal.html" class="nav-back">← Back to Portal</a>
-</div>
-
-<div class="hero">
-  <div class="hero-inner">
-    <div class="hero-eyebrow">Dispatch Support</div>
-    <div class="hero-title">US Time Zones &<br><span class="gold">Pakistan Converter</span></div>
-    <div class="hero-sub">Know exactly what time it is for any US driver — and convert their local time to Pakistan Standard Time instantly.</div>
+  <div class="nav-sep"></div>
+  <div class="nav-clocks" id="navClocks">
+    <!-- populated by JS -->
   </div>
-</div>
-
-<div class="main">
-
-  <!-- LIVE CLOCKS -->
-  <div class="card-box">
-    <div class="section-label">🕐 Live US Time Zones + Pakistan</div>
-    <div class="zones-grid" id="zonesGrid"></div>
+  <div class="nav-right">
+    <div class="nav-emp" id="navEmp">—</div>
+    <a href="portal.html" class="nav-back">← Portal</a>
   </div>
+</nav>
 
-  <!-- CITY SEARCH -->
-  <div class="card-box">
-    <div class="section-label">🔍 Look Up Any US City or State</div>
-    <div class="search-row">
-      <div class="ac-wrap" id="sw1">
-        <input class="field-input" id="inp1" type="text" autocomplete="off"
-          placeholder="Type city, state or abbreviation — e.g. NV, TX, Las Vegas, NYC..."
-          oninput="acInput('inp1','dd1')"
-          onkeydown="acKey(event,'inp1','dd1',doSearch)">
-        <div class="ac-dd" id="dd1"></div>
-      </div>
-      <button class="btn-gold" onclick="doSearch()">Check Time →</button>
-    </div>
-    <div class="quick-chips" style="margin-bottom:0;">
-      <span class="qchip" onclick="quickFill('inp1','dd1','New York',doSearch)">New York</span>
-      <span class="qchip" onclick="quickFill('inp1','dd1','Los Angeles',doSearch)">Los Angeles</span>
-      <span class="qchip" onclick="quickFill('inp1','dd1','Chicago',doSearch)">Chicago</span>
-      <span class="qchip" onclick="quickFill('inp1','dd1','Houston',doSearch)">Houston</span>
-      <span class="qchip" onclick="quickFill('inp1','dd1','Phoenix',doSearch)">Phoenix</span>
-      <span class="qchip" onclick="quickFill('inp1','dd1','Nevada',doSearch)">Nevada</span>
-      <span class="qchip" onclick="quickFill('inp1','dd1','Texas',doSearch)">Texas</span>
-      <span class="qchip" onclick="quickFill('inp1','dd1','Florida',doSearch)">Florida</span>
-      <span class="qchip" onclick="quickFill('inp1','dd1','California',doSearch)">California</span>
-      <span class="qchip" onclick="quickFill('inp1','dd1','Denver',doSearch)">Denver</span>
-      <span class="qchip" onclick="quickFill('inp1','dd1','Seattle',doSearch)">Seattle</span>
-      <span class="qchip" onclick="quickFill('inp1','dd1','Atlanta',doSearch)">Atlanta</span>
-      <span class="qchip" onclick="quickFill('inp1','dd1','Alaska',doSearch)">Alaska</span>
-      <span class="qchip" onclick="quickFill('inp1','dd1','Hawaii',doSearch)">Hawaii</span>
-      <span class="qchip" onclick="quickFill('inp1','dd1','Memphis',doSearch)">Memphis</span>
-      <span class="qchip" onclick="quickFill('inp1','dd1','Detroit',doSearch)">Detroit</span>
-    </div>
-    <div class="err-msg" id="err1">Location not found. Try full name or 2-letter abbreviation (e.g. NV, CA, TX).</div>
-    <div class="search-result" id="res1">
-      <div class="res-location" id="res1loc"></div>
-      <div class="res-tz" id="res1tz"></div>
-      <div class="res-grid">
-        <div>
-          <div class="res-lbl">🇺🇸 Local Time</div>
-          <div class="res-time" id="res1us"></div>
-          <div class="res-date" id="res1usd"></div>
-        </div>
-        <div>
-          <div class="res-lbl">🇵🇰 Pakistan Time (PKT)</div>
-          <div class="res-time" id="res1pk"></div>
-          <div class="res-date" id="res1pkd"></div>
-        </div>
-      </div>
-    </div>
+<!-- ═══════════════════════════════════════════
+     PAGE
+═══════════════════════════════════════════ -->
+<div class="page">
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('tabTime',this)">🕐 Time Lookup</button>
+    <button class="tab-btn" onclick="switchTab('tabConvert',this)">🔄 Converter</button>
+    <button class="tab-btn" onclick="switchTab('tabAppt',this)">📅 Appointments</button>
   </div>
 
-  <!-- CONVERTER -->
-  <div class="card-box">
-    <div class="section-label">📞 Driver Says "Call me at..." → What time in Pakistan?</div>
-    <div class="conv-row">
+  <!-- ════════ TAB: TIME LOOKUP ════════ -->
+  <div class="tab-panel active" id="tabTime">
+    <div class="lookup-grid">
+      <!-- LEFT: search -->
       <div>
-        <label class="field-label">Driver's State / City</label>
-        <div id="convTag" style="display:none;margin-bottom:8px;"></div>
-        <div class="ac-wrap" id="sw2">
-          <input class="field-input" id="inp2" type="text" autocomplete="off"
-            placeholder="Type state, city or abbreviation — e.g. NV, California, Dallas..."
-            oninput="acInput('inp2','dd2')"
-            onkeydown="acKey(event,'inp2','dd2',convertTime)">
-          <div class="ac-dd" id="dd2"></div>
+        <div class="card">
+          <div class="card-title">🔍 City or State Lookup</div>
+          <div class="field">
+            <label class="field-label">Search Location</label>
+            <div class="ac-wrap">
+              <input class="field-input" id="luInp" type="text" autocomplete="off"
+                placeholder="Type city, state or abbreviation — e.g. NV, NYC, Texas..."
+                oninput="acInput('luInp','luDd')"
+                onkeydown="acKey(event,'luInp','luDd',doLookup)">
+              <div class="ac-dd" id="luDd"></div>
+            </div>
+          </div>
+          <button class="btn-gold" style="width:100%;" onclick="doLookup()">Look Up Time →</button>
+
+          <div class="lookup-chips" id="quickChips">
+            <span class="chip" onclick="qFill('luInp','luDd','Nevada',doLookup)">NV</span>
+            <span class="chip" onclick="qFill('luInp','luDd','Texas',doLookup)">TX</span>
+            <span class="chip" onclick="qFill('luInp','luDd','California',doLookup)">CA</span>
+            <span class="chip" onclick="qFill('luInp','luDd','Florida',doLookup)">FL</span>
+            <span class="chip" onclick="qFill('luInp','luDd','New York',doLookup)">NY</span>
+            <span class="chip" onclick="qFill('luInp','luDd','Illinois',doLookup)">IL</span>
+            <span class="chip" onclick="qFill('luInp','luDd','Georgia',doLookup)">GA</span>
+            <span class="chip" onclick="qFill('luInp','luDd','Tennessee',doLookup)">TN</span>
+            <span class="chip" onclick="qFill('luInp','luDd','Colorado',doLookup)">CO</span>
+            <span class="chip" onclick="qFill('luInp','luDd','Arizona',doLookup)">AZ</span>
+            <span class="chip" onclick="qFill('luInp','luDd','Washington',doLookup)">WA</span>
+            <span class="chip" onclick="qFill('luInp','luDd','Ohio',doLookup)">OH</span>
+            <span class="chip" onclick="qFill('luInp','luDd','Las Vegas',doLookup)">Las Vegas</span>
+            <span class="chip" onclick="qFill('luInp','luDd','Chicago',doLookup)">Chicago</span>
+            <span class="chip" onclick="qFill('luInp','luDd','Dallas',doLookup)">Dallas</span>
+            <span class="chip" onclick="qFill('luInp','luDd','Atlanta',doLookup)">Atlanta</span>
+            <span class="chip" onclick="qFill('luInp','luDd','Miami',doLookup)">Miami</span>
+            <span class="chip" onclick="qFill('luInp','luDd','Phoenix',doLookup)">Phoenix</span>
+          </div>
+          <div class="err" id="luErr">Location not found. Try a city name, state name, or 2-letter code.</div>
         </div>
       </div>
-      <div class="conv-arrow"><div class="conv-arrow-icon">→</div></div>
+
+      <!-- RIGHT: result -->
       <div>
-        <label class="field-label">Driver's Local Time</label>
-        <input class="field-input" type="time" id="convTime" value="16:00">
+        <div class="lookup-result" id="luResult">
+          <div class="lr-location" id="lrLoc"></div>
+          <div class="lr-tz" id="lrTz"></div>
+          <div class="lr-row">
+            <div>
+              <div class="lr-block-lbl">🇺🇸 Local Time</div>
+              <div class="lr-time us" id="lrUs"></div>
+              <div class="lr-date" id="lrUsD"></div>
+            </div>
+            <div>
+              <div class="lr-block-lbl">🇵🇰 Pakistan (PKT)</div>
+              <div class="lr-time pk" id="lrPk"></div>
+              <div class="lr-date" id="lrPkD"></div>
+            </div>
+          </div>
+        </div>
+        <!-- placeholder before first search -->
+        <div id="luPlaceholder" style="background:var(--bg2);border-radius:18px;padding:40px 24px;text-align:center;border:1.5px dashed var(--border2);">
+          <div style="font-size:28px;margin-bottom:10px;opacity:0.3;">🗺️</div>
+          <div style="font-size:13px;color:var(--text-muted);">Search a US city or state to see<br>local time and Pakistan time side by side</div>
+        </div>
       </div>
-    </div>
-    <button class="btn-dark" onclick="convertTime()">Convert to Pakistan Time →</button>
-    <div class="err-msg" id="err2">Please select a location first.</div>
-    <div class="conv-result" id="convResult">
-      <div class="conv-res-lbl">🇵🇰 Pakistan Standard Time (PKT, UTC+5)</div>
-      <div class="conv-res-time" id="convPk"></div>
-      <div class="conv-res-date" id="convPkD"></div>
-      <div class="conv-res-sum" id="convSum"></div>
     </div>
   </div>
 
+  <!-- ════════ TAB: CONVERTER ════════ -->
+  <div class="tab-panel" id="tabConvert">
+    <div class="card">
+      <div class="card-title">🔄 Convert Driver's Local Time → Pakistan Time</div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:22px;margin-top:-8px;">Driver says "call me at 4 PM" — enter their location and time to instantly get Pakistan time.</p>
+
+      <div class="conv-wrap">
+        <div>
+          <label class="field-label">Driver's Location</label>
+          <div id="convSelTag" style="display:none;margin-bottom:8px;"></div>
+          <div class="ac-wrap">
+            <input class="field-input" id="cvInp" type="text" autocomplete="off"
+              placeholder="State, city or abbreviation — e.g. NV, Texas, Dallas..."
+              oninput="acInput('cvInp','cvDd')"
+              onkeydown="acKey(event,'cvInp','cvDd',doConvert)">
+            <div class="ac-dd" id="cvDd"></div>
+          </div>
+        </div>
+        <div class="conv-arrow"><div class="arrow-icon">→</div></div>
+        <div>
+          <label class="field-label">Driver's Local Time</label>
+          <input class="field-input" type="time" id="cvTime" value="16:00">
+        </div>
+      </div>
+
+      <button class="btn-dark" style="width:100%;" onclick="doConvert()">Convert to Pakistan Time →</button>
+      <div class="err" id="cvErr"></div>
+
+      <div class="conv-result" id="cvResult" style="margin-top:18px;">
+        <div class="cr-lbl">🇵🇰 Pakistan Standard Time (PKT · UTC+5)</div>
+        <div class="cr-time" id="cvPkT"></div>
+        <div class="cr-date" id="cvPkD"></div>
+        <div class="cr-sum" id="cvSum"></div>
+      </div>
+    </div>
+
+    <!-- Quick convert chips -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:14px;">⚡ Quick States</div>
+      <div class="lookup-chips">
+        <span class="chip" onclick="qFill('cvInp','cvDd','Nevada',doConvert)">Nevada (PT)</span>
+        <span class="chip" onclick="qFill('cvInp','cvDd','Texas',doConvert)">Texas (CT)</span>
+        <span class="chip" onclick="qFill('cvInp','cvDd','California',doConvert)">California (PT)</span>
+        <span class="chip" onclick="qFill('cvInp','cvDd','Florida',doConvert)">Florida (ET)</span>
+        <span class="chip" onclick="qFill('cvInp','cvDd','New York',doConvert)">New York (ET)</span>
+        <span class="chip" onclick="qFill('cvInp','cvDd','Illinois',doConvert)">Illinois (CT)</span>
+        <span class="chip" onclick="qFill('cvInp','cvDd','Georgia',doConvert)">Georgia (ET)</span>
+        <span class="chip" onclick="qFill('cvInp','cvDd','Tennessee',doConvert)">Tennessee (CT)</span>
+        <span class="chip" onclick="qFill('cvInp','cvDd','Arizona',doConvert)">Arizona (AZ)</span>
+        <span class="chip" onclick="qFill('cvInp','cvDd','Colorado',doConvert)">Colorado (MT)</span>
+        <span class="chip" onclick="qFill('cvInp','cvDd','Washington',doConvert)">Washington (PT)</span>
+        <span class="chip" onclick="qFill('cvInp','cvDd','Ohio',doConvert)">Ohio (ET)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ TAB: APPOINTMENTS ════════ -->
+  <div class="tab-panel" id="tabAppt">
+
+    <div class="appt-top">
+      <div>
+        <div class="appt-top-title">📅 Appointments</div>
+        <div class="appt-top-sub">Your booked appointments — private to your employee ID</div>
+      </div>
+      <button class="btn-gold" onclick="openApptModal()">+ Set Appointment</button>
+    </div>
+
+    <!-- Today -->
+    <div class="today-strip">
+      <div class="today-lbl">Today · <span id="todayDateLbl"></span></div>
+      <div id="todayList"><div class="today-empty">No appointments today.</div></div>
+    </div>
+
+    <!-- Search + all -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px;">All Appointments</div>
+      <div class="appt-search-row">
+        <input class="field-input" id="apptSearch" type="text" placeholder="Search by name, MC#, company, date..." oninput="filterAppts()">
+      </div>
+      <div id="apptList"><div class="empty"><div class="empty-icon">📋</div><div class="empty-txt">No appointments yet. Set one using the button above.</div></div></div>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<!-- ═══════════════════════════════════════════
+     NEW APPOINTMENT MODAL
+═══════════════════════════════════════════ -->
+<div class="modal-bg" id="apptModal">
+  <div class="modal">
+    <div class="modal-title">Set New Appointment</div>
+    <div class="modal-sub">Fill in the carrier details. This appointment will be saved to your account only.</div>
+
+    <div class="form-section-title">Carrier Information</div>
+    <div class="g2">
+      <div class="field">
+        <label class="field-label">MC Number *</label>
+        <input class="field-input" id="fMC" type="text" placeholder="e.g. MC-123456">
+      </div>
+      <div class="field">
+        <label class="field-label">Company Name *</label>
+        <input class="field-input" id="fCompany" type="text" placeholder="e.g. Fast Freight LLC">
+      </div>
+    </div>
+    <div class="g2">
+      <div class="field">
+        <label class="field-label">Contact Person *</label>
+        <input class="field-input" id="fPerson" type="text" placeholder="Full name">
+      </div>
+      <div class="field">
+        <label class="field-label">Phone Number *</label>
+        <input class="field-input" id="fPhone" type="tel" placeholder="+1 (555) 000-0000">
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Truck Type</label>
+      <select class="field-input" id="fTruck">
+        <option value="">Select truck type...</option>
+        <option>Dry Van</option>
+        <option>Reefer</option>
+        <option>Flatbed</option>
+        <option>Step Deck</option>
+        <option>Lowboy</option>
+        <option>Box Truck</option>
+        <option>Tanker</option>
+        <option>Car Carrier</option>
+        <option>Hotshot</option>
+        <option>Other</option>
+      </select>
+    </div>
+
+    <div class="form-section-title">Appointment Details</div>
+    <div class="g2">
+      <div class="field">
+        <label class="field-label">Date *</label>
+        <input class="field-input" id="fDate" type="date">
+      </div>
+      <div class="field">
+        <label class="field-label">Time (Driver's Local) *</label>
+        <input class="field-input" id="fTime" type="time">
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Driver's State / Time Zone</label>
+      <div class="ac-wrap">
+        <input class="field-input" id="fLocInp" type="text" autocomplete="off"
+          placeholder="Optional — for PKT reference"
+          oninput="acInput('fLocInp','fLocDd')"
+          onkeydown="acKey(event,'fLocInp','fLocDd',null)">
+        <div class="ac-dd" id="fLocDd"></div>
+      </div>
+      <div id="fPktNote" style="display:none;" class="pkt-note">🇵🇰 PKT equivalent: <strong id="fPktTime"></strong></div>
+    </div>
+    <div class="field">
+      <label class="field-label">Comments / Notes</label>
+      <textarea class="field-input" id="fComments" placeholder="Any extra details, follow-up instructions..."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-gold" style="flex:1;" onclick="saveAppt()">Save Appointment →</button>
+      <button class="btn-outline" onclick="closeApptModal()">Cancel</button>
+    </div>
+    <div class="success-banner" id="apptSuccess">✅ Appointment saved successfully!</div>
+    <div class="err" id="apptErr" style="margin-top:10px;"></div>
+  </div>
 </div>
 
 <script>
-// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+//  EMPLOYEE ID from URL param
+// ═══════════════════════════════════════════════════════════════
+const params = new URLSearchParams(window.location.search);
+const EMP_ID = params.get('emp') || 'GUEST';
+document.getElementById('navEmp').textContent = EMP_ID;
+
+// ═══════════════════════════════════════════════════════════════
 //  LOCATION DATABASE
-// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 const LOCS = [
   // States
-  {n:'Alabama',        ab:['AL'],            tz:'America/Chicago',     t:'State',zone:'ct'},
-  {n:'Alaska',         ab:['AK'],            tz:'America/Anchorage',   t:'State',zone:'akt'},
-  {n:'Arizona',        ab:['AZ'],            tz:'America/Phoenix',     t:'State',zone:'az'},
-  {n:'Arkansas',       ab:['AR'],            tz:'America/Chicago',     t:'State',zone:'ct'},
-  {n:'California',     ab:['CA'],            tz:'America/Los_Angeles', t:'State',zone:'pt'},
-  {n:'Colorado',       ab:['CO'],            tz:'America/Denver',      t:'State',zone:'mt'},
-  {n:'Connecticut',    ab:['CT'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'Delaware',       ab:['DE'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'Florida',        ab:['FL'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'Georgia',        ab:['GA'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'Hawaii',         ab:['HI'],            tz:'Pacific/Honolulu',    t:'State',zone:'hst'},
-  {n:'Idaho',          ab:['ID'],            tz:'America/Denver',      t:'State',zone:'mt'},
-  {n:'Illinois',       ab:['IL'],            tz:'America/Chicago',     t:'State',zone:'ct'},
-  {n:'Indiana',        ab:['IN'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'Iowa',           ab:['IA'],            tz:'America/Chicago',     t:'State',zone:'ct'},
-  {n:'Kansas',         ab:['KS'],            tz:'America/Chicago',     t:'State',zone:'ct'},
-  {n:'Kentucky',       ab:['KY'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'Louisiana',      ab:['LA'],            tz:'America/Chicago',     t:'State',zone:'ct'},
-  {n:'Maine',          ab:['ME'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'Maryland',       ab:['MD'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'Massachusetts',  ab:['MA','Mass'],     tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'Michigan',       ab:['MI'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'Minnesota',      ab:['MN','Minn'],     tz:'America/Chicago',     t:'State',zone:'ct'},
-  {n:'Mississippi',    ab:['MS','Miss'],     tz:'America/Chicago',     t:'State',zone:'ct'},
-  {n:'Missouri',       ab:['MO'],            tz:'America/Chicago',     t:'State',zone:'ct'},
-  {n:'Montana',        ab:['MT'],            tz:'America/Denver',      t:'State',zone:'mt'},
-  {n:'Nebraska',       ab:['NE','Neb'],      tz:'America/Chicago',     t:'State',zone:'ct'},
-  {n:'Nevada',         ab:['NV','Nev'],      tz:'America/Los_Angeles', t:'State',zone:'pt'},
-  {n:'New Hampshire',  ab:['NH'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'New Jersey',     ab:['NJ'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'New Mexico',     ab:['NM'],            tz:'America/Denver',      t:'State',zone:'mt'},
-  {n:'New York',       ab:['NY'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'North Carolina', ab:['NC'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'North Dakota',   ab:['ND'],            tz:'America/Chicago',     t:'State',zone:'ct'},
-  {n:'Ohio',           ab:['OH'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'Oklahoma',       ab:['OK'],            tz:'America/Chicago',     t:'State',zone:'ct'},
-  {n:'Oregon',         ab:['OR'],            tz:'America/Los_Angeles', t:'State',zone:'pt'},
-  {n:'Pennsylvania',   ab:['PA','Penn'],     tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'Rhode Island',   ab:['RI'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'South Carolina', ab:['SC'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'South Dakota',   ab:['SD'],            tz:'America/Chicago',     t:'State',zone:'ct'},
-  {n:'Tennessee',      ab:['TN','Tenn'],     tz:'America/Chicago',     t:'State',zone:'ct'},
-  {n:'Texas',          ab:['TX','Tex'],      tz:'America/Chicago',     t:'State',zone:'ct'},
-  {n:'Utah',           ab:['UT'],            tz:'America/Denver',      t:'State',zone:'mt'},
-  {n:'Vermont',        ab:['VT'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'Virginia',       ab:['VA'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'Washington',     ab:['WA','Wash'],     tz:'America/Los_Angeles', t:'State',zone:'pt'},
-  {n:'West Virginia',  ab:['WV'],            tz:'America/New_York',    t:'State',zone:'et'},
-  {n:'Wisconsin',      ab:['WI','Wis'],      tz:'America/Chicago',     t:'State',zone:'ct'},
-  {n:'Wyoming',        ab:['WY'],            tz:'America/Denver',      t:'State',zone:'mt'},
-  {n:'Washington DC',  ab:['DC','D.C.'],     tz:'America/New_York',    t:'State',zone:'et'},
+  {n:'Alabama',        ab:['AL'],           tz:'America/Chicago',     t:'State',z:'ct'},
+  {n:'Alaska',         ab:['AK'],           tz:'America/Anchorage',   t:'State',z:'akt'},
+  {n:'Arizona',        ab:['AZ'],           tz:'America/Phoenix',     t:'State',z:'az'},
+  {n:'Arkansas',       ab:['AR'],           tz:'America/Chicago',     t:'State',z:'ct'},
+  {n:'California',     ab:['CA'],           tz:'America/Los_Angeles', t:'State',z:'pt'},
+  {n:'Colorado',       ab:['CO'],           tz:'America/Denver',      t:'State',z:'mt'},
+  {n:'Connecticut',    ab:['CT'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'Delaware',       ab:['DE'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'Florida',        ab:['FL'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'Georgia',        ab:['GA'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'Hawaii',         ab:['HI'],           tz:'Pacific/Honolulu',    t:'State',z:'hst'},
+  {n:'Idaho',          ab:['ID'],           tz:'America/Denver',      t:'State',z:'mt'},
+  {n:'Illinois',       ab:['IL'],           tz:'America/Chicago',     t:'State',z:'ct'},
+  {n:'Indiana',        ab:['IN'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'Iowa',           ab:['IA'],           tz:'America/Chicago',     t:'State',z:'ct'},
+  {n:'Kansas',         ab:['KS'],           tz:'America/Chicago',     t:'State',z:'ct'},
+  {n:'Kentucky',       ab:['KY'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'Louisiana',      ab:['LA'],           tz:'America/Chicago',     t:'State',z:'ct'},
+  {n:'Maine',          ab:['ME'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'Maryland',       ab:['MD'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'Massachusetts',  ab:['MA','Mass'],    tz:'America/New_York',    t:'State',z:'et'},
+  {n:'Michigan',       ab:['MI'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'Minnesota',      ab:['MN','Minn'],    tz:'America/Chicago',     t:'State',z:'ct'},
+  {n:'Mississippi',    ab:['MS','Miss'],    tz:'America/Chicago',     t:'State',z:'ct'},
+  {n:'Missouri',       ab:['MO'],           tz:'America/Chicago',     t:'State',z:'ct'},
+  {n:'Montana',        ab:['MT'],           tz:'America/Denver',      t:'State',z:'mt'},
+  {n:'Nebraska',       ab:['NE','Neb'],     tz:'America/Chicago',     t:'State',z:'ct'},
+  {n:'Nevada',         ab:['NV','Nev'],     tz:'America/Los_Angeles', t:'State',z:'pt'},
+  {n:'New Hampshire',  ab:['NH'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'New Jersey',     ab:['NJ'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'New Mexico',     ab:['NM'],           tz:'America/Denver',      t:'State',z:'mt'},
+  {n:'New York',       ab:['NY'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'North Carolina', ab:['NC'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'North Dakota',   ab:['ND'],           tz:'America/Chicago',     t:'State',z:'ct'},
+  {n:'Ohio',           ab:['OH'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'Oklahoma',       ab:['OK'],           tz:'America/Chicago',     t:'State',z:'ct'},
+  {n:'Oregon',         ab:['OR'],           tz:'America/Los_Angeles', t:'State',z:'pt'},
+  {n:'Pennsylvania',   ab:['PA','Penn'],    tz:'America/New_York',    t:'State',z:'et'},
+  {n:'Rhode Island',   ab:['RI'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'South Carolina', ab:['SC'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'South Dakota',   ab:['SD'],           tz:'America/Chicago',     t:'State',z:'ct'},
+  {n:'Tennessee',      ab:['TN','Tenn'],    tz:'America/Chicago',     t:'State',z:'ct'},
+  {n:'Texas',          ab:['TX','Tex'],     tz:'America/Chicago',     t:'State',z:'ct'},
+  {n:'Utah',           ab:['UT'],           tz:'America/Denver',      t:'State',z:'mt'},
+  {n:'Vermont',        ab:['VT'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'Virginia',       ab:['VA'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'Washington',     ab:['WA','Wash'],    tz:'America/Los_Angeles', t:'State',z:'pt'},
+  {n:'West Virginia',  ab:['WV'],           tz:'America/New_York',    t:'State',z:'et'},
+  {n:'Wisconsin',      ab:['WI','Wis'],     tz:'America/Chicago',     t:'State',z:'ct'},
+  {n:'Wyoming',        ab:['WY'],           tz:'America/Denver',      t:'State',z:'mt'},
+  {n:'Washington DC',  ab:['DC'],           tz:'America/New_York',    t:'State',z:'et'},
   // Cities
-  {n:'New York City',   ab:['NYC'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Los Angeles',     ab:['LA','LAX'],     tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Chicago',         ab:['CHI'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Houston',         ab:['HOU'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Phoenix',         ab:['PHX'],          tz:'America/Phoenix',     t:'City', zone:'az'},
-  {n:'Philadelphia',    ab:['PHL','Philly'], tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'San Antonio',     ab:['SAT'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'San Diego',       ab:['SAN'],          tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Dallas',          ab:['DAL'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'San Jose',        ab:['SJC'],          tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Austin',          ab:['AUS'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Jacksonville',    ab:['JAX'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Fort Worth',      ab:['FTW'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Columbus',        ab:['CMH'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Charlotte',       ab:['CLT'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Indianapolis',    ab:['IND','Indy'],   tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'San Francisco',   ab:['SF','SFO'],     tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Seattle',         ab:['SEA'],          tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Denver',          ab:['DEN'],          tz:'America/Denver',      t:'City', zone:'mt'},
-  {n:'Nashville',       ab:['BNA'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Oklahoma City',   ab:['OKC'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'El Paso',         ab:['ELP'],          tz:'America/Denver',      t:'City', zone:'mt'},
-  {n:'Boston',          ab:['BOS'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Portland',        ab:['PDX'],          tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Las Vegas',       ab:['LAS','Vegas'],  tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Memphis',         ab:['MEM'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Louisville',      ab:['SDF'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Baltimore',       ab:['BWI','Balt'],   tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Milwaukee',       ab:['MKE'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Albuquerque',     ab:['ABQ'],          tz:'America/Denver',      t:'City', zone:'mt'},
-  {n:'Tucson',          ab:['TUS'],          tz:'America/Phoenix',     t:'City', zone:'az'},
-  {n:'Fresno',          ab:['FAT'],          tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Sacramento',      ab:['SAC'],          tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Atlanta',         ab:['ATL'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Kansas City',     ab:['MCI'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Omaha',           ab:['OMA'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Raleigh',         ab:['RDU'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Miami',           ab:['MIA'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Minneapolis',     ab:['MSP','Minny'],  tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Cleveland',       ab:['CLE'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Wichita',         ab:['ICT'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'New Orleans',     ab:['MSY','NOLA'],   tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Tampa',           ab:['TPA'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Honolulu',        ab:['HNL'],          tz:'Pacific/Honolulu',    t:'City', zone:'hst'},
-  {n:'Anchorage',       ab:['ANC'],          tz:'America/Anchorage',   t:'City', zone:'akt'},
-  {n:'Salt Lake City',  ab:['SLC'],          tz:'America/Denver',      t:'City', zone:'mt'},
-  {n:'Reno',            ab:['RNO'],          tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Baton Rouge',     ab:['BTR'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Richmond',        ab:['RIC'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Spokane',         ab:['GEG'],          tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Des Moines',      ab:['DSM'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Little Rock',     ab:['LIT'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Birmingham',      ab:['BHM'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Rochester',       ab:['ROC'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Knoxville',       ab:['TYS'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Chattanooga',     ab:['CHA'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Pittsburgh',      ab:['PIT'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Cincinnati',      ab:['CVG'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'St. Louis',       ab:['STL'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Buffalo',         ab:['BUF'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Orlando',         ab:['MCO'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Fort Lauderdale', ab:['FLL'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Norfolk',         ab:['ORF'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'McAllen',         ab:['MFE'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Madison',         ab:['MSN'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Lubbock',         ab:['LBB'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Scottsdale',      ab:[],               tz:'America/Phoenix',     t:'City', zone:'az'},
-  {n:'Mesa',            ab:[],               tz:'America/Phoenix',     t:'City', zone:'az'},
-  {n:'Tempe',           ab:[],               tz:'America/Phoenix',     t:'City', zone:'az'},
-  {n:'Gilbert',         ab:[],               tz:'America/Phoenix',     t:'City', zone:'az'},
-  {n:'Chandler',        ab:[],               tz:'America/Phoenix',     t:'City', zone:'az'},
-  {n:'Glendale',        ab:[],               tz:'America/Phoenix',     t:'City', zone:'az'},
-  {n:'Bakersfield',     ab:['BFL'],          tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Riverside',       ab:[],               tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Stockton',        ab:[],               tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Fremont',         ab:[],               tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Irvine',          ab:[],               tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Huntington Beach',ab:[],               tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Las Vegas',       ab:['LAS'],          tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Henderson',       ab:[],               tz:'America/Los_Angeles', t:'City', zone:'pt'},
-  {n:'Plano',           ab:[],               tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Arlington',       ab:[],               tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Corpus Christi',  ab:['CRP'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Shreveport',      ab:['SHV'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Nashville',       ab:['BNA'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Savannah',        ab:['SAV'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Providence',      ab:['PVD'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Fort Wayne',      ab:['FWA'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Durham',          ab:[],               tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Greensboro',      ab:['GSO'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Syracuse',        ab:['SYR'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Aurora',          ab:[],               tz:'America/Denver',      t:'City', zone:'mt'},
-  {n:'Fort Collins',    ab:[],               tz:'America/Denver',      t:'City', zone:'mt'},
-  {n:'Salt Lake City',  ab:['SLC'],          tz:'America/Denver',      t:'City', zone:'mt'},
-  {n:'Tallahassee',     ab:['TLH'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Cape Coral',      ab:[],               tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Detroit',         ab:['DTW'],          tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Akron',           ab:[],               tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Lexington',       ab:[],               tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Newark',          ab:[],               tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Jersey City',     ab:[],               tz:'America/New_York',    t:'City', zone:'et'},
-  {n:'Jackson',         ab:['JAN'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Brownsville',     ab:['BRO'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Clarksville',     ab:[],               tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Killeen',         ab:[],               tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Peoria',          ab:['PIA'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Springfield',     ab:[],               tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Fayetteville',    ab:[],               tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Laredo',          ab:['LRD'],          tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Naperville',      ab:[],               tz:'America/Chicago',     t:'City', zone:'ct'},
-  {n:'Rockford',        ab:[],               tz:'America/Chicago',     t:'City', zone:'ct'},
+  {n:'New York City',   ab:['NYC'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Los Angeles',     ab:['LA','LAX'],    tz:'America/Los_Angeles', t:'City',z:'pt'},
+  {n:'Chicago',         ab:['CHI','ORD'],   tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Houston',         ab:['HOU'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Phoenix',         ab:['PHX'],         tz:'America/Phoenix',     t:'City',z:'az'},
+  {n:'Philadelphia',    ab:['PHL','Philly'],tz:'America/New_York',    t:'City',z:'et'},
+  {n:'San Antonio',     ab:['SAT'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'San Diego',       ab:['SAN'],         tz:'America/Los_Angeles', t:'City',z:'pt'},
+  {n:'Dallas',          ab:['DAL','DFW'],   tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Austin',          ab:['AUS'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Jacksonville',    ab:['JAX'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Fort Worth',      ab:['FTW'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Columbus',        ab:['CMH'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Charlotte',       ab:['CLT'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Indianapolis',    ab:['IND','Indy'],  tz:'America/New_York',    t:'City',z:'et'},
+  {n:'San Francisco',   ab:['SF','SFO'],    tz:'America/Los_Angeles', t:'City',z:'pt'},
+  {n:'Seattle',         ab:['SEA'],         tz:'America/Los_Angeles', t:'City',z:'pt'},
+  {n:'Denver',          ab:['DEN'],         tz:'America/Denver',      t:'City',z:'mt'},
+  {n:'Nashville',       ab:['BNA'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Oklahoma City',   ab:['OKC'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Boston',          ab:['BOS'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Portland',        ab:['PDX'],         tz:'America/Los_Angeles', t:'City',z:'pt'},
+  {n:'Las Vegas',       ab:['LAS','Vegas'], tz:'America/Los_Angeles', t:'City',z:'pt'},
+  {n:'Memphis',         ab:['MEM'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Louisville',      ab:['SDF'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Baltimore',       ab:['BWI'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Milwaukee',       ab:['MKE'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Albuquerque',     ab:['ABQ'],         tz:'America/Denver',      t:'City',z:'mt'},
+  {n:'Tucson',          ab:['TUS'],         tz:'America/Phoenix',     t:'City',z:'az'},
+  {n:'Fresno',          ab:['FAT'],         tz:'America/Los_Angeles', t:'City',z:'pt'},
+  {n:'Sacramento',      ab:['SAC'],         tz:'America/Los_Angeles', t:'City',z:'pt'},
+  {n:'Atlanta',         ab:['ATL'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Kansas City',     ab:['MCI'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Raleigh',         ab:['RDU'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Miami',           ab:['MIA'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Minneapolis',     ab:['MSP'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Cleveland',       ab:['CLE'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'New Orleans',     ab:['MSY','NOLA'],  tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Tampa',           ab:['TPA'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Honolulu',        ab:['HNL'],         tz:'Pacific/Honolulu',    t:'City',z:'hst'},
+  {n:'Anchorage',       ab:['ANC'],         tz:'America/Anchorage',   t:'City',z:'akt'},
+  {n:'Salt Lake City',  ab:['SLC'],         tz:'America/Denver',      t:'City',z:'mt'},
+  {n:'Reno',            ab:['RNO'],         tz:'America/Los_Angeles', t:'City',z:'pt'},
+  {n:'Richmond',        ab:['RIC'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Pittsburgh',      ab:['PIT'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Cincinnati',      ab:['CVG'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'St. Louis',       ab:['STL'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Buffalo',         ab:['BUF'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Orlando',         ab:['MCO'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Fort Lauderdale', ab:['FLL'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Detroit',         ab:['DTW'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Atlanta',         ab:['ATL'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Corpus Christi',  ab:['CRP'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Shreveport',      ab:['SHV'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Jackson',         ab:['JAN'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Omaha',           ab:['OMA'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Wichita',         ab:['ICT'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Scottsdale',      ab:[],              tz:'America/Phoenix',     t:'City',z:'az'},
+  {n:'Mesa',            ab:[],              tz:'America/Phoenix',     t:'City',z:'az'},
+  {n:'Tempe',           ab:[],              tz:'America/Phoenix',     t:'City',z:'az'},
+  {n:'Spokane',         ab:['GEG'],         tz:'America/Los_Angeles', t:'City',z:'pt'},
+  {n:'Bakersfield',     ab:['BFL'],         tz:'America/Los_Angeles', t:'City',z:'pt'},
+  {n:'Irvine',          ab:[],              tz:'America/Los_Angeles', t:'City',z:'pt'},
+  {n:'Riverside',       ab:[],              tz:'America/Los_Angeles', t:'City',z:'pt'},
+  {n:'Knoxville',       ab:['TYS'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Chattanooga',     ab:['CHA'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Savannah',        ab:['SAV'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Greensboro',      ab:['GSO'],         tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Durham',          ab:[],              tz:'America/New_York',    t:'City',z:'et'},
+  {n:'Birmingham',      ab:['BHM'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Little Rock',     ab:['LIT'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Baton Rouge',     ab:['BTR'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Des Moines',      ab:['DSM'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'Madison',         ab:['MSN'],         tz:'America/Chicago',     t:'City',z:'ct'},
+  {n:'El Paso',         ab:['ELP'],         tz:'America/Denver',      t:'City',z:'mt'},
+  {n:'Albuquerque',     ab:['ABQ'],         tz:'America/Denver',      t:'City',z:'mt'},
+  {n:'Aurora',          ab:[],              tz:'America/Denver',      t:'City',z:'mt'},
+  {n:'Fort Collins',    ab:[],              tz:'America/Denver',      t:'City',z:'mt'},
 ];
 
 const TZ_INFO = {
@@ -419,13 +672,56 @@ const TZ_INFO = {
   'Pacific/Honolulu':    {s:'HST',f:'Hawaii Time'},
 };
 
-// ── State: selected location per widget ──
-const SEL = { dd1: null, dd2: null };
-let hi = { dd1: -1, dd2: -1 };
+// ═══════════════════════════════════════════════════════════════
+//  NAV CLOCKS
+// ═══════════════════════════════════════════════════════════════
+const NAV_ZONES = [
+  {tz:'America/New_York',    label:'ET'},
+  {tz:'America/Chicago',     label:'CT'},
+  {tz:'America/Denver',      label:'MT'},
+  {tz:'America/Phoenix',     label:'AZ'},
+  {tz:'America/Los_Angeles', label:'PT'},
+  {tz:'Asia/Karachi',        label:'PKT', pkt:true},
+];
 
-// ══════════════════════════════════════════════════════════════
-//  AUTOCOMPLETE ENGINE
-// ══════════════════════════════════════════════════════════════
+function renderNavClocks() {
+  const c = document.getElementById('navClocks');
+  c.innerHTML = NAV_ZONES.map(z => `
+    <div class="nav-clock${z.pkt?' pkt':''}">
+      <div class="nav-clock-zone">${z.label}</div>
+      <div class="nav-clock-time" id="nc_${z.label}">${fmtNav(new Date(), z.tz)}</div>
+    </div>`).join('');
+}
+function tickNav() {
+  const now = new Date();
+  NAV_ZONES.forEach(z => {
+    const el = document.getElementById('nc_' + z.label);
+    if (el) el.textContent = fmtNav(now, z.tz);
+  });
+}
+function fmtNav(d, tz) {
+  return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:true});
+}
+renderNavClocks();
+setInterval(tickNav, 1000);
+
+// ═══════════════════════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════════════════════
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'tabAppt') renderAppts();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  AUTOCOMPLETE
+// ═══════════════════════════════════════════════════════════════
+const SEL = {};
+const HI  = {};
+
 function matchLocs(q) {
   if (!q) return [];
   const ql = q.trim().toLowerCase();
@@ -433,44 +729,35 @@ function matchLocs(q) {
   LOCS.forEach(loc => {
     if (seen.has(loc.n)) return;
     const nl = loc.n.toLowerCase();
-    const abbrExact = loc.ab.some(a => a.toLowerCase() === ql);
-    const abbrStart = loc.ab.some(a => a.toLowerCase().startsWith(ql));
-    const nameStart = nl.startsWith(ql);
-    const nameHas   = nl.includes(ql);
-    if (abbrExact || abbrStart || nameStart || nameHas) {
-      let score = abbrExact ? 100 : abbrStart ? 80 : nameStart ? 60 : 20;
-      out.push({ ...loc, score });
+    const abExact = loc.ab.some(a => a.toLowerCase() === ql);
+    const abStart = loc.ab.some(a => a.toLowerCase().startsWith(ql));
+    const nStart  = nl.startsWith(ql);
+    const nHas    = nl.includes(ql);
+    if (abExact || abStart || nStart || nHas) {
+      out.push({ ...loc, score: abExact?100:abStart?80:nStart?60:20 });
       seen.add(loc.n);
     }
   });
-  return out.sort((a,b) => b.score - a.score).slice(0, 9);
+  return out.sort((a,b)=>b.score-a.score).slice(0,9);
 }
 
 function acInput(inpId, ddId) {
   const q  = document.getElementById(inpId).value;
   const dd = document.getElementById(ddId);
-  hi[ddId] = -1;
-  SEL[ddId] = null; // reset selection when user types
-
-  if (!q.trim()) { dd.classList.remove('open'); dd.innerHTML = ''; return; }
-  const matches = matchLocs(q);
-  dd._m = matches;
-
-  if (!matches.length) {
-    dd.innerHTML = '<div class="ac-none">No results — try full name or 2-letter abbreviation</div>';
-    dd.classList.add('open'); return;
-  }
-
-  dd.innerHTML = matches.map((loc, i) => {
-    const info  = TZ_INFO[loc.tz] || {};
-    const abbrH = loc.ab.length ? `<span class="ac-abbr">${loc.ab[0]}</span> · ` : '';
-    return `<div class="ac-item" data-i="${i}"
-        onmousedown="acPick('${inpId}','${ddId}',${i})">
+  HI[ddId] = -1; SEL[ddId] = null;
+  if (!q.trim()) { dd.classList.remove('open'); dd.innerHTML=''; return; }
+  const m = matchLocs(q);
+  dd._m = m;
+  if (!m.length) { dd.innerHTML='<div class="ac-none">No results — try full name or 2-letter code</div>'; dd.classList.add('open'); return; }
+  dd.innerHTML = m.map((loc,i) => {
+    const info = TZ_INFO[loc.tz]||{};
+    const ab   = loc.ab.length ? `<span class="ac-abbr">${loc.ab[0]}</span> · ` : '';
+    return `<div class="ac-item" onmousedown="acPick('${inpId}','${ddId}',${i})">
       <div style="flex:1">
         <div class="ac-name">${loc.n}</div>
-        <div class="ac-meta">${abbrH}${loc.t} · ${info.f||loc.tz}</div>
+        <div class="ac-meta">${ab}${loc.t} · ${info.f||loc.tz}</div>
       </div>
-      <span class="ac-badge ${loc.zone}">${info.s||''}</span>
+      <span class="ac-badge ${loc.z}">${info.s||''}</span>
     </div>`;
   }).join('');
   dd.classList.add('open');
@@ -478,209 +765,396 @@ function acInput(inpId, ddId) {
 
 function acPick(inpId, ddId, idx) {
   const dd  = document.getElementById(ddId);
-  const loc = (dd._m || [])[idx];
+  const loc = (dd._m||[])[idx];
   if (!loc) return;
   document.getElementById(inpId).value = loc.n;
   SEL[ddId] = loc;
   dd.classList.remove('open');
-  // Show tag in converter
-  if (ddId === 'dd2') showConvTag(loc);
+  if (ddId === 'cvDd') showCvTag(loc);
+  if (ddId === 'fLocDd') updatePktNote();
 }
 
-function acKey(e, inpId, ddId, callback) {
-  const dd    = document.getElementById(ddId);
+function acKey(e, inpId, ddId, cb) {
+  const dd = document.getElementById(ddId);
   const items = dd.querySelectorAll('.ac-item');
-  if (e.key === 'ArrowDown')  { e.preventDefault(); hi[ddId] = Math.min(hi[ddId]+1, items.length-1); hlItem(items, hi[ddId]); }
-  else if (e.key === 'ArrowUp') { e.preventDefault(); hi[ddId] = Math.max(hi[ddId]-1, 0); hlItem(items, hi[ddId]); }
-  else if (e.key === 'Enter') {
-    if (hi[ddId] >= 0 && items[hi[ddId]]) { items[hi[ddId]].dispatchEvent(new MouseEvent('mousedown')); }
-    else { dd.classList.remove('open'); callback(); }
-  }
-  else if (e.key === 'Escape') dd.classList.remove('open');
+  if (e.key==='ArrowDown')  { e.preventDefault(); HI[ddId]=Math.min((HI[ddId]||0)+1,items.length-1); hlItem(items,HI[ddId]); }
+  else if (e.key==='ArrowUp') { e.preventDefault(); HI[ddId]=Math.max((HI[ddId]||0)-1,0); hlItem(items,HI[ddId]); }
+  else if (e.key==='Enter') { if (HI[ddId]>=0&&items[HI[ddId]]) items[HI[ddId]].dispatchEvent(new MouseEvent('mousedown')); else if(cb){dd.classList.remove('open');cb();} }
+  else if (e.key==='Escape') dd.classList.remove('open');
 }
-
-function hlItem(items, idx) { items.forEach((el,i) => el.classList.toggle('hi', i===idx)); }
+function hlItem(items,idx){ items.forEach((el,i)=>el.classList.toggle('hi',i===idx)); }
 
 document.addEventListener('click', e => {
-  ['dd1','dd2'].forEach(id => {
+  ['luDd','cvDd','fLocDd'].forEach(id => {
     const dd = document.getElementById(id);
     if (dd && !dd.parentElement.contains(e.target)) dd.classList.remove('open');
   });
 });
 
-function quickFill(inpId, ddId, name, cb) {
+function qFill(inpId, ddId, name, cb) {
   document.getElementById(inpId).value = name;
-  const loc = LOCS.find(l => l.n.toLowerCase() === name.toLowerCase());
-  if (loc) { SEL[ddId] = loc; if (ddId==='dd2') showConvTag(loc); }
-  cb();
+  const loc = LOCS.find(l=>l.n.toLowerCase()===name.toLowerCase());
+  if (loc) { SEL[ddId]=loc; if(ddId==='cvDd') showCvTag(loc); }
+  if (cb) cb();
 }
 
-function showConvTag(loc) {
-  const info = TZ_INFO[loc.tz] || {};
-  const wrap = document.getElementById('convTag');
-  wrap.style.display = 'block';
-  wrap.innerHTML = `<div class="sel-tag">📍 ${loc.n} <span style="opacity:0.5;">(${info.s||''})</span>
-    <span class="sel-tag-x" onclick="clearConv()">×</span></div>`;
-}
-
-function clearConv() {
-  SEL['dd2'] = null;
-  document.getElementById('convTag').style.display = 'none';
-  document.getElementById('inp2').value = '';
-  document.getElementById('convResult').classList.remove('show');
-}
-
-// ══════════════════════════════════════════════════════════════
-//  SEARCH
-// ══════════════════════════════════════════════════════════════
-function resolveInput(inpId, ddId) {
+function resolveLoc(inpId, ddId) {
   if (SEL[ddId]) return SEL[ddId];
   const q = document.getElementById(inpId).value.trim();
   const m = matchLocs(q);
-  if (m.length) { SEL[ddId] = m[0]; document.getElementById(inpId).value = m[0].n; return m[0]; }
+  if (m.length) { SEL[ddId]=m[0]; document.getElementById(inpId).value=m[0].n; return m[0]; }
   return null;
 }
 
-function doSearch() {
-  const errEl = document.getElementById('err1');
-  const resEl = document.getElementById('res1');
-  errEl.classList.remove('show'); resEl.classList.remove('show');
+// ═══════════════════════════════════════════════════════════════
+//  TIME CONVERSION — FIXED
+//  Correct method: use Intl to get the UTC wall-clock offset
+//  for the target timezone, avoiding local-machine TZ pollution
+// ═══════════════════════════════════════════════════════════════
+function getTzOffsetMin(tz, refDate) {
+  // Returns offset in minutes (positive = ahead of UTC)
+  // Uses Intl.DateTimeFormat to get wall clock in that tz, compare to UTC
+  const fmt = (d, zone) => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone,
+      year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+    }).formatToParts(d);
+    const p = {};
+    parts.forEach(({type,value}) => p[type]=value);
+    return new Date(`${p.year}-${p.month}-${p.day}T${p.hour==='24'?'00':p.hour}:${p.minute}:${p.second}Z`);
+  };
+  const utcWall = fmt(refDate, 'UTC');
+  const tzWall  = fmt(refDate, tz);
+  return (tzWall - utcWall) / 60000;
+}
 
-  const loc = resolveInput('inp1','dd1');
-  if (!loc) { errEl.classList.add('show'); return; }
-
-  const tz  = loc.tz;
+// Convert a time (h,m) in a given tz on today's date → PKT
+// Returns { pktH, pktM, dayDiff } where dayDiff: 0=same, 1=next, -1=prev
+function convertToPKT(h, m, tz) {
+  const PKT_OFFSET = 5 * 60; // PKT is always UTC+5, no DST
   const now = new Date();
-  const info = TZ_INFO[tz] || {};
-
-  document.getElementById('res1loc').textContent = loc.n;
-  document.getElementById('res1tz').textContent  = `${info.f||tz} (${info.s||''}) — ${getOff(tz)}`;
-  document.getElementById('res1us').textContent  = fmt(now, tz, true);
-  document.getElementById('res1usd').textContent = fmtD(now, tz);
-  document.getElementById('res1pk').textContent  = fmt(now, 'Asia/Karachi', true);
-  document.getElementById('res1pkd').textContent = fmtD(now, 'Asia/Karachi');
-  resEl.classList.add('show');
-
-  clearInterval(window._si);
-  window._si = setInterval(() => {
-    if (!resEl.classList.contains('show')) return;
-    const n = new Date();
-    document.getElementById('res1us').textContent = fmt(n, tz, true);
-    document.getElementById('res1pk').textContent = fmt(n, 'Asia/Karachi', true);
-  }, 1000);
-
-  SEL['dd1'] = null;
+  // Get today's date string in the driver's timezone (YYYY-MM-DD)
+  const driverDateStr = new Intl.DateTimeFormat('en-CA', {timeZone: tz}).format(now);
+  // Build a reference point: midnight UTC on that driver-local date
+  const [yr, mo, dy] = driverDateStr.split('-').map(Number);
+  // We need driver's h:m in UTC. Get tz offset for that day.
+  const refForOffset = new Date(Date.UTC(yr, mo-1, dy, 12, 0, 0)); // noon UTC same day
+  const driverOffsetMin = getTzOffsetMin(tz, refForOffset);
+  // Driver's wall-clock time in UTC minutes since epoch start of that day
+  // UTC time = driver local time - driver offset
+  const driverMinutesFromMidnightUTC = h * 60 + m - driverOffsetMin;
+  // PKT minutes from midnight UTC of same day
+  const pktMinutesFromMidnightUTC = driverMinutesFromMidnightUTC + PKT_OFFSET;
+  // Normalize to 0–1439
+  let pktTotalMin = pktMinutesFromMidnightUTC;
+  let dayDiff = 0;
+  if (pktTotalMin >= 1440) { pktTotalMin -= 1440; dayDiff = 1; }
+  else if (pktTotalMin < 0) { pktTotalMin += 1440; dayDiff = -1; }
+  return { pktH: Math.floor(pktTotalMin/60), pktM: pktTotalMin%60, dayDiff };
 }
 
-// ══════════════════════════════════════════════════════════════
-//  CONVERTER
-// ══════════════════════════════════════════════════════════════
-function convertTime() {
-  const errEl = document.getElementById('err2');
-  const resEl = document.getElementById('convResult');
-  errEl.classList.remove('show'); resEl.classList.remove('show');
-
-  const loc = resolveInput('inp2','dd2');
-  if (!loc) { errEl.textContent = 'Please select a location first.'; errEl.classList.add('show'); return; }
-  if (loc && !document.getElementById('convTag').style.display || document.getElementById('convTag').style.display === 'none') showConvTag(loc);
-
-  const timeVal = document.getElementById('convTime').value;
-  if (!timeVal) { errEl.textContent = 'Please enter a time.'; errEl.classList.add('show'); return; }
-
-  const [h, m] = timeVal.split(':').map(Number);
-  const tz = loc.tz;
-  const now = new Date();
-  const driverDate = now.toLocaleDateString('en-CA', { timeZone: tz });
-  const driverLocal = new Date(`${driverDate}T${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`);
-  const offMins = getOffMins(tz, driverLocal);
-  const pktMs   = driverLocal.getTime() - offMins * 60000 + 5 * 60 * 60000;
-  const pkt     = new Date(pktMs);
-  const pktH    = pkt.getUTCHours(), pktM = pkt.getUTCMinutes();
-  const pktStr  = fmt12(pktH, pktM);
-
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const pktDay = `${DAYS[pkt.getUTCDay()]}, ${MONTHS[pkt.getUTCMonth()]} ${pkt.getUTCDate()}`;
-
-  const driverDayN = new Date(driverDate + 'T00:00:00').getDate();
-  let dayNote = '';
-  if (pkt.getUTCDate() > driverDayN) dayNote = ' · Next day in Pakistan 🌙';
-  else if (pkt.getUTCDate() < driverDayN) dayNote = ' · Previous day';
-
-  const info = TZ_INFO[tz] || {};
-  document.getElementById('convPk').textContent  = pktStr;
-  document.getElementById('convPkD').textContent = pktDay + dayNote;
-  document.getElementById('convSum').textContent = `When it's ${fmt12(h,m)} in ${loc.n} (${info.f||tz}), it is ${pktStr} in Pakistan.`;
-  resEl.classList.add('show');
-}
-
-// ══════════════════════════════════════════════════════════════
-//  LIVE ZONE CLOCKS
-// ══════════════════════════════════════════════════════════════
-const ZONES = [
-  {tz:'America/New_York',    label:'Eastern (ET)',  states:'NY, FL, GA, NC, VA, OH, PA, MA, NJ...'},
-  {tz:'America/Chicago',     label:'Central (CT)',  states:'TX, IL, TN, MO, MN, WI, LA, AL...'},
-  {tz:'America/Denver',      label:'Mountain (MT)', states:'CO, MT, WY, UT, NM, ID...'},
-  {tz:'America/Phoenix',     label:'Arizona (AZ)',  states:'Arizona only · No daylight saving'},
-  {tz:'America/Los_Angeles', label:'Pacific (PT)',  states:'CA, NV, OR, WA...'},
-  {tz:'America/Anchorage',   label:'Alaska (AKT)',  states:'Alaska'},
-  {tz:'Pacific/Honolulu',    label:'Hawaii (HST)',  states:'Hawaii'},
-  {tz:'Asia/Karachi',        label:'Pakistan (PKT)',states:'', pkt:true},
-];
-
-function tzk(tz) { return tz.replace(/[\/\.]/g,'_'); }
-
-function renderZones() {
-  document.getElementById('zonesGrid').innerHTML = ZONES.map(z => {
-    const now = new Date();
-    const ts = fmt(now, z.tz, true);
-    const ds = now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:z.tz});
-    const off = z.tz==='Asia/Karachi' ? 'UTC+5' : getOff(z.tz);
-    return `<div class="zone-card${z.pkt?' pkt-card':''}">
-      <div class="zone-name">${z.label}</div>
-      <div class="zone-time" id="zt_${tzk(z.tz)}">${ts}</div>
-      <div class="zone-date" id="zd_${tzk(z.tz)}">${ds}</div>
-      <span class="zone-offset">${off}</span>
-      ${z.states?`<div class="zone-states">${z.states}</div>`:''}
-    </div>`;
-  }).join('');
-}
-
-function tickZones() {
-  const now = new Date();
-  ZONES.forEach(z => {
-    const te = document.getElementById('zt_'+tzk(z.tz));
-    const de = document.getElementById('zd_'+tzk(z.tz));
-    if (te) te.textContent = fmt(now, z.tz, true);
-    if (de) de.textContent = now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:z.tz});
-  });
-}
-
-// ══════════════════════════════════════════════════════════════
-//  HELPERS
-// ══════════════════════════════════════════════════════════════
-function fmt(d, tz, sec) {
-  return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second: sec ? '2-digit' : undefined, timeZone:tz});
-}
-function fmtD(d, tz) {
-  return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric',timeZone:tz});
-}
 function fmt12(h, m) {
   const ap = h>=12?'PM':'AM', h12=h%12||12;
   return `${h12}:${String(m).padStart(2,'0')} ${ap}`;
 }
+
 function getOff(tz) {
-  const now=new Date(), u=new Date(now.toLocaleString('en-US',{timeZone:'UTC'})), l=new Date(now.toLocaleString('en-US',{timeZone:tz}));
-  const d=(l-u)/3600000, s=d>=0?'+':'-', a=Math.abs(d), hh=Math.floor(a), mm=Math.round((a-hh)*60);
+  const off = getTzOffsetMin(tz, new Date());
+  const s = off>=0?'+':'-', a=Math.abs(off), hh=Math.floor(a/60), mm=a%60;
   return `UTC${s}${hh}${mm?':'+String(mm).padStart(2,'0'):''}`;
 }
-function getOffMins(tz, d) {
-  const u=new Date(d.toLocaleString('en-US',{timeZone:'UTC'})), l=new Date(d.toLocaleString('en-US',{timeZone:tz}));
-  return (l-u)/60000;
+
+// ═══════════════════════════════════════════════════════════════
+//  TIME LOOKUP
+// ═══════════════════════════════════════════════════════════════
+function doLookup() {
+  const errEl = document.getElementById('luErr');
+  const resEl = document.getElementById('luResult');
+  const phEl  = document.getElementById('luPlaceholder');
+  errEl.classList.remove('show'); resEl.classList.remove('show');
+
+  const loc = resolveLoc('luInp','luDd');
+  if (!loc) { errEl.classList.add('show'); return; }
+
+  const tz = loc.tz, now = new Date();
+  const info = TZ_INFO[tz]||{};
+
+  document.getElementById('lrLoc').textContent = loc.n;
+  document.getElementById('lrTz').textContent  = `${info.f||tz} · ${getOff(tz)}`;
+  document.getElementById('lrUs').textContent  = fmtTime(now, tz);
+  document.getElementById('lrUsD').textContent = fmtDate(now, tz);
+  document.getElementById('lrPk').textContent  = fmtTime(now, 'Asia/Karachi');
+  document.getElementById('lrPkD').textContent = fmtDate(now, 'Asia/Karachi');
+
+  phEl.style.display = 'none';
+  resEl.classList.add('show');
+
+  clearInterval(window._luTick);
+  window._luTick = setInterval(() => {
+    if (!resEl.classList.contains('show')) return;
+    const n = new Date();
+    document.getElementById('lrUs').textContent = fmtTime(n, tz);
+    document.getElementById('lrPk').textContent = fmtTime(n, 'Asia/Karachi');
+  }, 1000);
+
+  SEL['luDd'] = null;
 }
 
-renderZones();
-setInterval(tickZones, 1000);
+function fmtTime(d, tz) {
+  return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:tz});
+}
+function fmtDate(d, tz) {
+  return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric',timeZone:tz});
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CONVERTER
+// ═══════════════════════════════════════════════════════════════
+function showCvTag(loc) {
+  const info = TZ_INFO[loc.tz]||{};
+  const wrap = document.getElementById('convSelTag');
+  wrap.style.display='block';
+  wrap.innerHTML=`<div class="sel-tag">📍 ${loc.n} <span style="opacity:0.5;">(${info.s||''})</span> <span class="sel-x" onclick="clearCv()">×</span></div>`;
+}
+function clearCv() {
+  SEL['cvDd']=null;
+  document.getElementById('convSelTag').style.display='none';
+  document.getElementById('cvInp').value='';
+  document.getElementById('cvResult').classList.remove('show');
+}
+
+function doConvert() {
+  const errEl = document.getElementById('cvErr');
+  const resEl = document.getElementById('cvResult');
+  errEl.classList.remove('show'); resEl.classList.remove('show');
+
+  const loc = resolveLoc('cvInp','cvDd');
+  if (!loc) { errEl.textContent='Please select a location first.'; errEl.classList.add('show'); return; }
+  if (loc && document.getElementById('convSelTag').style.display==='none') showCvTag(loc);
+
+  const tv = document.getElementById('cvTime').value;
+  if (!tv) { errEl.textContent='Please enter a time.'; errEl.classList.add('show'); return; }
+
+  const [h,m] = tv.split(':').map(Number);
+  const {pktH, pktM, dayDiff} = convertToPKT(h, m, loc.tz);
+  const pktStr = fmt12(pktH, pktM);
+
+  const now = new Date();
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  // PKT date = today in PKT + dayDiff
+  const pktNow = new Date(now.toLocaleString('en-US',{timeZone:'Asia/Karachi'}));
+  pktNow.setDate(pktNow.getDate() + dayDiff);
+  const pktDay = `${DAYS[pktNow.getDay()]}, ${MONTHS[pktNow.getMonth()]} ${pktNow.getDate()}`;
+
+  let dayNote = '';
+  if (dayDiff===1) dayNote = ' · <span style="color:rgba(245,166,35,0.7);">Next day in Pakistan 🌙</span>';
+  else if (dayDiff===-1) dayNote = ' · Previous day in Pakistan';
+
+  const info = TZ_INFO[loc.tz]||{};
+  document.getElementById('cvPkT').textContent = pktStr;
+  document.getElementById('cvPkD').innerHTML   = pktDay + dayNote;
+  document.getElementById('cvSum').textContent  = `When it's ${fmt12(h,m)} in ${loc.n} (${info.f||loc.tz}), it is ${pktStr} in Pakistan.`;
+  resEl.classList.add('show');
+}
+
+// PKT note in appt form
+function updatePktNote() {
+  const loc = SEL['fLocDd'];
+  const tv  = document.getElementById('fTime').value;
+  const note = document.getElementById('fPktNote');
+  if (!loc || !tv) { note.style.display='none'; return; }
+  const [h,m] = tv.split(':').map(Number);
+  const {pktH,pktM,dayDiff} = convertToPKT(h,m,loc.tz);
+  document.getElementById('fPktTime').textContent = fmt12(pktH,pktM) + (dayDiff?` (${dayDiff>0?'+1':'-1'} day PKT)`:'');
+  note.style.display='flex';
+}
+document.addEventListener('change', e => { if(e.target.id==='fTime') updatePktNote(); });
+
+// ═══════════════════════════════════════════════════════════════
+//  APPOINTMENTS — localStorage per EMP_ID
+// ═══════════════════════════════════════════════════════════════
+const APPT_KEY = 'appts_' + EMP_ID;
+
+function loadAppts() {
+  try { return JSON.parse(localStorage.getItem(APPT_KEY)||'[]'); } catch(e){ return []; }
+}
+function saveAppts(arr) {
+  localStorage.setItem(APPT_KEY, JSON.stringify(arr));
+}
+
+function openApptModal() {
+  // Set today as default date
+  const today = new Date().toLocaleDateString('en-CA');
+  document.getElementById('fDate').value = today;
+  document.getElementById('fTime').value = '09:00';
+  document.getElementById('fMC').value = '';
+  document.getElementById('fCompany').value = '';
+  document.getElementById('fPerson').value = '';
+  document.getElementById('fPhone').value = '';
+  document.getElementById('fTruck').value = '';
+  document.getElementById('fComments').value = '';
+  document.getElementById('fLocInp').value = '';
+  document.getElementById('fPktNote').style.display = 'none';
+  document.getElementById('apptSuccess').classList.remove('show');
+  document.getElementById('apptErr').classList.remove('show');
+  SEL['fLocDd'] = null;
+  document.getElementById('apptModal').classList.add('show');
+}
+function closeApptModal() {
+  document.getElementById('apptModal').classList.remove('show');
+}
+
+function saveAppt() {
+  const mc      = document.getElementById('fMC').value.trim();
+  const company = document.getElementById('fCompany').value.trim();
+  const person  = document.getElementById('fPerson').value.trim();
+  const phone   = document.getElementById('fPhone').value.trim();
+  const truck   = document.getElementById('fTruck').value;
+  const date    = document.getElementById('fDate').value;
+  const time    = document.getElementById('fTime').value;
+  const comments= document.getElementById('fComments').value.trim();
+  const loc     = SEL['fLocDd'];
+  const errEl   = document.getElementById('apptErr');
+  errEl.classList.remove('show');
+
+  if (!mc||!company||!person||!phone||!date||!time) {
+    errEl.textContent = 'Please fill all required fields (marked with *).';
+    errEl.classList.add('show'); return;
+  }
+
+  // PKT equivalent
+  let pktEquiv = '';
+  if (loc && time) {
+    const [h,m] = time.split(':').map(Number);
+    const {pktH,pktM,dayDiff} = convertToPKT(h,m,loc.tz);
+    pktEquiv = fmt12(pktH,pktM) + (dayDiff?` (${dayDiff>0?'next':'prev'} day PKT)`:'') + ' PKT';
+  }
+
+  const appt = {
+    id: Date.now(),
+    mc, company, person, phone, truck,
+    date, time, comments,
+    location: loc ? loc.n : '',
+    locationTz: loc ? loc.tz : '',
+    pktEquiv,
+    createdAt: new Date().toISOString(),
+    empId: EMP_ID,
+  };
+
+  const arr = loadAppts();
+  arr.push(appt);
+  saveAppts(arr);
+
+  // Also submit to Google Form (replace with your actual form URL + entry IDs)
+  submitToForm(appt);
+
+  document.getElementById('apptSuccess').classList.add('show');
+  setTimeout(() => { closeApptModal(); renderAppts(); }, 1800);
+}
+
+async function submitToForm(appt) {
+  // ⚠️ REPLACE these with your actual Google Form URL and entry IDs
+  const FORM_URL = 'YOUR_GOOGLE_FORM_RESPONSE_URL_HERE';
+  const body = new URLSearchParams({
+    'ENTRY_MC':       appt.mc,
+    'ENTRY_COMPANY':  appt.company,
+    'ENTRY_PERSON':   appt.person,
+    'ENTRY_PHONE':    appt.phone,
+    'ENTRY_TRUCK':    appt.truck,
+    'ENTRY_DATE':     appt.date,
+    'ENTRY_TIME':     appt.time,
+    'ENTRY_LOCATION': appt.location,
+    'ENTRY_PKT':      appt.pktEquiv,
+    'ENTRY_COMMENTS': appt.comments,
+    'ENTRY_EMPID':    appt.empId,
+  });
+  try { await fetch(FORM_URL, { method:'POST', mode:'no-cors', body }); } catch(e){}
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RENDER APPOINTMENTS
+// ═══════════════════════════════════════════════════════════════
+function renderAppts() {
+  const all = loadAppts();
+  const todayStr = new Date().toLocaleDateString('en-CA');
+
+  // Today strip
+  const todayAppts = all.filter(a => a.date === todayStr).sort((a,b)=>a.time.localeCompare(b.time));
+  const todayListEl = document.getElementById('todayList');
+  document.getElementById('todayDateLbl').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+
+  if (!todayAppts.length) {
+    todayListEl.innerHTML = '<div class="today-empty">No appointments today.</div>';
+  } else {
+    todayListEl.innerHTML = '<div class="today-list">' + todayAppts.map(a => `
+      <div class="today-card">
+        <div class="tc-time">${fmt12(...a.time.split(':').map(Number))}</div>
+        <div class="tc-info">
+          <div class="tc-name">${a.person} — ${a.company}</div>
+          <div class="tc-meta">MC: ${a.mc} · ${a.phone}${a.truck?' · '+a.truck:''}</div>
+          ${a.pktEquiv?`<div class="tc-meta" style="color:rgba(245,166,35,0.6);">🇵🇰 ${a.pktEquiv}</div>`:''}
+        </div>
+        ${a.location?`<div class="tc-badge">${a.location}</div>`:''}
+      </div>`).join('') + '</div>';
+  }
+
+  // All list (filtered by search)
+  renderApptList(all);
+}
+
+function filterAppts() {
+  renderApptList(loadAppts());
+}
+
+function renderApptList(all) {
+  const q = document.getElementById('apptSearch').value.trim().toLowerCase();
+  let list = all;
+  if (q) list = all.filter(a =>
+    a.person.toLowerCase().includes(q) ||
+    a.company.toLowerCase().includes(q) ||
+    a.mc.toLowerCase().includes(q) ||
+    a.date.includes(q) ||
+    (a.location||'').toLowerCase().includes(q) ||
+    (a.comments||'').toLowerCase().includes(q)
+  );
+
+  list = list.sort((a,b) => a.date===b.date ? a.time.localeCompare(b.time) : b.date.localeCompare(a.date));
+
+  const el = document.getElementById('apptList');
+  if (!list.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-txt">' + (q?'No results for "'+q+'"':'No appointments yet.') + '</div></div>';
+    return;
+  }
+
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  el.innerHTML = list.map(a => {
+    const d = new Date(a.date+'T12:00:00');
+    const mo = MONTHS[d.getMonth()], dy = d.getDate();
+    return `<div class="appt-card">
+      <div class="appt-date-badge"><div class="adb-month">${mo}</div><div class="adb-day">${dy}</div></div>
+      <div class="appt-info">
+        <div class="ai-name">${a.person} <span style="font-weight:400;color:var(--text-muted);">— ${a.company}</span></div>
+        <div class="ai-meta">MC: ${a.mc} · ${a.phone}${a.truck?' · '+a.truck:''}</div>
+        ${a.location?`<div class="ai-meta">📍 ${a.location}${a.pktEquiv?' · 🇵🇰 '+a.pktEquiv:''}</div>`:''}
+        ${a.comments?`<div class="ai-comment">${a.comments}</div>`:''}
+      </div>
+      <div>
+        <div class="appt-time">${fmt12(...a.time.split(':').map(Number))}</div>
+        <div class="appt-time-tz">${a.locationTz?TZ_INFO[a.locationTz]?.s||'':''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Close modal on backdrop click
+document.getElementById('apptModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('apptModal')) closeApptModal();
+});
+
+// Init
+renderAppts();
 </script>
 </body>
 </html>
