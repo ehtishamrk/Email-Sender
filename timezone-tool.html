@@ -524,7 +524,10 @@ select.field-input{cursor:pointer}
           </div>
           <button class="btn-gold" id="newApptBtn">+ New Appointment</button>
         </div>
-
+<div class="tab-bar" id="rightTabBar" style="margin-bottom:16px;">
+  <button class="tab-btn active" data-tab="tabAppts">📅 Appointments</button>
+  <button class="tab-btn" data-tab="tabCBSales">📞 CB & Sales</button>
+</div>
         <div class="upcoming-alert" id="upcomingAlert">
           <div style="font-size:18px;flex-shrink:0;">&#9200;</div>
           <div><div class="ua-text" id="upcomingText"></div><div class="ua-sub" id="upcomingSub"></div></div>
@@ -1057,16 +1060,41 @@ function loadMeta(){meta=JSON.parse(localStorage.getItem(META_KEY)||'{}');}
 function saveMeta(){localStorage.setItem(META_KEY,JSON.stringify(meta));}
 function getCallCount(){return Object.keys(meta).length;}
 
-function initDialer(){
-  loadLeads();loadMeta();
-  curIdx = parseInt(localStorage.getItem('leadIdx_'+EMP_ID)||'0');
-  if(curIdx >= leads.length) curIdx = 0;
-  var hasLeads = leads.length > 0;
-  document.getElementById('noDataState').style.display = hasLeads ? 'none' : 'block';
-  document.getElementById('leadDisplay').style.display = hasLeads ? 'block' : 'none';
-  var counter = document.getElementById('navCounter');
-  if(hasLeads){counter.style.display='';} else {counter.style.display='none';}
-  if(hasLeads) renderLead();
+async function initDialer() {
+  document.getElementById('noDataState').style.display = 'block';
+  document.getElementById('leadDisplay').style.display = 'none';
+  document.getElementById('dialerSub').textContent = 'Loading...';
+
+  const result = await apiGet({ action: 'getBDOLeads', empId: EMP_ID });
+  if (!result || !result.length) {
+    document.getElementById('dialerSub').textContent = 'No data loaded for today';
+    updateDialerStats();
+    return;
+  }
+
+  leads = result;
+  // Build meta from sheet data
+  meta = {};
+  leads.forEach((lead, i) => {
+    if (lead.callStatus || lead.dnc || lead.contactName || lead.truckType) {
+      meta[i] = {
+        status:      lead.callStatus || '',
+        dnc:         lead.dnc || false,
+        contactName: lead.contactName || '',
+        truckType:   lead.truckType || '',
+        calledAt:    lead.calledAt || ''
+      };
+    }
+  });
+
+  curIdx = parseInt(localStorage.getItem('leadIdx_' + EMP_ID) || '0');
+  if (curIdx >= leads.length) curIdx = 0;
+
+  document.getElementById('noDataState').style.display = 'none';
+  document.getElementById('leadDisplay').style.display = 'block';
+  document.getElementById('navCounter').style.display = '';
+
+  renderLead();
   updateDialerStats();
 }
 
