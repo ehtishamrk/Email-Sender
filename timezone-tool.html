@@ -522,8 +522,10 @@
 //  EMPLOYEE ID from URL param
 // ═══════════════════════════════════════════════════════════════
 const params = new URLSearchParams(window.location.search);
-const EMP_ID = params.get('emp') || 'GUEST';
+const EMP_ID = params.get('emp') || localStorage.getItem('hx_active_emp') || 'GUEST';
 document.getElementById('navEmp').textContent = EMP_ID;
+// Also persist so refreshing the tool tab keeps the ID
+if (EMP_ID !== 'GUEST') localStorage.setItem('hx_active_emp', EMP_ID);
 
 // ═══════════════════════════════════════════════════════════════
 //  LOCATION DATABASE
