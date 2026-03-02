@@ -971,7 +971,9 @@
           <button class="tab-item active" onclick="switchAdminTab('tabAttendance', this)">Attendance Reports</button>
           <button class="tab-item" onclick="switchAdminTab('tabLeaves', this)">Leave Management</button>
 <button class="tab-item" onclick="switchAdminTab('tabAccess', this)">Tool Access</button>
-          <button class="tab-item" onclick="switchAdminTab('tabLive', this)">Live Status</button>        </div>
+          <button class="tab-item" onclick="switchAdminTab('tabLive', this)">Live Status</button>
+         <button class="tab-item" onclick="switchAdminTab('tabDataUpload', this)">Load Call Data</button>
+       </div>
 
         <!-- Attendance Reports Tab -->
         <div id="tabAttendance">
@@ -993,6 +995,42 @@
           <div id="adminLiveContent"></div>
         </div>
 
+        <!-- Load Call Data Tab -->
+        <div id="tabDataUpload" style="display:none;">
+          <div class="card-box" style="margin-bottom:16px;">
+            <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:18px;margin-bottom:6px;">📄 Load BDO Call Data</div>
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Upload daily call list (500 records) for a BDO. Previous data is replaced.</div>
+            <div class="field-wrap">
+              <label class="field-label">Target BDO</label>
+              <select class="field-input" id="portalUploadEmpId">
+                <option value="HX-0003">HX-0003 — Rana Nouman Ahmad</option>
+                <option value="HX-0004">HX-0004 — Muhammad Ans</option>
+                <option value="HX-0005">HX-0005 — Sania Rafi</option>
+                <option value="HX-0006">HX-0006 — Farwa Qamar</option>
+              </select>
+            </div>
+            <div class="field-wrap">
+              <label class="field-label">Upload CSV File</label>
+              <input type="file" accept=".csv" id="portalCsvFile" class="field-input">
+            </div>
+            <div style="text-align:center;color:var(--text-muted);font-size:11px;margin:8px 0;">— or paste CSV below —</div>
+            <div class="field-wrap">
+              <label class="field-label">Paste CSV Data</label>
+              <textarea class="field-input" id="portalCsvPaste" placeholder="MC Number,Entity Status,Power,Driver,Company Name,Physical Address,Phone Number,Email Address" style="min-height:100px;font-size:11px;font-family:monospace;"></textarea>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
+              <strong>Column order:</strong> MC Number, Entity Status, Power, Driver, Company Name, Physical Address, Phone Number, Email Address
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn-primary" style="flex:1;min-width:140px;" onclick="portalLoadCsv()">✅ Load Data</button>
+              <button class="btn-outline" style="flex:0 0 auto;" onclick="portalClearBdo()">🗑 Clear Data</button>
+            </div>
+            <div id="portalUploadMsg" style="display:none;margin-top:12px;padding:10px 14px;border-radius:10px;font-size:13px;"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
       </div>
     </div>
 
@@ -1501,7 +1539,7 @@ if (id === 'viewProfile') { loadProfile(); }
 }
 
 function switchAdminTab(tabId, btn) {
-document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive').forEach(t => t.style.display = 'none');
+document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive,#tabDataUpload').forEach(t => t.style.display = 'none');
   document.getElementById(tabId).style.display = '';
   document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -2092,6 +2130,129 @@ function adminLeaveAction(id, status) {
   store('leaveRequests', requests);
   renderAdminLeaves();
   refreshLeaveHistory(); // in case same admin is also employee
+}
+  // ── IDLE DETECTION ───────────────────────────────
+const BDO_IDS = ['HX-0003','HX-0004','HX-0005','HX-0006'];
+const BDO_NAMES = {
+  'HX-0003':'Rana Nouman Ahmad',
+  'HX-0004':'Muhammad Ans',
+  'HX-0005':'Sania Rafi',
+  'HX-0006':'Farwa Qamar'
+};
+
+function getLastActivity(empId) {
+  try { return parseInt(localStorage.getItem('hx_activity_' + empId) || '0'); } catch(e) { return 0; }
+}
+function getIdleMinutes(empId) {
+  const last = getLastActivity(empId);
+  if (!last) return null;
+  return Math.floor((Date.now() - last) / 60000);
+}
+function getCallProgress(empId) {
+  try {
+    const leads = JSON.parse(localStorage.getItem('leads_' + empId) || '[]');
+    const meta  = JSON.parse(localStorage.getItem('leadMeta_' + empId) || '{}');
+    return { total: leads.length, called: Object.keys(meta).length };
+  } catch(e) { return { total: 0, called: 0 }; }
+}
+
+function showIdlePopup(name, empId, minutes) {
+  const old = document.getElementById('idlePopup');
+  if (old) old.remove();
+  const popup = document.createElement('div');
+  popup.id = 'idlePopup';
+  popup.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#FFF;border:2px solid #E84545;border-radius:16px;padding:18px 22px;box-shadow:0 12px 48px rgba(232,69,69,0.2);z-index:9999;max-width:320px;';
+  popup.innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:12px;">
+      <div style="font-size:24px;flex-shrink:0;">⚠️</div>
+      <div style="flex:1;">
+        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:14px;color:#E84545;margin-bottom:4px;">Employee Idle Alert</div>
+        <div style="font-size:13px;color:#374151;line-height:1.5;"><strong>${name}</strong> has been idle for <strong>${minutes} minutes</strong>.</div>
+        <div style="margin-top:10px;display:flex;gap:8px;">
+          <button onclick="document.getElementById('idlePopup').remove()" style="flex:1;background:#E84545;color:#FFF;border:none;border-radius:8px;padding:7px;font-size:12px;font-weight:700;cursor:pointer;">Dismiss</button>
+          <button onclick="showView('viewAdmin')" style="flex:1;background:var(--bg2);color:var(--text);border:1.5px solid var(--border2);border-radius:8px;padding:7px;font-size:12px;font-weight:600;cursor:pointer;">View Status</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(popup);
+  setTimeout(() => { if (popup.parentNode) popup.remove(); }, 30000);
+}
+
+// Check idle every 60 seconds while admin is logged in
+setInterval(() => {
+  if (!currentUser || !currentUser.isAdmin) return;
+  BDO_IDS.forEach(empId => {
+    const idleMin = getIdleMinutes(empId);
+    const clocked = load('clockState_' + empId, null);
+    const isIn = clocked && clocked.clockedIn;
+    if (idleMin !== null && idleMin >= 15 && isIn) {
+      const key = empId + '_idle_ts';
+      const lastAlert = parseInt(sessionStorage.getItem(key) || '0');
+      if (Date.now() - lastAlert > 5 * 60 * 1000) {
+        sessionStorage.setItem(key, Date.now().toString());
+        showIdlePopup(BDO_NAMES[empId] || empId, empId, idleMin);
+      }
+    }
+  });
+}, 60000);
+
+// ── CSV UPLOAD ───────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const fileInput = document.getElementById('portalCsvFile');
+  if (fileInput) {
+    fileInput.addEventListener('change', function() {
+      const file = this.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => { document.getElementById('portalCsvPaste').value = e.target.result; };
+      reader.readAsText(file);
+    });
+  }
+});
+
+function parsePortalCSV(text) {
+  const lines = text.trim().split('\n');
+  const results = [];
+  let start = lines[0].toLowerCase().includes('mc') ? 1 : 0;
+  for (let i = start; i < lines.length; i++) {
+    const p = lines[i].split(',').map(s => s.trim().replace(/^"|"$/g,''));
+    if (p.length < 2) continue;
+    results.push({
+      mc: p[0]||'', entityStatus: p[1]||'', power: p[2]||'',
+      driver: p[3]||'', company: p[4]||'', address: p[5]||'',
+      phone: p[6]||'', email: p[7]||''
+    });
+  }
+  return results;
+}
+
+function portalLoadCsv() {
+  const empId = document.getElementById('portalUploadEmpId').value;
+  const text  = document.getElementById('portalCsvPaste').value;
+  if (!text.trim()) { showPortalMsg('No data entered.', false); return; }
+  const rows = parsePortalCSV(text);
+  if (!rows.length) { showPortalMsg('No valid rows found. Check CSV format.', false); return; }
+  localStorage.setItem('leads_' + empId, JSON.stringify(rows));
+  localStorage.setItem('leadMeta_' + empId, '{}');
+  localStorage.setItem('leadIdx_' + empId, '0');
+  showPortalMsg('Loaded ' + rows.length + ' records for ' + (BDO_NAMES[empId]||empId) + '.', true);
+}
+
+function portalClearBdo() {
+  const empId = document.getElementById('portalUploadEmpId').value;
+  if (!confirm('Clear all lead data for ' + (BDO_NAMES[empId]||empId) + '?')) return;
+  ['leads_','leadMeta_','leadIdx_'].forEach(k => localStorage.removeItem(k + empId));
+  showPortalMsg('Cleared data for ' + (BDO_NAMES[empId]||empId) + '.', true);
+}
+
+function showPortalMsg(msg, success) {
+  const el = document.getElementById('portalUploadMsg');
+  if (!el) return;
+  el.style.display  = 'block';
+  el.style.background = success ? '#F0FFF5' : '#FFF0F0';
+  el.style.color      = success ? '#15803D' : '#E84545';
+  el.style.border     = success ? '1.5px solid #BBF7D0' : '1.5px solid #FECACA';
+  el.textContent = msg;
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
 </script>
 </body>
