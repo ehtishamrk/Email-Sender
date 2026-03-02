@@ -1055,21 +1055,30 @@ function saveAppt() {
 }
 
 async function submitToForm(appt) {
-  // ⚠️ REPLACE these with your actual Google Form URL and entry IDs
-  const FORM_URL = 'YOUR_GOOGLE_FORM_RESPONSE_URL_HERE';
+  const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdbR7wv10wjUzNDDTiU5l4rx2fXhpLO2BdlgrUOvQx0rszdQw/formResponse';
+
+  // Parse date into year/month/day parts
+  const [yr, mo, dy] = (appt.date || '').split('-');
+  // Parse time into hour/minute parts
+  const [hr, mn] = (appt.time || '').split(':');
+
   const body = new URLSearchParams({
-    'ENTRY_MC':       appt.mc,
-    'ENTRY_COMPANY':  appt.company,
-    'ENTRY_PERSON':   appt.person,
-    'ENTRY_PHONE':    appt.phone,
-    'ENTRY_TRUCK':    appt.truck,
-    'ENTRY_DATE':     appt.date,
-    'ENTRY_TIME':     appt.time,
-    'ENTRY_LOCATION': appt.location,
-    'ENTRY_PKT':      appt.pktEquiv,
-    'ENTRY_COMMENTS': appt.comments,
-    'ENTRY_EMPID':    appt.empId,
+    'entry.93345311':          appt.mc,
+    'entry.974786686':         appt.company,
+    'entry.1639113321':        appt.person,
+    'entry.1915642081':        appt.phone,
+    'entry.387855634':         appt.truck,
+    'entry.1518077786_year':   yr || '',
+    'entry.1518077786_month':  mo || '',
+    'entry.1518077786_day':    dy || '',
+    'entry.419050169_hour':    hr || '',
+    'entry.419050169_minute':  mn || '',
+    'entry.725688733':         appt.location,
+    'entry.1074378665':        appt.pktEquiv,
+    'entry.1585868655':        appt.comments,
+    'entry.34474063':          appt.empId,
   });
+
   try { await fetch(FORM_URL, { method:'POST', mode:'no-cors', body }); } catch(e){}
 }
 
