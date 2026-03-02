@@ -14,101 +14,118 @@
       --text: #1A1714; --text-mid: #5A5550; --text-muted: #9B958D;
       --red: #E84545; --green: #22C55E; --blue: #3B82F6;
       --shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
-      --shadow-lg: 0 12px 48px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.06);
-      --radius: 16px;
+      --shadow-lg: 0 12px 48px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
     }
     html { scroll-behavior: smooth; }
     body { background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); min-height: 100vh; }
     body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; }
 
-    /* ═══════════════════════════════════════════
-       NAV
-    ═══════════════════════════════════════════ */
+    /* ══════════════════════════════════════════════════
+       NAV — 3 zone layout: brand | clocks (centered) | emp
+    ══════════════════════════════════════════════════ */
     .nav {
-      background: rgba(26,23,20,0.96);
+      background: rgba(22,19,16,0.97);
       backdrop-filter: blur(24px);
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-      padding: 0 28px;
-      display: flex; align-items: center; gap: 0;
-      height: 58px; position: sticky; top: 0; z-index: 300;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      height: 62px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      padding: 0 24px;
+      position: sticky; top: 0; z-index: 300;
     }
-    .nav-brand { display: flex; align-items: center; gap: 10px; margin-right: 28px; flex-shrink: 0; }
-    .nav-mark { width: 30px; height: 30px; background: var(--gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 800; color: #111; }
-    .nav-name { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; color: #FFF; }
-    .nav-sep { width: 1px; height: 24px; background: rgba(255,255,255,0.1); margin: 0 20px; flex-shrink: 0; }
+    .nav-left { display: flex; align-items: center; gap: 10px; }
+    .nav-mark { width: 32px; height: 32px; background: var(--gold); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; color: #111; flex-shrink: 0; }
+    .nav-name { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; color: #FFF; letter-spacing: -0.3px; }
+    .nav-tag { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(245,166,35,0.5); margin-left: 2px; }
 
-    /* Clock strip */
-    .nav-clocks { display: flex; align-items: center; gap: 4px; flex: 1; overflow-x: auto; scrollbar-width: none; }
-    .nav-clocks::-webkit-scrollbar { display: none; }
+    /* CENTER: clocks evenly spaced */
+    .nav-clocks {
+      display: flex; align-items: center;
+      gap: 2px;
+    }
     .nav-clock {
-      display: flex; align-items: center; gap: 8px;
-      padding: 6px 12px; border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.07);
-      transition: background 0.18s; flex-shrink: 0; cursor: default;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 8px 14px; border-radius: 10px;
+      border: 1px solid transparent;
+      transition: all 0.18s; cursor: default; position: relative;
     }
-    .nav-clock:hover { background: rgba(255,255,255,0.06); }
-    .nav-clock-zone { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(255,255,255,0.35); }
-    .nav-clock-time { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: #FFF; letter-spacing: -0.3px; }
-    .nav-clock.pkt { border-color: rgba(245,166,35,0.25); background: rgba(245,166,35,0.08); }
-    .nav-clock.pkt .nav-clock-zone { color: rgba(245,166,35,0.6); }
-    .nav-clock.pkt .nav-clock-time { color: var(--gold); }
+    .nav-clock::after {
+      content: '';
+      position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+      width: 1px; height: 18px;
+      background: rgba(255,255,255,0.07);
+    }
+    .nav-clock:last-child::after { display: none; }
+    .nav-clock:hover { background: rgba(255,255,255,0.05); }
+    .nc-zone { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.28); margin-bottom: 3px; }
+    .nc-time { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.85); letter-spacing: -0.2px; white-space: nowrap; }
+    .nav-clock.pkt { background: rgba(245,166,35,0.07); border-color: rgba(245,166,35,0.18); }
+    .nav-clock.pkt .nc-zone { color: rgba(245,166,35,0.55); }
+    .nav-clock.pkt .nc-time { color: var(--gold); }
+    .nav-clock.pkt::after { display: none; }
 
-    .nav-right { display: flex; align-items: center; gap: 10px; margin-left: 16px; flex-shrink: 0; }
-    .nav-emp { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.35); padding: 5px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; }
-    .nav-back { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.5); text-decoration: none; padding: 6px 14px; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; transition: all 0.18s; white-space: nowrap; }
-    .nav-back:hover { color: #FFF; border-color: rgba(255,255,255,0.3); }
+    .nav-right { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+    .nav-emp-pill {
+      display: flex; align-items: center; gap: 7px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px; padding: 5px 14px 5px 8px;
+    }
+    .nav-emp-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 6px rgba(34,197,94,0.6); }
+    .nav-emp-id { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.6); font-family: 'Syne', sans-serif; }
 
-    /* ═══════════════════════════════════════════
-       PAGE LAYOUT
-    ═══════════════════════════════════════════ */
-    .page { max-width: 1060px; margin: 0 auto; padding: 32px 28px 80px; position: relative; z-index: 1; }
+    /* ══════════════════════════════════════════════════
+       TAB BAR — centered
+    ══════════════════════════════════════════════════ */
+    .page { max-width: 1080px; margin: 0 auto; padding: 28px 28px 80px; position: relative; z-index: 1; }
 
-    /* TAB BAR */
-    .tab-bar { display: flex; gap: 6px; margin-bottom: 28px; background: var(--bg2); padding: 5px; border-radius: 14px; width: fit-content; }
-    .tab-btn { padding: 9px 22px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: none; color: var(--text-muted); font-family: 'DM Sans', sans-serif; transition: all 0.18s; }
-    .tab-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-
-    .tab-panel { display: none; }
+    .tab-wrap { display: flex; justify-content: center; margin-bottom: 28px; }
+    .tab-bar { display: flex; gap: 4px; background: rgba(26,23,20,0.06); padding: 5px; border-radius: 14px; border: 1.5px solid var(--border); }
+    .tab-btn {
+      padding: 9px 24px; border-radius: 10px; font-size: 13px; font-weight: 600;
+      cursor: pointer; border: none; background: none; color: var(--text-muted);
+      font-family: 'DM Sans', sans-serif; transition: all 0.18s; white-space: nowrap;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .tab-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+    .tab-panel { display: none; animation: fadeIn 0.2s ease; }
     .tab-panel.active { display: block; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
 
-    /* ═══════════════════════════════════════════
+    /* ══════════════════════════════════════════════════
        CARDS
-    ═══════════════════════════════════════════ */
-    .card { background: var(--surface); border-radius: 20px; border: 1.5px solid var(--border); padding: 28px 32px; box-shadow: var(--shadow); margin-bottom: 18px; }
+    ══════════════════════════════════════════════════ */
+    .card { background: var(--surface); border-radius: 20px; border: 1.5px solid var(--border); padding: 28px 30px; box-shadow: var(--shadow); margin-bottom: 18px; }
     .card-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
 
-    /* ═══════════════════════════════════════════
+    /* ══════════════════════════════════════════════════
        INPUTS
-    ═══════════════════════════════════════════ */
-    .field { margin-bottom: 16px; }
-    .field-label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: var(--text-muted); margin-bottom: 7px; }
-    .field-input {
-      width: 100%; background: var(--bg2); border: 1.5px solid var(--border);
-      border-radius: 11px; padding: 12px 15px; font-size: 14px; color: var(--text);
-      outline: none; font-family: 'DM Sans', sans-serif; transition: all 0.2s;
-    }
+    ══════════════════════════════════════════════════ */
+    .field { margin-bottom: 14px; }
+    .field-label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: var(--text-muted); margin-bottom: 6px; }
+    .field-input { width: 100%; background: var(--bg2); border: 1.5px solid var(--border); border-radius: 11px; padding: 11px 14px; font-size: 14px; color: var(--text); outline: none; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
     .field-input::placeholder { color: var(--text-muted); }
     .field-input:focus { border-color: var(--gold); background: #FFF; box-shadow: 0 0 0 3px rgba(245,166,35,0.1); }
-    textarea.field-input { resize: vertical; min-height: 80px; }
+    textarea.field-input { resize: vertical; min-height: 76px; }
     select.field-input { cursor: pointer; }
 
-    /* BUTTONS */
-    .btn-gold { background: var(--gold); color: #111; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; padding: 12px 22px; border: none; border-radius: 11px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
-    .btn-gold:hover { background: #FFB83A; transform: translateY(-1px); }
-    .btn-dark { background: var(--text); color: #FFF; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; padding: 12px 22px; border: none; border-radius: 11px; cursor: pointer; transition: all 0.2s; }
+    .btn-gold { background: var(--gold); color: #111; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; padding: 11px 22px; border: none; border-radius: 11px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .btn-gold:hover { background: #FFB83A; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(245,166,35,0.3); }
+    .btn-dark { background: var(--text); color: #FFF; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; padding: 11px 22px; border: none; border-radius: 11px; cursor: pointer; transition: all 0.2s; }
     .btn-dark:hover { background: #2D2926; }
-    .btn-outline { background: transparent; color: var(--text-mid); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; padding: 11px 20px; border: 1.5px solid var(--border2); border-radius: 11px; cursor: pointer; transition: all 0.18s; }
+    .btn-outline { background: transparent; color: var(--text-mid); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; padding: 10px 20px; border: 1.5px solid var(--border2); border-radius: 11px; cursor: pointer; transition: all 0.18s; }
     .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-red { background: #FFF0F0; color: var(--red); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; padding: 10px 20px; border: 1.5px solid #FECACA; border-radius: 11px; cursor: pointer; transition: all 0.18s; }
+    .btn-red:hover { background: var(--red); color: #FFF; border-color: var(--red); }
 
-    /* GRID */
-    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 
-    /* ═══════════════════════════════════════════
+    /* ══════════════════════════════════════════════════
        AUTOCOMPLETE
-    ═══════════════════════════════════════════ */
+    ══════════════════════════════════════════════════ */
     .ac-wrap { position: relative; }
-    .ac-dd { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); z-index: 500; max-height: 260px; overflow-y: auto; display: none; }
+    .ac-dd { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); z-index: 600; max-height: 260px; overflow-y: auto; display: none; }
     .ac-dd.open { display: block; }
     .ac-item { padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
     .ac-item:last-child { border-bottom: none; }
@@ -122,168 +139,201 @@
     .ac-badge.mt  { background:#FFF7ED; color:#C2410C; }
     .ac-badge.pt  { background:#F5F3FF; color:#7C3AED; }
     .ac-badge.az  { background:#FFF3DC; color:#8B5200; }
+    .ac-badge.akt { background:#F0F9FF; color:#0369A1; }
+    .ac-badge.hst { background:#FDF4FF; color:#86198F; }
     .ac-none { padding: 14px; font-size: 12px; color: var(--text-muted); text-align: center; }
 
-    /* ═══════════════════════════════════════════
-       TIME LOOKUP PANEL
-    ═══════════════════════════════════════════ */
+    /* ══════════════════════════════════════════════════
+       TIME LOOKUP
+    ══════════════════════════════════════════════════ */
     .lookup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
-    .lookup-left { }
     .lookup-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
     .chip { background: var(--bg2); border: 1.5px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 11px; font-weight: 600; color: var(--text-mid); cursor: pointer; transition: all 0.15s; }
     .chip:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-light); }
 
-    .lookup-result {
-      background: linear-gradient(135deg, #1A1714, #2D2520);
-      border-radius: 18px; padding: 24px 26px; display: none;
-    }
+    .lookup-result { background: linear-gradient(140deg, #1A1714 0%, #2A2018 100%); border-radius: 18px; padding: 26px; display: none; border: 1px solid rgba(255,255,255,0.06); }
     .lookup-result.show { display: block; }
-    .lr-location { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: #FFF; margin-bottom: 3px; }
-    .lr-tz { font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 20px; }
-    .lr-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .lr-block-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: rgba(255,255,255,0.35); margin-bottom: 6px; }
-    .lr-time { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; letter-spacing: -1px; }
+    .lr-location { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: #FFF; margin-bottom: 3px; }
+    .lr-tz { font-size: 11px; color: rgba(255,255,255,0.3); margin-bottom: 22px; }
+    .lr-row { display: grid; grid-template-columns: 1fr 1px 1fr; gap: 0; }
+    .lr-divider { background: rgba(255,255,255,0.07); }
+    .lr-col { padding: 0 20px; }
+    .lr-col:first-child { padding-left: 0; }
+    .lr-col:last-child { padding-right: 0; }
+    .lr-block-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: rgba(255,255,255,0.3); margin-bottom: 8px; }
+    .lr-time { font-family: 'Syne', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
     .lr-time.us { color: #FFF; }
     .lr-time.pk { color: var(--gold); }
-    .lr-date { font-size: 11px; margin-top: 3px; color: rgba(255,255,255,0.35); }
-    .lr-div { width: 1px; background: rgba(255,255,255,0.08); margin: 0 4px; }
+    .lr-date { font-size: 11px; margin-top: 5px; color: rgba(255,255,255,0.3); }
 
-    /* ═══════════════════════════════════════════
-       CONVERTER PANEL
-    ═══════════════════════════════════════════ */
+    .lu-placeholder { background: var(--bg2); border-radius: 18px; padding: 48px 24px; text-align: center; border: 1.5px dashed var(--border2); }
+
+    /* ══════════════════════════════════════════════════
+       CONVERTER
+    ══════════════════════════════════════════════════ */
     .conv-wrap { display: grid; grid-template-columns: 1fr auto 1fr; gap: 18px; align-items: end; margin-bottom: 18px; }
     .conv-arrow { display: flex; align-items: center; justify-content: center; padding-bottom: 2px; }
     .arrow-icon { width: 36px; height: 36px; background: var(--gold-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--gold); }
-    .conv-result { background: linear-gradient(135deg, #1A1714, #2D2520); border-radius: 18px; padding: 24px 28px; display: none; }
+    .conv-result { background: linear-gradient(140deg, #1A1714, #2A2018); border-radius: 18px; padding: 26px 28px; display: none; border: 1px solid rgba(255,255,255,0.06); }
     .conv-result.show { display: block; }
     .cr-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: rgba(245,166,35,0.5); margin-bottom: 10px; }
-    .cr-time { font-family: 'Syne', sans-serif; font-size: 44px; font-weight: 800; color: #FFF; letter-spacing: -2px; line-height: 1; margin-bottom: 6px; }
-    .cr-date { font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 14px; }
-    .cr-sum { font-size: 12px; color: rgba(255,255,255,0.3); padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); }
+    .cr-time { font-family: 'Syne', sans-serif; font-size: 52px; font-weight: 800; color: #FFF; letter-spacing: -2.5px; line-height: 1; margin-bottom: 8px; }
+    .cr-date { font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 16px; }
+    .cr-sum { font-size: 12px; color: rgba(255,255,255,0.28); padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.07); }
     .sel-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--gold-light); border: 1.5px solid rgba(245,166,35,0.4); border-radius: 20px; padding: 4px 12px; font-size: 11px; font-weight: 600; color: #8B5200; margin-bottom: 8px; }
     .sel-x { cursor: pointer; font-size: 15px; color: var(--gold); line-height: 1; }
+    .pkt-note { display: inline-flex; align-items: center; gap: 5px; background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.25); border-radius: 8px; padding: 6px 12px; font-size: 11px; color: var(--gold-dark); font-weight: 600; margin-top: 8px; }
 
     .err { color: var(--red); font-size: 12px; margin-top: 8px; display: none; }
     .err.show { display: block; }
 
-    /* ═══════════════════════════════════════════
-       APPOINTMENT PANEL
-    ═══════════════════════════════════════════ */
-    .appt-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+    /* ══════════════════════════════════════════════════
+       APPOINTMENTS
+    ══════════════════════════════════════════════════ */
+    .appt-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
     .appt-top-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; }
     .appt-top-sub { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
 
-    /* TODAY strip */
-    .today-strip { background: linear-gradient(135deg, #1A1714, #2D2520); border-radius: 18px; padding: 20px 24px; margin-bottom: 18px; }
-    .today-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: rgba(245,166,35,0.6); margin-bottom: 12px; }
-    .today-empty { font-size: 13px; color: rgba(255,255,255,0.3); }
-    .today-list { display: flex; flex-direction: column; gap: 10px; }
+    /* UPCOMING ALERT */
+    .upcoming-alert { background: linear-gradient(135deg, rgba(245,166,35,0.12), rgba(245,166,35,0.06)); border: 1.5px solid rgba(245,166,35,0.3); border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; display: none; }
+    .upcoming-alert.show { display: flex; align-items: center; gap: 12px; }
+    .ua-icon { font-size: 20px; flex-shrink: 0; }
+    .ua-text { font-size: 13px; font-weight: 600; color: var(--gold-dark); }
+    .ua-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* TODAY STRIP */
+    .today-strip { background: linear-gradient(140deg, #1A1714 0%, #2A2018 100%); border-radius: 18px; padding: 22px 24px; margin-bottom: 18px; border: 1px solid rgba(255,255,255,0.05); }
+    .today-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(245,166,35,0.55); margin-bottom: 14px; }
+    .today-empty { font-size: 13px; color: rgba(255,255,255,0.25); }
     .today-card {
-      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
       border-radius: 12px; padding: 14px 18px;
       display: flex; align-items: center; gap: 16px;
+      margin-bottom: 8px; cursor: pointer; transition: all 0.18s;
     }
-    .tc-time { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: var(--gold); min-width: 80px; }
-    .tc-info { flex: 1; }
-    .tc-name { font-size: 14px; font-weight: 600; color: #FFF; }
-    .tc-meta { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; }
-    .tc-badge { font-size: 10px; font-weight: 700; background: rgba(245,166,35,0.15); color: var(--gold); padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+    .today-card:last-child { margin-bottom: 0; }
+    .today-card:hover { background: rgba(255,255,255,0.09); border-color: rgba(245,166,35,0.3); }
+    .tc-time { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 800; color: var(--gold); min-width: 78px; }
+    .tc-info { flex: 1; min-width: 0; }
+    .tc-name { font-size: 14px; font-weight: 600; color: #FFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tc-meta { font-size: 11px; color: rgba(255,255,255,0.38); margin-top: 2px; }
+    .tc-badge { font-size: 10px; font-weight: 700; background: rgba(245,166,35,0.15); color: var(--gold); padding: 3px 10px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
 
-    /* Search + list */
-    .appt-search-row { display: flex; gap: 10px; margin-bottom: 18px; }
-    .appt-search-row .field-input { flex: 1; }
-
-    .appt-list { display: flex; flex-direction: column; gap: 10px; }
+    /* APPOINTMENT LIST */
     .appt-card {
       background: var(--surface); border: 1.5px solid var(--border);
       border-radius: 14px; padding: 16px 20px;
       display: flex; align-items: center; gap: 16px;
-      transition: border-color 0.18s;
+      cursor: pointer; transition: all 0.18s; margin-bottom: 10px;
     }
-    .appt-card:hover { border-color: var(--gold); }
-    .appt-date-badge { min-width: 52px; text-align: center; background: var(--bg2); border-radius: 10px; padding: 8px; }
+    .appt-card:last-child { margin-bottom: 0; }
+    .appt-card:hover { border-color: var(--gold); box-shadow: 0 4px 16px rgba(245,166,35,0.1); transform: translateY(-1px); }
+    .appt-card.today-highlight { border-color: rgba(245,166,35,0.4); background: var(--gold-light); }
+    .appt-date-badge { min-width: 54px; text-align: center; background: var(--bg2); border-radius: 10px; padding: 8px 6px; flex-shrink: 0; }
     .adb-month { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
-    .adb-day { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: var(--text); line-height: 1; }
-    .appt-info { flex: 1; }
-    .ai-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .adb-day { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; color: var(--text); line-height: 1; }
+    .appt-info { flex: 1; min-width: 0; }
+    .ai-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ai-meta { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
-    .ai-comment { font-size: 11px; color: var(--text-mid); margin-top: 4px; font-style: italic; }
-    .appt-time { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); text-align: right; }
-    .appt-time-tz { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+    .ai-comment { font-size: 11px; color: var(--text-mid); margin-top: 4px; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .appt-right { text-align: right; flex-shrink: 0; }
+    .appt-time { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); }
+    .appt-tz { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+    .appt-pkt { font-size: 10px; color: var(--gold-dark); font-weight: 600; margin-top: 3px; }
 
-    /* NEW APPT FORM */
-    .form-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: var(--text-muted); margin: 20px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    /* FORM MODAL */
+    .form-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: var(--text-muted); margin: 20px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
     .form-section-title:first-child { margin-top: 0; }
 
-    /* MODAL */
-    .modal-bg { display: none; position: fixed; inset: 0; background: rgba(26,23,20,0.5); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 24px; }
+    .modal-bg { display: none; position: fixed; inset: 0; background: rgba(22,19,16,0.55); backdrop-filter: blur(10px); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
     .modal-bg.show { display: flex; }
-    .modal { background: var(--surface); border-radius: 24px; padding: 36px; width: 100%; max-width: 580px; box-shadow: var(--shadow-lg); max-height: 90vh; overflow-y: auto; }
-    .modal-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; margin-bottom: 4px; }
-    .modal-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
-    .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+    .modal { background: var(--surface); border-radius: 24px; padding: 32px; width: 100%; max-width: 580px; box-shadow: var(--shadow-lg); max-height: 92vh; overflow-y: auto; }
+    .modal-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+    .modal-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; }
+    .modal-sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+    .modal-close { width: 30px; height: 30px; border-radius: 8px; border: none; background: var(--bg2); cursor: pointer; font-size: 16px; color: var(--text-muted); display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
+    .modal-close:hover { background: var(--border2); color: var(--text); }
+    .modal-actions { display: flex; gap: 8px; margin-top: 22px; }
 
-    /* SUCCESS */
-    .success-banner { background: #F0FFF5; border: 1.5px solid #BBF7D0; border-radius: 12px; padding: 14px 18px; font-size: 13px; color: #15803D; display: none; margin-top: 14px; }
+    .success-banner { background: #F0FFF5; border: 1.5px solid #BBF7D0; border-radius: 12px; padding: 12px 16px; font-size: 13px; color: #15803D; display: none; margin-top: 12px; }
     .success-banner.show { display: block; }
-
-    /* EMPTY STATE */
-    .empty { text-align: center; padding: 40px 24px; color: var(--text-muted); }
-    .empty-icon { font-size: 32px; margin-bottom: 10px; opacity: 0.4; }
+    .empty { text-align: center; padding: 44px 24px; color: var(--text-muted); }
+    .empty-icon { font-size: 36px; margin-bottom: 10px; opacity: 0.3; }
     .empty-txt { font-size: 13px; }
 
-    /* PKT badge */
-    .pkt-note { display: inline-flex; align-items: center; gap: 5px; background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.3); border-radius: 8px; padding: 6px 12px; font-size: 11px; color: var(--gold-dark); font-weight: 600; margin-top: 8px; }
+    /* VIEW MODAL — appointment detail */
+    .view-modal { max-width: 500px; }
+    .vm-header { background: linear-gradient(140deg, #1A1714, #2A2018); border-radius: 16px; padding: 22px 24px; margin-bottom: 20px; }
+    .vm-time { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--gold); }
+    .vm-date { font-size: 13px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+    .vm-name { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; color: #FFF; margin-top: 14px; }
+    .vm-company { font-size: 13px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+    .vm-row { display: flex; gap: 10px; margin-bottom: 10px; }
+    .vm-field { flex: 1; background: var(--bg2); border-radius: 10px; padding: 12px 14px; }
+    .vm-field-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted); margin-bottom: 4px; }
+    .vm-field-val { font-size: 13px; font-weight: 600; color: var(--text); }
+    .vm-pkt { background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.25); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+    .vm-pkt-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(245,166,35,0.6); margin-bottom: 4px; }
+    .vm-pkt-val { font-size: 14px; font-weight: 700; color: var(--gold-dark); }
 
-    @media (max-width: 700px) {
+    @media (max-width: 720px) {
       .lookup-grid { grid-template-columns: 1fr; }
       .conv-wrap { grid-template-columns: 1fr; }
       .conv-arrow { display: none; }
       .g2, .g3 { grid-template-columns: 1fr; }
       .lr-row { grid-template-columns: 1fr; }
+      .lr-divider { display: none; }
+      .lr-col { padding: 0; margin-bottom: 16px; }
       .page { padding: 20px 16px 60px; }
-      .nav { padding: 0 16px; }
-      .nav-clocks { gap: 2px; }
-      .nav-clock { padding: 5px 8px; }
+      .nav { padding: 0 14px; }
+      .nc-time { font-size: 11px; }
+      .nav-clock { padding: 6px 10px; }
+      .tab-btn { padding: 8px 14px; font-size: 12px; }
+      .cr-time { font-size: 36px; }
     }
   </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════
+<!-- ══════════════════════════════════════════════════
      NAV
-═══════════════════════════════════════════ -->
+══════════════════════════════════════════════════ -->
 <nav class="nav">
-  <div class="nav-brand">
+  <div class="nav-left">
     <div class="nav-mark">H</div>
-    <span class="nav-name">Haulxify</span>
+    <div>
+      <div class="nav-name">Haulxify</div>
+      <div class="nav-tag">Dispatch Tool</div>
+    </div>
   </div>
-  <div class="nav-sep"></div>
-  <div class="nav-clocks" id="navClocks">
-    <!-- populated by JS -->
-  </div>
+
+  <div class="nav-clocks" id="navClocks"></div>
+
   <div class="nav-right">
-    <div class="nav-emp" id="navEmp">—</div>
-    <a href="portal.html" class="nav-back">← Portal</a>
+    <div class="nav-emp-pill">
+      <div class="nav-emp-dot"></div>
+      <div class="nav-emp-id" id="navEmp">—</div>
+    </div>
   </div>
 </nav>
 
-<!-- ═══════════════════════════════════════════
+<!-- ══════════════════════════════════════════════════
      PAGE
-═══════════════════════════════════════════ -->
+══════════════════════════════════════════════════ -->
 <div class="page">
 
-  <!-- TAB BAR -->
-  <div class="tab-bar">
-    <button class="tab-btn active" onclick="switchTab('tabTime',this)">🕐 Time Lookup</button>
-    <button class="tab-btn" onclick="switchTab('tabConvert',this)">🔄 Converter</button>
-    <button class="tab-btn" onclick="switchTab('tabAppt',this)">📅 Appointments</button>
+  <!-- CENTERED TABS -->
+  <div class="tab-wrap">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('tabTime',this)">🕐 Time Lookup</button>
+      <button class="tab-btn" onclick="switchTab('tabConvert',this)">🔄 Converter</button>
+      <button class="tab-btn" onclick="switchTab('tabAppt',this)">📅 Appointments</button>
+    </div>
   </div>
 
-  <!-- ════════ TAB: TIME LOOKUP ════════ -->
+  <!-- ════ TIME LOOKUP ════ -->
   <div class="tab-panel active" id="tabTime">
     <div class="lookup-grid">
-      <!-- LEFT: search -->
       <div>
         <div class="card">
           <div class="card-title">🔍 City or State Lookup</div>
@@ -291,15 +341,14 @@
             <label class="field-label">Search Location</label>
             <div class="ac-wrap">
               <input class="field-input" id="luInp" type="text" autocomplete="off"
-                placeholder="Type city, state or abbreviation — e.g. NV, NYC, Texas..."
+                placeholder="City, state or code — e.g. NV, NYC, Texas..."
                 oninput="acInput('luInp','luDd')"
                 onkeydown="acKey(event,'luInp','luDd',doLookup)">
               <div class="ac-dd" id="luDd"></div>
             </div>
           </div>
-          <button class="btn-gold" style="width:100%;" onclick="doLookup()">Look Up Time →</button>
-
-          <div class="lookup-chips" id="quickChips">
+          <button class="btn-gold" style="width:100%;margin-bottom:16px;" onclick="doLookup()">Look Up Time →</button>
+          <div class="lookup-chips">
             <span class="chip" onclick="qFill('luInp','luDd','Nevada',doLookup)">NV</span>
             <span class="chip" onclick="qFill('luInp','luDd','Texas',doLookup)">TX</span>
             <span class="chip" onclick="qFill('luInp','luDd','California',doLookup)">CA</span>
@@ -322,47 +371,44 @@
           <div class="err" id="luErr">Location not found. Try a city name, state name, or 2-letter code.</div>
         </div>
       </div>
-
-      <!-- RIGHT: result -->
       <div>
         <div class="lookup-result" id="luResult">
           <div class="lr-location" id="lrLoc"></div>
           <div class="lr-tz" id="lrTz"></div>
           <div class="lr-row">
-            <div>
+            <div class="lr-col">
               <div class="lr-block-lbl">🇺🇸 Local Time</div>
               <div class="lr-time us" id="lrUs"></div>
               <div class="lr-date" id="lrUsD"></div>
             </div>
-            <div>
+            <div class="lr-divider"></div>
+            <div class="lr-col">
               <div class="lr-block-lbl">🇵🇰 Pakistan (PKT)</div>
               <div class="lr-time pk" id="lrPk"></div>
               <div class="lr-date" id="lrPkD"></div>
             </div>
           </div>
         </div>
-        <!-- placeholder before first search -->
-        <div id="luPlaceholder" style="background:var(--bg2);border-radius:18px;padding:40px 24px;text-align:center;border:1.5px dashed var(--border2);">
-          <div style="font-size:28px;margin-bottom:10px;opacity:0.3;">🗺️</div>
+        <div class="lu-placeholder" id="luPlaceholder">
+          <div style="font-size:32px;margin-bottom:10px;opacity:0.25;">🗺️</div>
           <div style="font-size:13px;color:var(--text-muted);">Search a US city or state to see<br>local time and Pakistan time side by side</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ════════ TAB: CONVERTER ════════ -->
+  <!-- ════ CONVERTER ════ -->
   <div class="tab-panel" id="tabConvert">
     <div class="card">
       <div class="card-title">🔄 Convert Driver's Local Time → Pakistan Time</div>
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:22px;margin-top:-8px;">Driver says "call me at 4 PM" — enter their location and time to instantly get Pakistan time.</p>
-
+      <p style="font-size:13px;color:var(--text-muted);margin:-8px 0 20px;">Driver says "call me at 4 PM" — enter their location and time to get exact Pakistan time.</p>
       <div class="conv-wrap">
         <div>
           <label class="field-label">Driver's Location</label>
-          <div id="convSelTag" style="display:none;margin-bottom:8px;"></div>
+          <div id="convSelTag" style="display:none;"></div>
           <div class="ac-wrap">
             <input class="field-input" id="cvInp" type="text" autocomplete="off"
-              placeholder="State, city or abbreviation — e.g. NV, Texas, Dallas..."
+              placeholder="State, city or code — e.g. NV, Texas, Dallas..."
               oninput="acInput('cvInp','cvDd')"
               onkeydown="acKey(event,'cvInp','cvDd',doConvert)">
             <div class="ac-dd" id="cvDd"></div>
@@ -374,19 +420,15 @@
           <input class="field-input" type="time" id="cvTime" value="16:00">
         </div>
       </div>
-
       <button class="btn-dark" style="width:100%;" onclick="doConvert()">Convert to Pakistan Time →</button>
       <div class="err" id="cvErr"></div>
-
       <div class="conv-result" id="cvResult" style="margin-top:18px;">
-        <div class="cr-lbl">🇵🇰 Pakistan Standard Time (PKT · UTC+5)</div>
+        <div class="cr-lbl">🇵🇰 Pakistan Standard Time · UTC+5</div>
         <div class="cr-time" id="cvPkT"></div>
         <div class="cr-date" id="cvPkD"></div>
         <div class="cr-sum" id="cvSum"></div>
       </div>
     </div>
-
-    <!-- Quick convert chips -->
     <div class="card">
       <div class="card-title" style="margin-bottom:14px;">⚡ Quick States</div>
       <div class="lookup-chips">
@@ -406,15 +448,23 @@
     </div>
   </div>
 
-  <!-- ════════ TAB: APPOINTMENTS ════════ -->
+  <!-- ════ APPOINTMENTS ════ -->
   <div class="tab-panel" id="tabAppt">
-
     <div class="appt-top">
       <div>
         <div class="appt-top-title">📅 Appointments</div>
-        <div class="appt-top-sub">Your booked appointments — private to your employee ID</div>
+        <div class="appt-top-sub" id="apptSub">Your private appointments</div>
       </div>
-      <button class="btn-gold" onclick="openApptModal()">+ Set Appointment</button>
+      <button class="btn-gold" onclick="openNewApptModal()">+ New Appointment</button>
+    </div>
+
+    <!-- Upcoming alert -->
+    <div class="upcoming-alert" id="upcomingAlert">
+      <div class="ua-icon">⏰</div>
+      <div>
+        <div class="ua-text" id="upcomingText"></div>
+        <div class="ua-sub" id="upcomingSub"></div>
+      </div>
     </div>
 
     <!-- Today -->
@@ -425,72 +475,62 @@
 
     <!-- Search + all -->
     <div class="card">
-      <div class="card-title" style="margin-bottom:16px;">All Appointments</div>
-      <div class="appt-search-row">
-        <input class="field-input" id="apptSearch" type="text" placeholder="Search by name, MC#, company, date..." oninput="filterAppts()">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div class="card-title" style="margin:0;">All Appointments</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select class="field-input" id="apptFilter" onchange="filterAppts()" style="width:auto;padding:7px 12px;font-size:12px;">
+            <option value="">All dates</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="past">Past</option>
+            <option value="today">Today only</option>
+          </select>
+        </div>
       </div>
-      <div id="apptList"><div class="empty"><div class="empty-icon">📋</div><div class="empty-txt">No appointments yet. Set one using the button above.</div></div></div>
+      <input class="field-input" id="apptSearch" type="text" placeholder="Search by name, MC#, company, date..." oninput="filterAppts()" style="margin-bottom:16px;">
+      <div id="apptList"></div>
     </div>
   </div>
 
-</div><!-- /page -->
+</div>
 
-<!-- ═══════════════════════════════════════════
-     NEW APPOINTMENT MODAL
-═══════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════
+     NEW / EDIT APPOINTMENT MODAL
+══════════════════════════════════════════════════ -->
 <div class="modal-bg" id="apptModal">
   <div class="modal">
-    <div class="modal-title">Set New Appointment</div>
-    <div class="modal-sub">Fill in the carrier details. This appointment will be saved to your account only.</div>
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="apptModalTitle">New Appointment</div>
+        <div class="modal-sub" id="apptModalSub">Fill in the carrier details.</div>
+      </div>
+      <button class="modal-close" onclick="closeApptModal()">✕</button>
+    </div>
+
+    <input type="hidden" id="fEditId">
 
     <div class="form-section-title">Carrier Information</div>
     <div class="g2">
-      <div class="field">
-        <label class="field-label">MC Number *</label>
-        <input class="field-input" id="fMC" type="text" placeholder="e.g. MC-123456">
-      </div>
-      <div class="field">
-        <label class="field-label">Company Name *</label>
-        <input class="field-input" id="fCompany" type="text" placeholder="e.g. Fast Freight LLC">
-      </div>
+      <div class="field"><label class="field-label">MC Number *</label><input class="field-input" id="fMC" placeholder="e.g. MC-123456"></div>
+      <div class="field"><label class="field-label">Company Name *</label><input class="field-input" id="fCompany" placeholder="e.g. Fast Freight LLC"></div>
     </div>
     <div class="g2">
-      <div class="field">
-        <label class="field-label">Contact Person *</label>
-        <input class="field-input" id="fPerson" type="text" placeholder="Full name">
-      </div>
-      <div class="field">
-        <label class="field-label">Phone Number *</label>
-        <input class="field-input" id="fPhone" type="tel" placeholder="+1 (555) 000-0000">
-      </div>
+      <div class="field"><label class="field-label">Contact Person *</label><input class="field-input" id="fPerson" placeholder="Full name"></div>
+      <div class="field"><label class="field-label">Phone Number *</label><input class="field-input" id="fPhone" type="tel" placeholder="+1 (555) 000-0000"></div>
     </div>
     <div class="field">
       <label class="field-label">Truck Type</label>
       <select class="field-input" id="fTruck">
         <option value="">Select truck type...</option>
-        <option>Dry Van</option>
-        <option>Reefer</option>
-        <option>Flatbed</option>
-        <option>Step Deck</option>
-        <option>Lowboy</option>
-        <option>Box Truck</option>
-        <option>Tanker</option>
-        <option>Car Carrier</option>
-        <option>Hotshot</option>
-        <option>Other</option>
+        <option>Dry Van</option><option>Reefer</option><option>Flatbed</option>
+        <option>Step Deck</option><option>Lowboy</option><option>Box Truck</option>
+        <option>Tanker</option><option>Car Carrier</option><option>Hotshot</option><option>Other</option>
       </select>
     </div>
 
     <div class="form-section-title">Appointment Details</div>
     <div class="g2">
-      <div class="field">
-        <label class="field-label">Date *</label>
-        <input class="field-input" id="fDate" type="date">
-      </div>
-      <div class="field">
-        <label class="field-label">Time (Driver's Local) *</label>
-        <input class="field-input" id="fTime" type="time">
-      </div>
+      <div class="field"><label class="field-label">Date *</label><input class="field-input" id="fDate" type="date"></div>
+      <div class="field"><label class="field-label">Time (Driver's Local) *</label><input class="field-input" id="fTime" type="time" oninput="updatePktNote()"></div>
     </div>
     <div class="field">
       <label class="field-label">Driver's State / Time Zone</label>
@@ -503,10 +543,7 @@
       </div>
       <div id="fPktNote" style="display:none;" class="pkt-note">🇵🇰 PKT equivalent: <strong id="fPktTime"></strong></div>
     </div>
-    <div class="field">
-      <label class="field-label">Comments / Notes</label>
-      <textarea class="field-input" id="fComments" placeholder="Any extra details, follow-up instructions..."></textarea>
-    </div>
+    <div class="field"><label class="field-label">Comments / Notes</label><textarea class="field-input" id="fComments" placeholder="Any extra details..."></textarea></div>
 
     <div class="modal-actions">
       <button class="btn-gold" style="flex:1;" onclick="saveAppt()">Save Appointment →</button>
@@ -517,21 +554,37 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════
+     VIEW APPOINTMENT MODAL
+══════════════════════════════════════════════════ -->
+<div class="modal-bg" id="viewModal">
+  <div class="modal view-modal">
+    <div class="modal-header" style="margin-bottom:0;">
+      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;">Appointment Details</div>
+      <button class="modal-close" onclick="closeViewModal()">✕</button>
+    </div>
+    <div id="viewContent" style="margin-top:16px;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn-gold" style="flex:1;" onclick="editFromView()">✏️ Edit</button>
+      <button class="btn-red" onclick="deleteFromView()">🗑 Delete</button>
+      <button class="btn-outline" onclick="closeViewModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <script>
-// ═══════════════════════════════════════════════════════════════
-//  EMPLOYEE ID from URL param
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
+//  EMPLOYEE ID
+// ══════════════════════════════════════════════════
 const params = new URLSearchParams(window.location.search);
 const EMP_ID = params.get('emp') || localStorage.getItem('hx_active_emp') || 'GUEST';
-document.getElementById('navEmp').textContent = EMP_ID;
-// Also persist so refreshing the tool tab keeps the ID
 if (EMP_ID !== 'GUEST') localStorage.setItem('hx_active_emp', EMP_ID);
+document.getElementById('navEmp').textContent = EMP_ID;
 
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 //  LOCATION DATABASE
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 const LOCS = [
-  // States
   {n:'Alabama',        ab:['AL'],           tz:'America/Chicago',     t:'State',z:'ct'},
   {n:'Alaska',         ab:['AK'],           tz:'America/Anchorage',   t:'State',z:'akt'},
   {n:'Arizona',        ab:['AZ'],           tz:'America/Phoenix',     t:'State',z:'az'},
@@ -583,85 +636,70 @@ const LOCS = [
   {n:'Wisconsin',      ab:['WI','Wis'],     tz:'America/Chicago',     t:'State',z:'ct'},
   {n:'Wyoming',        ab:['WY'],           tz:'America/Denver',      t:'State',z:'mt'},
   {n:'Washington DC',  ab:['DC'],           tz:'America/New_York',    t:'State',z:'et'},
-  // Cities
-  {n:'New York City',   ab:['NYC'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Los Angeles',     ab:['LA','LAX'],    tz:'America/Los_Angeles', t:'City',z:'pt'},
-  {n:'Chicago',         ab:['CHI','ORD'],   tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Houston',         ab:['HOU'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Phoenix',         ab:['PHX'],         tz:'America/Phoenix',     t:'City',z:'az'},
-  {n:'Philadelphia',    ab:['PHL','Philly'],tz:'America/New_York',    t:'City',z:'et'},
-  {n:'San Antonio',     ab:['SAT'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'San Diego',       ab:['SAN'],         tz:'America/Los_Angeles', t:'City',z:'pt'},
-  {n:'Dallas',          ab:['DAL','DFW'],   tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Austin',          ab:['AUS'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Jacksonville',    ab:['JAX'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Fort Worth',      ab:['FTW'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Columbus',        ab:['CMH'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Charlotte',       ab:['CLT'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Indianapolis',    ab:['IND','Indy'],  tz:'America/New_York',    t:'City',z:'et'},
-  {n:'San Francisco',   ab:['SF','SFO'],    tz:'America/Los_Angeles', t:'City',z:'pt'},
-  {n:'Seattle',         ab:['SEA'],         tz:'America/Los_Angeles', t:'City',z:'pt'},
-  {n:'Denver',          ab:['DEN'],         tz:'America/Denver',      t:'City',z:'mt'},
-  {n:'Nashville',       ab:['BNA'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Oklahoma City',   ab:['OKC'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Boston',          ab:['BOS'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Portland',        ab:['PDX'],         tz:'America/Los_Angeles', t:'City',z:'pt'},
-  {n:'Las Vegas',       ab:['LAS','Vegas'], tz:'America/Los_Angeles', t:'City',z:'pt'},
-  {n:'Memphis',         ab:['MEM'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Louisville',      ab:['SDF'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Baltimore',       ab:['BWI'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Milwaukee',       ab:['MKE'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Albuquerque',     ab:['ABQ'],         tz:'America/Denver',      t:'City',z:'mt'},
-  {n:'Tucson',          ab:['TUS'],         tz:'America/Phoenix',     t:'City',z:'az'},
-  {n:'Fresno',          ab:['FAT'],         tz:'America/Los_Angeles', t:'City',z:'pt'},
-  {n:'Sacramento',      ab:['SAC'],         tz:'America/Los_Angeles', t:'City',z:'pt'},
-  {n:'Atlanta',         ab:['ATL'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Kansas City',     ab:['MCI'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Raleigh',         ab:['RDU'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Miami',           ab:['MIA'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Minneapolis',     ab:['MSP'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Cleveland',       ab:['CLE'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'New Orleans',     ab:['MSY','NOLA'],  tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Tampa',           ab:['TPA'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Honolulu',        ab:['HNL'],         tz:'Pacific/Honolulu',    t:'City',z:'hst'},
-  {n:'Anchorage',       ab:['ANC'],         tz:'America/Anchorage',   t:'City',z:'akt'},
-  {n:'Salt Lake City',  ab:['SLC'],         tz:'America/Denver',      t:'City',z:'mt'},
-  {n:'Reno',            ab:['RNO'],         tz:'America/Los_Angeles', t:'City',z:'pt'},
-  {n:'Richmond',        ab:['RIC'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Pittsburgh',      ab:['PIT'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Cincinnati',      ab:['CVG'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'St. Louis',       ab:['STL'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Buffalo',         ab:['BUF'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Orlando',         ab:['MCO'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Fort Lauderdale', ab:['FLL'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Detroit',         ab:['DTW'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Atlanta',         ab:['ATL'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Corpus Christi',  ab:['CRP'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Shreveport',      ab:['SHV'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Jackson',         ab:['JAN'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Omaha',           ab:['OMA'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Wichita',         ab:['ICT'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Scottsdale',      ab:[],              tz:'America/Phoenix',     t:'City',z:'az'},
-  {n:'Mesa',            ab:[],              tz:'America/Phoenix',     t:'City',z:'az'},
-  {n:'Tempe',           ab:[],              tz:'America/Phoenix',     t:'City',z:'az'},
-  {n:'Spokane',         ab:['GEG'],         tz:'America/Los_Angeles', t:'City',z:'pt'},
-  {n:'Bakersfield',     ab:['BFL'],         tz:'America/Los_Angeles', t:'City',z:'pt'},
-  {n:'Irvine',          ab:[],              tz:'America/Los_Angeles', t:'City',z:'pt'},
-  {n:'Riverside',       ab:[],              tz:'America/Los_Angeles', t:'City',z:'pt'},
-  {n:'Knoxville',       ab:['TYS'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Chattanooga',     ab:['CHA'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Savannah',        ab:['SAV'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Greensboro',      ab:['GSO'],         tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Durham',          ab:[],              tz:'America/New_York',    t:'City',z:'et'},
-  {n:'Birmingham',      ab:['BHM'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Little Rock',     ab:['LIT'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Baton Rouge',     ab:['BTR'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Des Moines',      ab:['DSM'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'Madison',         ab:['MSN'],         tz:'America/Chicago',     t:'City',z:'ct'},
-  {n:'El Paso',         ab:['ELP'],         tz:'America/Denver',      t:'City',z:'mt'},
-  {n:'Albuquerque',     ab:['ABQ'],         tz:'America/Denver',      t:'City',z:'mt'},
-  {n:'Aurora',          ab:[],              tz:'America/Denver',      t:'City',z:'mt'},
-  {n:'Fort Collins',    ab:[],              tz:'America/Denver',      t:'City',z:'mt'},
+  {n:'New York City',  ab:['NYC'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Los Angeles',    ab:['LA','LAX'],     tz:'America/Los_Angeles', t:'City', z:'pt'},
+  {n:'Chicago',        ab:['CHI','ORD'],    tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Houston',        ab:['HOU'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Phoenix',        ab:['PHX'],          tz:'America/Phoenix',     t:'City', z:'az'},
+  {n:'Philadelphia',   ab:['PHL','Philly'], tz:'America/New_York',    t:'City', z:'et'},
+  {n:'San Antonio',    ab:['SAT'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'San Diego',      ab:['SAN'],          tz:'America/Los_Angeles', t:'City', z:'pt'},
+  {n:'Dallas',         ab:['DAL','DFW'],    tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Austin',         ab:['AUS'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Jacksonville',   ab:['JAX'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Fort Worth',     ab:['FTW'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Columbus',       ab:['CMH'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Charlotte',      ab:['CLT'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Indianapolis',   ab:['IND','Indy'],   tz:'America/New_York',    t:'City', z:'et'},
+  {n:'San Francisco',  ab:['SF','SFO'],     tz:'America/Los_Angeles', t:'City', z:'pt'},
+  {n:'Seattle',        ab:['SEA'],          tz:'America/Los_Angeles', t:'City', z:'pt'},
+  {n:'Denver',         ab:['DEN'],          tz:'America/Denver',      t:'City', z:'mt'},
+  {n:'Nashville',      ab:['BNA'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Oklahoma City',  ab:['OKC'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Boston',         ab:['BOS'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Portland',       ab:['PDX'],          tz:'America/Los_Angeles', t:'City', z:'pt'},
+  {n:'Las Vegas',      ab:['LAS','Vegas'],  tz:'America/Los_Angeles', t:'City', z:'pt'},
+  {n:'Memphis',        ab:['MEM'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Louisville',     ab:['SDF'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Baltimore',      ab:['BWI'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Milwaukee',      ab:['MKE'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Albuquerque',    ab:['ABQ'],          tz:'America/Denver',      t:'City', z:'mt'},
+  {n:'Tucson',         ab:['TUS'],          tz:'America/Phoenix',     t:'City', z:'az'},
+  {n:'Fresno',         ab:['FAT'],          tz:'America/Los_Angeles', t:'City', z:'pt'},
+  {n:'Sacramento',     ab:['SAC'],          tz:'America/Los_Angeles', t:'City', z:'pt'},
+  {n:'Atlanta',        ab:['ATL'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Kansas City',    ab:['MCI'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Raleigh',        ab:['RDU'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Miami',          ab:['MIA'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Minneapolis',    ab:['MSP'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Cleveland',      ab:['CLE'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'New Orleans',    ab:['MSY','NOLA'],   tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Tampa',          ab:['TPA'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Salt Lake City', ab:['SLC'],          tz:'America/Denver',      t:'City', z:'mt'},
+  {n:'Reno',           ab:['RNO'],          tz:'America/Los_Angeles', t:'City', z:'pt'},
+  {n:'Richmond',       ab:['RIC'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Pittsburgh',     ab:['PIT'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Cincinnati',     ab:['CVG'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'St. Louis',      ab:['STL'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Buffalo',        ab:['BUF'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Orlando',        ab:['MCO'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Detroit',        ab:['DTW'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'El Paso',        ab:['ELP'],          tz:'America/Denver',      t:'City', z:'mt'},
+  {n:'Omaha',          ab:['OMA'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Wichita',        ab:['ICT'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Scottsdale',     ab:[],               tz:'America/Phoenix',     t:'City', z:'az'},
+  {n:'Mesa',           ab:[],               tz:'America/Phoenix',     t:'City', z:'az'},
+  {n:'Tempe',          ab:[],               tz:'America/Phoenix',     t:'City', z:'az'},
+  {n:'Spokane',        ab:['GEG'],          tz:'America/Los_Angeles', t:'City', z:'pt'},
+  {n:'Knoxville',      ab:['TYS'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Chattanooga',    ab:['CHA'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Savannah',       ab:['SAV'],          tz:'America/New_York',    t:'City', z:'et'},
+  {n:'Birmingham',     ab:['BHM'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Little Rock',    ab:['LIT'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Baton Rouge',    ab:['BTR'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Des Moines',     ab:['DSM'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Madison',        ab:['MSN'],          tz:'America/Chicago',     t:'City', z:'ct'},
+  {n:'Fort Collins',   ab:[],               tz:'America/Denver',      t:'City', z:'mt'},
 ];
 
 const TZ_INFO = {
@@ -674,9 +712,9 @@ const TZ_INFO = {
   'Pacific/Honolulu':    {s:'HST',f:'Hawaii Time'},
 };
 
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 //  NAV CLOCKS
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 const NAV_ZONES = [
   {tz:'America/New_York',    label:'ET'},
   {tz:'America/Chicago',     label:'CT'},
@@ -685,421 +723,352 @@ const NAV_ZONES = [
   {tz:'America/Los_Angeles', label:'PT'},
   {tz:'Asia/Karachi',        label:'PKT', pkt:true},
 ];
-
 function renderNavClocks() {
-  const c = document.getElementById('navClocks');
-  c.innerHTML = NAV_ZONES.map(z => `
-    <div class="nav-clock${z.pkt?' pkt':''}">
-      <div class="nav-clock-zone">${z.label}</div>
-      <div class="nav-clock-time" id="nc_${z.label}">${fmtNav(new Date(), z.tz)}</div>
-    </div>`).join('');
+  document.getElementById('navClocks').innerHTML = NAV_ZONES.map(z =>
+    `<div class="nav-clock${z.pkt?' pkt':''}">
+      <div class="nc-zone">${z.label}</div>
+      <div class="nc-time" id="nc_${z.label}">${fmtNav(new Date(),z.tz)}</div>
+    </div>`
+  ).join('');
 }
 function tickNav() {
   const now = new Date();
   NAV_ZONES.forEach(z => {
-    const el = document.getElementById('nc_' + z.label);
+    const el = document.getElementById('nc_'+z.label);
     if (el) el.textContent = fmtNav(now, z.tz);
   });
 }
-function fmtNav(d, tz) {
-  return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:true});
-}
+function fmtNav(d,tz) { return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:true}); }
 renderNavClocks();
 setInterval(tickNav, 1000);
 
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 //  TABS
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 function switchTab(id, btn) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
-  if (id === 'tabAppt') renderAppts();
+  if (id==='tabAppt') renderAppts();
 }
 
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 //  AUTOCOMPLETE
-// ═══════════════════════════════════════════════════════════════
-const SEL = {};
-const HI  = {};
-
+// ══════════════════════════════════════════════════
+const SEL={}, HI={};
 function matchLocs(q) {
   if (!q) return [];
-  const ql = q.trim().toLowerCase();
-  const out = [], seen = new Set();
+  const ql=q.trim().toLowerCase(), out=[], seen=new Set();
   LOCS.forEach(loc => {
     if (seen.has(loc.n)) return;
-    const nl = loc.n.toLowerCase();
-    const abExact = loc.ab.some(a => a.toLowerCase() === ql);
-    const abStart = loc.ab.some(a => a.toLowerCase().startsWith(ql));
-    const nStart  = nl.startsWith(ql);
-    const nHas    = nl.includes(ql);
-    if (abExact || abStart || nStart || nHas) {
-      out.push({ ...loc, score: abExact?100:abStart?80:nStart?60:20 });
-      seen.add(loc.n);
-    }
+    const nl=loc.n.toLowerCase();
+    const abE=loc.ab.some(a=>a.toLowerCase()===ql);
+    const abS=loc.ab.some(a=>a.toLowerCase().startsWith(ql));
+    const nS=nl.startsWith(ql), nH=nl.includes(ql);
+    if (abE||abS||nS||nH) { out.push({...loc,score:abE?100:abS?80:nS?60:20}); seen.add(loc.n); }
   });
   return out.sort((a,b)=>b.score-a.score).slice(0,9);
 }
-
 function acInput(inpId, ddId) {
-  const q  = document.getElementById(inpId).value;
-  const dd = document.getElementById(ddId);
-  HI[ddId] = -1; SEL[ddId] = null;
+  const q=document.getElementById(inpId).value, dd=document.getElementById(ddId);
+  HI[ddId]=-1; SEL[ddId]=null;
   if (!q.trim()) { dd.classList.remove('open'); dd.innerHTML=''; return; }
-  const m = matchLocs(q);
-  dd._m = m;
+  const m=matchLocs(q); dd._m=m;
   if (!m.length) { dd.innerHTML='<div class="ac-none">No results — try full name or 2-letter code</div>'; dd.classList.add('open'); return; }
-  dd.innerHTML = m.map((loc,i) => {
-    const info = TZ_INFO[loc.tz]||{};
-    const ab   = loc.ab.length ? `<span class="ac-abbr">${loc.ab[0]}</span> · ` : '';
-    return `<div class="ac-item" onmousedown="acPick('${inpId}','${ddId}',${i})">
-      <div style="flex:1">
-        <div class="ac-name">${loc.n}</div>
-        <div class="ac-meta">${ab}${loc.t} · ${info.f||loc.tz}</div>
-      </div>
-      <span class="ac-badge ${loc.z}">${info.s||''}</span>
-    </div>`;
+  dd.innerHTML=m.map((loc,i)=>{
+    const info=TZ_INFO[loc.tz]||{}, ab=loc.ab.length?`<span class="ac-abbr">${loc.ab[0]}</span> · `:'';
+    return `<div class="ac-item" onmousedown="acPick('${inpId}','${ddId}',${i})"><div style="flex:1"><div class="ac-name">${loc.n}</div><div class="ac-meta">${ab}${loc.t} · ${info.f||loc.tz}</div></div><span class="ac-badge ${loc.z}">${info.s||''}</span></div>`;
   }).join('');
   dd.classList.add('open');
 }
-
 function acPick(inpId, ddId, idx) {
-  const dd  = document.getElementById(ddId);
-  const loc = (dd._m||[])[idx];
+  const dd=document.getElementById(ddId), loc=(dd._m||[])[idx];
   if (!loc) return;
-  document.getElementById(inpId).value = loc.n;
-  SEL[ddId] = loc;
+  document.getElementById(inpId).value=loc.n; SEL[ddId]=loc;
   dd.classList.remove('open');
-  if (ddId === 'cvDd') showCvTag(loc);
-  if (ddId === 'fLocDd') updatePktNote();
+  if (ddId==='cvDd') showCvTag(loc);
+  if (ddId==='fLocDd') updatePktNote();
 }
-
-function acKey(e, inpId, ddId, cb) {
-  const dd = document.getElementById(ddId);
-  const items = dd.querySelectorAll('.ac-item');
-  if (e.key==='ArrowDown')  { e.preventDefault(); HI[ddId]=Math.min((HI[ddId]||0)+1,items.length-1); hlItem(items,HI[ddId]); }
-  else if (e.key==='ArrowUp') { e.preventDefault(); HI[ddId]=Math.max((HI[ddId]||0)-1,0); hlItem(items,HI[ddId]); }
+function acKey(e,inpId,ddId,cb) {
+  const dd=document.getElementById(ddId), items=dd.querySelectorAll('.ac-item');
+  if (e.key==='ArrowDown') { e.preventDefault(); HI[ddId]=Math.min((HI[ddId]||0)+1,items.length-1); items.forEach((el,i)=>el.classList.toggle('hi',i===HI[ddId])); }
+  else if (e.key==='ArrowUp') { e.preventDefault(); HI[ddId]=Math.max((HI[ddId]||0)-1,0); items.forEach((el,i)=>el.classList.toggle('hi',i===HI[ddId])); }
   else if (e.key==='Enter') { if (HI[ddId]>=0&&items[HI[ddId]]) items[HI[ddId]].dispatchEvent(new MouseEvent('mousedown')); else if(cb){dd.classList.remove('open');cb();} }
   else if (e.key==='Escape') dd.classList.remove('open');
 }
-function hlItem(items,idx){ items.forEach((el,i)=>el.classList.toggle('hi',i===idx)); }
-
 document.addEventListener('click', e => {
-  ['luDd','cvDd','fLocDd'].forEach(id => {
-    const dd = document.getElementById(id);
-    if (dd && !dd.parentElement.contains(e.target)) dd.classList.remove('open');
-  });
+  ['luDd','cvDd','fLocDd'].forEach(id=>{ const dd=document.getElementById(id); if(dd&&!dd.parentElement.contains(e.target)) dd.classList.remove('open'); });
 });
-
-function qFill(inpId, ddId, name, cb) {
-  document.getElementById(inpId).value = name;
-  const loc = LOCS.find(l=>l.n.toLowerCase()===name.toLowerCase());
+function qFill(inpId,ddId,name,cb) {
+  document.getElementById(inpId).value=name;
+  const loc=LOCS.find(l=>l.n.toLowerCase()===name.toLowerCase());
   if (loc) { SEL[ddId]=loc; if(ddId==='cvDd') showCvTag(loc); }
   if (cb) cb();
 }
-
-function resolveLoc(inpId, ddId) {
+function resolveLoc(inpId,ddId) {
   if (SEL[ddId]) return SEL[ddId];
-  const q = document.getElementById(inpId).value.trim();
-  const m = matchLocs(q);
+  const q=document.getElementById(inpId).value.trim(), m=matchLocs(q);
   if (m.length) { SEL[ddId]=m[0]; document.getElementById(inpId).value=m[0].n; return m[0]; }
   return null;
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  TIME CONVERSION — FIXED
-//  Correct method: use Intl to get the UTC wall-clock offset
-//  for the target timezone, avoiding local-machine TZ pollution
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
+//  TIME CONVERSION (fixed — Intl-based, no local TZ pollution)
+// ══════════════════════════════════════════════════
 function getTzOffsetMin(tz, refDate) {
-  // Returns offset in minutes (positive = ahead of UTC)
-  // Uses Intl.DateTimeFormat to get wall clock in that tz, compare to UTC
-  const fmt = (d, zone) => {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: zone,
-      year:'numeric', month:'2-digit', day:'2-digit',
-      hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
-    }).formatToParts(d);
-    const p = {};
-    parts.forEach(({type,value}) => p[type]=value);
+  const fmt=(d,z)=>{
+    const p={};
+    new Intl.DateTimeFormat('en-US',{timeZone:z,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).formatToParts(d).forEach(({type,value})=>p[type]=value);
     return new Date(`${p.year}-${p.month}-${p.day}T${p.hour==='24'?'00':p.hour}:${p.minute}:${p.second}Z`);
   };
-  const utcWall = fmt(refDate, 'UTC');
-  const tzWall  = fmt(refDate, tz);
-  return (tzWall - utcWall) / 60000;
+  return (fmt(refDate,tz)-fmt(refDate,'UTC'))/60000;
 }
-
-// Convert a time (h,m) in a given tz on today's date → PKT
-// Returns { pktH, pktM, dayDiff } where dayDiff: 0=same, 1=next, -1=prev
-function convertToPKT(h, m, tz) {
-  const PKT_OFFSET = 5 * 60; // PKT is always UTC+5, no DST
-  const now = new Date();
-  // Get today's date string in the driver's timezone (YYYY-MM-DD)
-  const driverDateStr = new Intl.DateTimeFormat('en-CA', {timeZone: tz}).format(now);
-  // Build a reference point: midnight UTC on that driver-local date
-  const [yr, mo, dy] = driverDateStr.split('-').map(Number);
-  // We need driver's h:m in UTC. Get tz offset for that day.
-  const refForOffset = new Date(Date.UTC(yr, mo-1, dy, 12, 0, 0)); // noon UTC same day
-  const driverOffsetMin = getTzOffsetMin(tz, refForOffset);
-  // Driver's wall-clock time in UTC minutes since epoch start of that day
-  // UTC time = driver local time - driver offset
-  const driverMinutesFromMidnightUTC = h * 60 + m - driverOffsetMin;
-  // PKT minutes from midnight UTC of same day
-  const pktMinutesFromMidnightUTC = driverMinutesFromMidnightUTC + PKT_OFFSET;
-  // Normalize to 0–1439
-  let pktTotalMin = pktMinutesFromMidnightUTC;
-  let dayDiff = 0;
-  if (pktTotalMin >= 1440) { pktTotalMin -= 1440; dayDiff = 1; }
-  else if (pktTotalMin < 0) { pktTotalMin += 1440; dayDiff = -1; }
-  return { pktH: Math.floor(pktTotalMin/60), pktM: pktTotalMin%60, dayDiff };
+function convertToPKT(h,m,tz) {
+  const PKT=5*60, now=new Date();
+  const driverDate=new Intl.DateTimeFormat('en-CA',{timeZone:tz}).format(now);
+  const [yr,mo,dy]=driverDate.split('-').map(Number);
+  const refOff=getTzOffsetMin(tz,new Date(Date.UTC(yr,mo-1,dy,12,0,0)));
+  const driverUTCmin=h*60+m-refOff;
+  let pktMin=driverUTCmin+PKT, dayDiff=0;
+  if (pktMin>=1440){pktMin-=1440;dayDiff=1;} else if(pktMin<0){pktMin+=1440;dayDiff=-1;}
+  return {pktH:Math.floor(pktMin/60),pktM:pktMin%60,dayDiff};
 }
+function fmt12(h,m){const ap=h>=12?'PM':'AM',h12=h%12||12;return `${h12}:${String(m).padStart(2,'0')} ${ap}`;}
+function getOff(tz){const off=getTzOffsetMin(tz,new Date()),s=off>=0?'+':'-',a=Math.abs(off),hh=Math.floor(a/60),mm=a%60;return `UTC${s}${hh}${mm?':'+String(mm).padStart(2,'0'):''}`;}
+function fmtTime(d,tz){return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:tz});}
+function fmtDate(d,tz){return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric',timeZone:tz});}
 
-function fmt12(h, m) {
-  const ap = h>=12?'PM':'AM', h12=h%12||12;
-  return `${h12}:${String(m).padStart(2,'0')} ${ap}`;
-}
-
-function getOff(tz) {
-  const off = getTzOffsetMin(tz, new Date());
-  const s = off>=0?'+':'-', a=Math.abs(off), hh=Math.floor(a/60), mm=a%60;
-  return `UTC${s}${hh}${mm?':'+String(mm).padStart(2,'0'):''}`;
-}
-
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 //  TIME LOOKUP
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 function doLookup() {
-  const errEl = document.getElementById('luErr');
-  const resEl = document.getElementById('luResult');
-  const phEl  = document.getElementById('luPlaceholder');
+  const errEl=document.getElementById('luErr'), resEl=document.getElementById('luResult'), phEl=document.getElementById('luPlaceholder');
   errEl.classList.remove('show'); resEl.classList.remove('show');
-
-  const loc = resolveLoc('luInp','luDd');
-  if (!loc) { errEl.classList.add('show'); return; }
-
-  const tz = loc.tz, now = new Date();
-  const info = TZ_INFO[tz]||{};
-
-  document.getElementById('lrLoc').textContent = loc.n;
-  document.getElementById('lrTz').textContent  = `${info.f||tz} · ${getOff(tz)}`;
-  document.getElementById('lrUs').textContent  = fmtTime(now, tz);
-  document.getElementById('lrUsD').textContent = fmtDate(now, tz);
-  document.getElementById('lrPk').textContent  = fmtTime(now, 'Asia/Karachi');
-  document.getElementById('lrPkD').textContent = fmtDate(now, 'Asia/Karachi');
-
-  phEl.style.display = 'none';
-  resEl.classList.add('show');
-
+  const loc=resolveLoc('luInp','luDd');
+  if (!loc){errEl.classList.add('show');return;}
+  const tz=loc.tz, now=new Date(), info=TZ_INFO[tz]||{};
+  document.getElementById('lrLoc').textContent=loc.n;
+  document.getElementById('lrTz').textContent=`${info.f||tz} · ${getOff(tz)}`;
+  document.getElementById('lrUs').textContent=fmtTime(now,tz);
+  document.getElementById('lrUsD').textContent=fmtDate(now,tz);
+  document.getElementById('lrPk').textContent=fmtTime(now,'Asia/Karachi');
+  document.getElementById('lrPkD').textContent=fmtDate(now,'Asia/Karachi');
+  phEl.style.display='none'; resEl.classList.add('show');
   clearInterval(window._luTick);
-  window._luTick = setInterval(() => {
+  window._luTick=setInterval(()=>{
     if (!resEl.classList.contains('show')) return;
-    const n = new Date();
-    document.getElementById('lrUs').textContent = fmtTime(n, tz);
-    document.getElementById('lrPk').textContent = fmtTime(n, 'Asia/Karachi');
-  }, 1000);
-
-  SEL['luDd'] = null;
+    const n=new Date();
+    document.getElementById('lrUs').textContent=fmtTime(n,tz);
+    document.getElementById('lrPk').textContent=fmtTime(n,'Asia/Karachi');
+  },1000);
+  SEL['luDd']=null;
 }
 
-function fmtTime(d, tz) {
-  return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:tz});
-}
-function fmtDate(d, tz) {
-  return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric',timeZone:tz});
-}
-
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 //  CONVERTER
-// ═══════════════════════════════════════════════════════════════
-function showCvTag(loc) {
-  const info = TZ_INFO[loc.tz]||{};
-  const wrap = document.getElementById('convSelTag');
+// ══════════════════════════════════════════════════
+function showCvTag(loc){
+  const info=TZ_INFO[loc.tz]||{}, wrap=document.getElementById('convSelTag');
   wrap.style.display='block';
-  wrap.innerHTML=`<div class="sel-tag">📍 ${loc.n} <span style="opacity:0.5;">(${info.s||''})</span> <span class="sel-x" onclick="clearCv()">×</span></div>`;
+  wrap.innerHTML=`<div class="sel-tag" style="margin-bottom:8px;">📍 ${loc.n} <span style="opacity:0.5;">(${info.s||''})</span> <span class="sel-x" onclick="clearCv()">×</span></div>`;
 }
-function clearCv() {
-  SEL['cvDd']=null;
-  document.getElementById('convSelTag').style.display='none';
-  document.getElementById('cvInp').value='';
-  document.getElementById('cvResult').classList.remove('show');
-}
-
-function doConvert() {
-  const errEl = document.getElementById('cvErr');
-  const resEl = document.getElementById('cvResult');
+function clearCv(){SEL['cvDd']=null;document.getElementById('convSelTag').style.display='none';document.getElementById('cvInp').value='';document.getElementById('cvResult').classList.remove('show');}
+function doConvert(){
+  const errEl=document.getElementById('cvErr'), resEl=document.getElementById('cvResult');
   errEl.classList.remove('show'); resEl.classList.remove('show');
-
-  const loc = resolveLoc('cvInp','cvDd');
-  if (!loc) { errEl.textContent='Please select a location first.'; errEl.classList.add('show'); return; }
-  if (loc && document.getElementById('convSelTag').style.display==='none') showCvTag(loc);
-
-  const tv = document.getElementById('cvTime').value;
-  if (!tv) { errEl.textContent='Please enter a time.'; errEl.classList.add('show'); return; }
-
-  const [h,m] = tv.split(':').map(Number);
-  const {pktH, pktM, dayDiff} = convertToPKT(h, m, loc.tz);
-  const pktStr = fmt12(pktH, pktM);
-
-  const now = new Date();
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  // PKT date = today in PKT + dayDiff
-  const pktNow = new Date(now.toLocaleString('en-US',{timeZone:'Asia/Karachi'}));
-  pktNow.setDate(pktNow.getDate() + dayDiff);
-  const pktDay = `${DAYS[pktNow.getDay()]}, ${MONTHS[pktNow.getMonth()]} ${pktNow.getDate()}`;
-
-  let dayNote = '';
-  if (dayDiff===1) dayNote = ' · <span style="color:rgba(245,166,35,0.7);">Next day in Pakistan 🌙</span>';
-  else if (dayDiff===-1) dayNote = ' · Previous day in Pakistan';
-
-  const info = TZ_INFO[loc.tz]||{};
-  document.getElementById('cvPkT').textContent = pktStr;
-  document.getElementById('cvPkD').innerHTML   = pktDay + dayNote;
-  document.getElementById('cvSum').textContent  = `When it's ${fmt12(h,m)} in ${loc.n} (${info.f||loc.tz}), it is ${pktStr} in Pakistan.`;
+  const loc=resolveLoc('cvInp','cvDd');
+  if (!loc){errEl.textContent='Please select a location first.';errEl.classList.add('show');return;}
+  if (document.getElementById('convSelTag').style.display==='none') showCvTag(loc);
+  const tv=document.getElementById('cvTime').value;
+  if (!tv){errEl.textContent='Please enter a time.';errEl.classList.add('show');return;}
+  const [h,m]=tv.split(':').map(Number);
+  const {pktH,pktM,dayDiff}=convertToPKT(h,m,loc.tz);
+  const now=new Date(), MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const pktNow=new Date(now.toLocaleString('en-US',{timeZone:'Asia/Karachi'}));
+  pktNow.setDate(pktNow.getDate()+dayDiff);
+  const pktDay=`${DAYS[pktNow.getDay()]}, ${MONTHS[pktNow.getMonth()]} ${pktNow.getDate()}`;
+  let dayNote=dayDiff===1?' · <span style="color:rgba(245,166,35,0.7);">Next day in Pakistan 🌙</span>':dayDiff===-1?' · Previous day':'';
+  const info=TZ_INFO[loc.tz]||{};
+  document.getElementById('cvPkT').textContent=fmt12(pktH,pktM);
+  document.getElementById('cvPkD').innerHTML=pktDay+dayNote;
+  document.getElementById('cvSum').textContent=`When it's ${fmt12(h,m)} in ${loc.n} (${info.f||loc.tz}), it is ${fmt12(pktH,pktM)} in Pakistan.`;
   resEl.classList.add('show');
 }
-
-// PKT note in appt form
-function updatePktNote() {
-  const loc = SEL['fLocDd'];
-  const tv  = document.getElementById('fTime').value;
-  const note = document.getElementById('fPktNote');
-  if (!loc || !tv) { note.style.display='none'; return; }
-  const [h,m] = tv.split(':').map(Number);
-  const {pktH,pktM,dayDiff} = convertToPKT(h,m,loc.tz);
-  document.getElementById('fPktTime').textContent = fmt12(pktH,pktM) + (dayDiff?` (${dayDiff>0?'+1':'-1'} day PKT)`:'');
+function updatePktNote(){
+  const loc=SEL['fLocDd'], tv=document.getElementById('fTime').value, note=document.getElementById('fPktNote');
+  if (!loc||!tv){note.style.display='none';return;}
+  const [h,m]=tv.split(':').map(Number);
+  const {pktH,pktM,dayDiff}=convertToPKT(h,m,loc.tz);
+  document.getElementById('fPktTime').textContent=fmt12(pktH,pktM)+(dayDiff?` (${dayDiff>0?'+1':'-1'} day PKT)`:'');
   note.style.display='flex';
 }
-document.addEventListener('change', e => { if(e.target.id==='fTime') updatePktNote(); });
 
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 //  APPOINTMENTS — localStorage per EMP_ID
-// ═══════════════════════════════════════════════════════════════
-const APPT_KEY = 'appts_' + EMP_ID;
+// ══════════════════════════════════════════════════
+const APPT_KEY='appts_'+EMP_ID;
+const APPS_SCRIPT_API='https://script.google.com/macros/s/AKfycbxkVYnxV3FmWq52UFipohgUXGV2RBC9S0EuZ_Wgj1xMn8pkY7WWfBZHtR9KeocPELC7/exec';
 
-function loadAppts() {
-  try { return JSON.parse(localStorage.getItem(APPT_KEY)||'[]'); } catch(e){ return []; }
-}
-function saveAppts(arr) {
-  localStorage.setItem(APPT_KEY, JSON.stringify(arr));
-}
+function loadAppts(){try{return JSON.parse(localStorage.getItem(APPT_KEY)||'[]');}catch(e){return [];}}
+function saveAppts(arr){localStorage.setItem(APPT_KEY,JSON.stringify(arr));}
 
-function openApptModal() {
-  // Set today as default date
-  const today = new Date().toLocaleDateString('en-CA');
-  document.getElementById('fDate').value = today;
-  document.getElementById('fTime').value = '09:00';
-  document.getElementById('fMC').value = '';
-  document.getElementById('fCompany').value = '';
-  document.getElementById('fPerson').value = '';
-  document.getElementById('fPhone').value = '';
-  document.getElementById('fTruck').value = '';
-  document.getElementById('fComments').value = '';
-  document.getElementById('fLocInp').value = '';
-  document.getElementById('fPktNote').style.display = 'none';
+let viewingApptId=null;
+
+function openNewApptModal(){
+  document.getElementById('apptModalTitle').textContent='New Appointment';
+  document.getElementById('apptModalSub').textContent='Fill in the carrier details.';
+  document.getElementById('fEditId').value='';
+  document.getElementById('fDate').value=new Date().toLocaleDateString('en-CA');
+  document.getElementById('fTime').value='09:00';
+  ['fMC','fCompany','fPerson','fPhone','fComments','fLocInp'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fTruck').value='';
+  document.getElementById('fPktNote').style.display='none';
   document.getElementById('apptSuccess').classList.remove('show');
   document.getElementById('apptErr').classList.remove('show');
-  SEL['fLocDd'] = null;
+  SEL['fLocDd']=null;
   document.getElementById('apptModal').classList.add('show');
 }
-function closeApptModal() {
-  document.getElementById('apptModal').classList.remove('show');
+
+function openEditApptModal(appt){
+  document.getElementById('apptModalTitle').textContent='Edit Appointment';
+  document.getElementById('apptModalSub').textContent='Update the details below.';
+  document.getElementById('fEditId').value=appt.id;
+  document.getElementById('fMC').value=appt.mc||'';
+  document.getElementById('fCompany').value=appt.company||'';
+  document.getElementById('fPerson').value=appt.person||'';
+  document.getElementById('fPhone').value=appt.phone||'';
+  document.getElementById('fTruck').value=appt.truck||'';
+  document.getElementById('fDate').value=appt.date||'';
+  document.getElementById('fTime').value=appt.time||'';
+  document.getElementById('fComments').value=appt.comments||'';
+  document.getElementById('fLocInp').value=appt.location||'';
+  if (appt.locationTz) {
+    const loc=LOCS.find(l=>l.tz===appt.locationTz&&l.n===appt.location)||LOCS.find(l=>l.tz===appt.locationTz);
+    if (loc) SEL['fLocDd']=loc;
+  }
+  document.getElementById('fPktNote').style.display='none';
+  document.getElementById('apptSuccess').classList.remove('show');
+  document.getElementById('apptErr').classList.remove('show');
+  document.getElementById('apptModal').classList.add('show');
+  updatePktNote();
 }
 
-function saveAppt() {
-  const mc      = document.getElementById('fMC').value.trim();
-  const company = document.getElementById('fCompany').value.trim();
-  const person  = document.getElementById('fPerson').value.trim();
-  const phone   = document.getElementById('fPhone').value.trim();
-  const truck   = document.getElementById('fTruck').value;
-  const date    = document.getElementById('fDate').value;
-  const time    = document.getElementById('fTime').value;
-  const comments= document.getElementById('fComments').value.trim();
-  const loc     = SEL['fLocDd'];
-  const errEl   = document.getElementById('apptErr');
+function closeApptModal(){document.getElementById('apptModal').classList.remove('show');}
+
+function saveAppt(){
+  const mc=document.getElementById('fMC').value.trim();
+  const company=document.getElementById('fCompany').value.trim();
+  const person=document.getElementById('fPerson').value.trim();
+  const phone=document.getElementById('fPhone').value.trim();
+  const truck=document.getElementById('fTruck').value;
+  const date=document.getElementById('fDate').value;
+  const time=document.getElementById('fTime').value;
+  const comments=document.getElementById('fComments').value.trim();
+  const loc=SEL['fLocDd'];
+  const editId=document.getElementById('fEditId').value;
+  const errEl=document.getElementById('apptErr');
   errEl.classList.remove('show');
+  if (!mc||!company||!person||!phone||!date||!time){errEl.textContent='Please fill all required fields (marked with *).';errEl.classList.add('show');return;}
 
-  if (!mc||!company||!person||!phone||!date||!time) {
-    errEl.textContent = 'Please fill all required fields (marked with *).';
-    errEl.classList.add('show'); return;
+  let pktEquiv='';
+  if (loc&&time){const [h,m]=time.split(':').map(Number);const {pktH,pktM,dayDiff}=convertToPKT(h,m,loc.tz);pktEquiv=fmt12(pktH,pktM)+(dayDiff?` (${dayDiff>0?'next':'prev'} day PKT)`:'');}
+
+  const arr=loadAppts();
+  let appt;
+
+  if (editId) {
+    // Edit existing
+    const idx=arr.findIndex(a=>String(a.id)===String(editId));
+    if (idx>=0){
+      appt={...arr[idx],mc,company,person,phone,truck,date,time,comments,location:loc?loc.n:arr[idx].location,locationTz:loc?loc.tz:arr[idx].locationTz,pktEquiv,updatedAt:new Date().toISOString()};
+      arr[idx]=appt;
+    }
+  } else {
+    // New
+    appt={id:Date.now(),mc,company,person,phone,truck,date,time,comments,location:loc?loc.n:'',locationTz:loc?loc.tz:'',pktEquiv,createdAt:new Date().toISOString(),empId:EMP_ID};
+    arr.push(appt);
   }
-
-  // PKT equivalent
-  let pktEquiv = '';
-  if (loc && time) {
-    const [h,m] = time.split(':').map(Number);
-    const {pktH,pktM,dayDiff} = convertToPKT(h,m,loc.tz);
-    pktEquiv = fmt12(pktH,pktM) + (dayDiff?` (${dayDiff>0?'next':'prev'} day PKT)`:'') + ' PKT';
-  }
-
-  const appt = {
-    id: Date.now(),
-    mc, company, person, phone, truck,
-    date, time, comments,
-    location: loc ? loc.n : '',
-    locationTz: loc ? loc.tz : '',
-    pktEquiv,
-    createdAt: new Date().toISOString(),
-    empId: EMP_ID,
-  };
-
-  const arr = loadAppts();
-  arr.push(appt);
   saveAppts(arr);
-
-  // Submit to Google Form
-  submitToForm(appt);
+  if (!editId) syncSheet('addAppointment', appt);
+  else syncSheet('updateAppointment', appt);
 
   document.getElementById('apptSuccess').classList.add('show');
-  setTimeout(() => { closeApptModal(); renderAppts(); }, 1800);
+  setTimeout(()=>{closeApptModal();closeViewModal();renderAppts();},1500);
 }
 
-// Apps Script Web App URL — same one used by the portal
-const APPS_SCRIPT_API = 'https://script.google.com/macros/s/AKfycbxkVYnxV3FmWq52UFipohgUXGV2RBC9S0EuZ_Wgj1xMn8pkY7WWfBZHtR9KeocPELC7/exec';
-
-async function submitToForm(appt) {
-  try {
-    await fetch(APPS_SCRIPT_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({
-        action:    'addAppointment',
-        empId:     appt.empId,
-        mc:        appt.mc,
-        company:   appt.company,
-        person:    appt.person,
-        phone:     appt.phone,
-        truck:     appt.truck,
-        date:      appt.date,
-        time:      appt.time,
-        location:  appt.location,
-        pktEquiv:  appt.pktEquiv,
-        comments:  appt.comments,
-        createdAt: appt.createdAt,
-      })
-    });
-  } catch(e) { console.warn('Appointment sync failed:', e); }
+async function syncSheet(action, appt){
+  try{await fetch(APPS_SCRIPT_API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action,empId:appt.empId,mc:appt.mc,company:appt.company,person:appt.person,phone:appt.phone,truck:appt.truck,date:appt.date,time:appt.time,location:appt.location,pktEquiv:appt.pktEquiv,comments:appt.comments,createdAt:appt.createdAt})});}catch(e){console.warn('Sheet sync failed:',e);}
 }
 
-// ═══════════════════════════════════════════════════════════════
+function deleteAppt(id){
+  const appt=loadAppts().find(a=>String(a.id)===String(id));
+  const arr=loadAppts().filter(a=>String(a.id)!==String(id));
+  saveAppts(arr);
+  // Also delete from sheet
+  if(appt&&appt.createdAt){
+    fetch(APPS_SCRIPT_API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'deleteAppointment',empId:appt.empId,createdAt:appt.createdAt})}).catch(()=>{});
+  }
+  closeViewModal();
+  renderAppts();
+}
+
+// ══════════════════════════════════════════════════
+//  VIEW MODAL
+// ══════════════════════════════════════════════════
+function openViewModal(appt){
+  viewingApptId=appt.id;
+  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const d=new Date(appt.date+'T12:00:00');
+  const timeStr=fmt12(...appt.time.split(':').map(Number));
+  const info=appt.locationTz?TZ_INFO[appt.locationTz]||{}:{};
+  document.getElementById('viewContent').innerHTML=`
+    <div class="vm-header">
+      <div class="vm-time">${timeStr}</div>
+      <div class="vm-date">${DAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}</div>
+      <div class="vm-name">${appt.person}</div>
+      <div class="vm-company">${appt.company}</div>
+    </div>
+    <div class="vm-row">
+      <div class="vm-field"><div class="vm-field-lbl">MC Number</div><div class="vm-field-val">${appt.mc}</div></div>
+      <div class="vm-field"><div class="vm-field-lbl">Phone</div><div class="vm-field-val">${appt.phone}</div></div>
+    </div>
+    <div class="vm-row">
+      <div class="vm-field"><div class="vm-field-lbl">Truck Type</div><div class="vm-field-val">${appt.truck||'—'}</div></div>
+      <div class="vm-field"><div class="vm-field-lbl">Location</div><div class="vm-field-val">${appt.location?`${appt.location} (${info.s||''})` : '—'}</div></div>
+    </div>
+    ${appt.pktEquiv?`<div class="vm-pkt"><div class="vm-pkt-lbl">🇵🇰 Pakistan Time (PKT)</div><div class="vm-pkt-val">${appt.pktEquiv}</div></div>`:''}
+    ${appt.comments?`<div class="vm-field" style="margin-bottom:0;"><div class="vm-field-lbl">Notes</div><div class="vm-field-val" style="font-weight:400;font-style:italic;color:var(--text-mid);">${appt.comments}</div></div>`:''}
+  `;
+  document.getElementById('viewModal').classList.add('show');
+}
+function closeViewModal(){document.getElementById('viewModal').classList.remove('show');viewingApptId=null;}
+function editFromView(){
+  const appt=loadAppts().find(a=>String(a.id)===String(viewingApptId));
+  if (appt){closeViewModal();openEditApptModal(appt);}
+}
+function deleteFromView(){
+  if (confirm('Delete this appointment? This cannot be undone.')) deleteAppt(viewingApptId);
+}
+
+// ══════════════════════════════════════════════════
 //  RENDER APPOINTMENTS
-// ═══════════════════════════════════════════════════════════════
-function renderAppts() {
-  const all = loadAppts();
-  const todayStr = new Date().toLocaleDateString('en-CA');
+// ══════════════════════════════════════════════════
+function renderAppts(){
+  const all=loadAppts();
+  const todayStr=new Date().toLocaleDateString('en-CA');
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MONTHSFULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-  // Today strip
-  const todayAppts = all.filter(a => a.date === todayStr).sort((a,b)=>a.time.localeCompare(b.time));
-  const todayListEl = document.getElementById('todayList');
-  document.getElementById('todayDateLbl').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  document.getElementById('todayDateLbl').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  document.getElementById('apptSub').textContent=`${all.length} appointment${all.length!==1?'s':''} · ${EMP_ID}`;
 
-  if (!todayAppts.length) {
-    todayListEl.innerHTML = '<div class="today-empty">No appointments today.</div>';
-  } else {
-    todayListEl.innerHTML = '<div class="today-list">' + todayAppts.map(a => `
-      <div class="today-card">
+  // TODAY strip
+  const todayAppts=all.filter(a=>a.date===todayStr).sort((a,b)=>a.time.localeCompare(b.time));
+  document.getElementById('todayList').innerHTML=todayAppts.length
+    ? todayAppts.map(a=>`<div class="today-card" onclick="openViewModal(${JSON.stringify(a).replace(/"/g,'&quot;')})">
         <div class="tc-time">${fmt12(...a.time.split(':').map(Number))}</div>
         <div class="tc-info">
           <div class="tc-name">${a.person} — ${a.company}</div>
@@ -1107,64 +1076,88 @@ function renderAppts() {
           ${a.pktEquiv?`<div class="tc-meta" style="color:rgba(245,166,35,0.6);">🇵🇰 ${a.pktEquiv}</div>`:''}
         </div>
         ${a.location?`<div class="tc-badge">${a.location}</div>`:''}
-      </div>`).join('') + '</div>';
-  }
+      </div>`).join('')
+    : '<div class="today-empty">No appointments today.</div>';
 
-  // All list (filtered by search)
+  // UPCOMING ALERT — next appt within 60 mins (PKT)
+  checkUpcoming(all, todayStr);
+
   renderApptList(all);
 }
 
-function filterAppts() {
-  renderApptList(loadAppts());
+function checkUpcoming(all, todayStr){
+  const alertEl=document.getElementById('upcomingAlert');
+  const now=new Date();
+  const pktNow=new Date(now.toLocaleString('en-US',{timeZone:'Asia/Karachi'}));
+  const pktTotalMin=pktNow.getHours()*60+pktNow.getMinutes();
+
+  const upcoming=all.filter(a=>a.date===todayStr&&a.pktEquiv).filter(a=>{
+    const match=a.pktEquiv.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!match) return false;
+    let h=parseInt(match[1]), pm=match[3].toUpperCase()==='PM';
+    if (pm&&h!==12) h+=12; if (!pm&&h===12) h=0;
+    const apptMin=h*60+parseInt(match[2]);
+    const diff=apptMin-pktTotalMin;
+    return diff>0&&diff<=60;
+  }).sort((a,b)=>a.time.localeCompare(b.time));
+
+  if (upcoming.length){
+    const next=upcoming[0];
+    document.getElementById('upcomingText').textContent=`Upcoming: ${next.person} — ${next.company}`;
+    document.getElementById('upcomingSub').textContent=`In ~${Math.round((() => { const match=next.pktEquiv.match(/(\d+):(\d+)\s*(AM|PM)/i); if(!match)return 60; let h=parseInt(match[1]),pm=match[3].toUpperCase()==='PM'; if(pm&&h!==12)h+=12; if(!pm&&h===12)h=0; return (h*60+parseInt(match[2]))-pktTotalMin; })()} minutes PKT · MC: ${next.mc}`;
+    alertEl.classList.add('show');
+  } else alertEl.classList.remove('show');
 }
 
-function renderApptList(all) {
-  const q = document.getElementById('apptSearch').value.trim().toLowerCase();
-  let list = all;
-  if (q) list = all.filter(a =>
-    a.person.toLowerCase().includes(q) ||
-    a.company.toLowerCase().includes(q) ||
-    a.mc.toLowerCase().includes(q) ||
-    a.date.includes(q) ||
-    (a.location||'').toLowerCase().includes(q) ||
-    (a.comments||'').toLowerCase().includes(q)
-  );
+function filterAppts(){renderApptList(loadAppts());}
 
-  list = list.sort((a,b) => a.date===b.date ? a.time.localeCompare(b.time) : b.date.localeCompare(a.date));
-
-  const el = document.getElementById('apptList');
-  if (!list.length) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-txt">' + (q?'No results for "'+q+'"':'No appointments yet.') + '</div></div>';
-    return;
-  }
-
+function renderApptList(all){
+  const q=document.getElementById('apptSearch').value.trim().toLowerCase();
+  const filter=document.getElementById('apptFilter').value;
+  const todayStr=new Date().toLocaleDateString('en-CA');
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  el.innerHTML = list.map(a => {
-    const d = new Date(a.date+'T12:00:00');
-    const mo = MONTHS[d.getMonth()], dy = d.getDate();
-    return `<div class="appt-card">
+
+  let list=all;
+  if (q) list=list.filter(a=>[a.person,a.company,a.mc,a.date,a.location||'',a.comments||''].join(' ').toLowerCase().includes(q));
+  if (filter==='upcoming') list=list.filter(a=>a.date>=todayStr);
+  else if (filter==='past') list=list.filter(a=>a.date<todayStr);
+  else if (filter==='today') list=list.filter(a=>a.date===todayStr);
+  list=list.sort((a,b)=>a.date===b.date?a.time.localeCompare(b.time):b.date.localeCompare(a.date));
+
+  const el=document.getElementById('apptList');
+  if (!list.length){el.innerHTML=`<div class="empty"><div class="empty-icon">📋</div><div class="empty-txt">${q?'No results for "'+q+'"':'No appointments yet.'}</div></div>`;return;}
+
+  el.innerHTML=list.map(a=>{
+    const d=new Date(a.date+'T12:00:00');
+    const mo=MONTHS[d.getMonth()], dy=d.getDate();
+    const isToday=a.date===todayStr;
+    const info=a.locationTz?TZ_INFO[a.locationTz]||{}:{};
+    const apptJson=JSON.stringify(a).replace(/"/g,'&quot;');
+    return `<div class="appt-card${isToday?' today-highlight':''}" onclick="openViewModal(${apptJson})">
       <div class="appt-date-badge"><div class="adb-month">${mo}</div><div class="adb-day">${dy}</div></div>
       <div class="appt-info">
         <div class="ai-name">${a.person} <span style="font-weight:400;color:var(--text-muted);">— ${a.company}</span></div>
         <div class="ai-meta">MC: ${a.mc} · ${a.phone}${a.truck?' · '+a.truck:''}</div>
-        ${a.location?`<div class="ai-meta">📍 ${a.location}${a.pktEquiv?' · 🇵🇰 '+a.pktEquiv:''}</div>`:''}
+        ${a.location?`<div class="ai-meta">📍 ${a.location} (${info.s||''})</div>`:''}
         ${a.comments?`<div class="ai-comment">${a.comments}</div>`:''}
       </div>
-      <div>
+      <div class="appt-right">
         <div class="appt-time">${fmt12(...a.time.split(':').map(Number))}</div>
-        <div class="appt-time-tz">${a.locationTz?TZ_INFO[a.locationTz]?.s||'':''}</div>
+        ${a.locationTz?`<div class="appt-tz">${info.s||''}</div>`:''}
+        ${a.pktEquiv?`<div class="appt-pkt">🇵🇰 ${a.pktEquiv}</div>`:''}
       </div>
     </div>`;
   }).join('');
 }
 
-// Close modal on backdrop click
-document.getElementById('apptModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('apptModal')) closeApptModal();
+// Close modals on backdrop
+['apptModal','viewModal'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>{if(e.target===document.getElementById(id)){if(id==='apptModal')closeApptModal();else closeViewModal();}});
 });
 
 // Init
 renderAppts();
+setInterval(()=>{ if(document.getElementById('tabAppt').classList.contains('active')) checkUpcoming(loadAppts(),new Date().toLocaleDateString('en-CA')); },60000);
 </script>
 </body>
 </html>
