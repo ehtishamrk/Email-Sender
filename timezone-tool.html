@@ -451,6 +451,7 @@ select.field-input{cursor:pointer}
               <div class="lead-field"><span class="lead-field-icon">&#128222;</span><div><div class="lead-field-lbl">Phone</div><div class="lead-field-val" id="leadPhone">--</div></div></div>
               <div class="lead-field"><span class="lead-field-icon">&#9096;</span><div><div class="lead-field-lbl">MC #</div><div class="lead-field-val" id="leadMC">--</div></div></div>
               <div class="lead-field"><span class="lead-field-icon">&#128666;</span><div><div class="lead-field-lbl">Power</div><div class="lead-field-val" id="leadPower">--</div></div></div>
+              <div class="lead-field"><span class="lead-field-icon">&#128100;</span><div><div class="lead-field-lbl">Driver</div><div class="lead-field-val" id="leadDriver">--</div></div></div>
               <div class="lead-field"><span class="lead-field-icon">&#128205;</span><div><div class="lead-field-lbl">Address</div><div class="lead-field-val" id="leadAddr">--</div></div></div>
               <div class="lead-field"><span class="lead-field-icon">&#128140;</span><div><div class="lead-field-lbl">Status</div><div class="lead-field-val" id="leadEntityStatus">--</div></div></div>
               <div class="lead-field"><span class="lead-field-icon">&#9993;</span><div><div class="lead-field-lbl">Email</div><div class="lead-field-val" id="leadEmail" style="font-size:11px;word-break:break-all;">--</div></div></div>
@@ -516,58 +517,39 @@ select.field-input{cursor:pointer}
       </div>
 
       <!-- RIGHT: APPOINTMENTS -->
-      <!-- RIGHT: APPOINTMENTS -->
-<div class="appt-right-col">
-  <div class="appt-top">
-    <div>
-      <div class="appt-top-title">&#128197; Appointments</div>
-      <div class="appt-top-sub" id="apptSub">Your appointments</div>
-    </div>
-    <button class="btn-gold" id="newApptBtn">+ New Appointment</button>
-  </div>
+      <div class="appt-right-col">
+        <div class="appt-top">
+          <div>
+            <div class="appt-top-title">&#128197; Appointments</div>
+            <div class="appt-top-sub" id="apptSub">Your appointments</div>
+          </div>
+          <button class="btn-gold" id="newApptBtn">+ New Appointment</button>
+        </div>
 
-  <div class="tab-bar" id="rightTabBar" style="margin-bottom:16px;">
-    <button class="tab-btn active" data-tab="tabAppts">Appointments</button>
-    <button class="tab-btn" data-tab="tabCBSales">CB & Sales</button>
-  </div>
+        <div class="upcoming-alert" id="upcomingAlert">
+          <div style="font-size:18px;flex-shrink:0;">&#9200;</div>
+          <div><div class="ua-text" id="upcomingText"></div><div class="ua-sub" id="upcomingSub"></div></div>
+        </div>
 
-  <div class="tab-panel active" id="tabAppts">
-    <div class="upcoming-alert" id="upcomingAlert">
-      <div style="font-size:18px;flex-shrink:0;">&#9200;</div>
-      <div><div class="ua-text" id="upcomingText"></div><div class="ua-sub" id="upcomingSub"></div></div>
-    </div>
-    <div class="today-strip">
-      <div class="today-lbl">Today &middot; <span id="todayLbl"></span></div>
-      <div id="todayList"><div class="today-empty">No appointments today.</div></div>
-    </div>
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-        <div class="card-title" style="margin:0;">All Appointments</div>
-        <select class="field-input" id="apptFilter" style="width:auto;padding:7px 12px;font-size:12px;">
-          <option value="">All dates</option>
-          <option value="upcoming">Upcoming</option>
-          <option value="past">Past</option>
-          <option value="today">Today only</option>
-        </select>
+        <div class="today-strip">
+          <div class="today-lbl">Today &middot; <span id="todayLbl"></span></div>
+          <div id="todayList"><div class="today-empty">No appointments today.</div></div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+            <div class="card-title" style="margin:0;">All Appointments</div>
+            <select class="field-input" id="apptFilter" style="width:auto;padding:7px 12px;font-size:12px;">
+              <option value="">All dates</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="past">Past</option>
+              <option value="today">Today only</option>
+            </select>
+          </div>
+          <input class="field-input" id="apptSearch" type="text" placeholder="Search appointments..." style="margin-bottom:14px;font-size:12px;">
+          <div id="apptList"></div>
+        </div>
       </div>
-      <input class="field-input" id="apptSearch" type="text" placeholder="Search appointments..." style="margin-bottom:14px;font-size:12px;">
-      <div id="apptList"></div>
-    </div>
-  </div>
-
-  <div class="tab-panel" id="tabCBSales" style="display:none;">
-    <div class="card">
-      <div class="card-title">Callbacks &amp; Sales</div>
-      <div style="display:flex;gap:8px;margin-bottom:14px;">
-        <button class="btn-gold" onclick="loadCBSales('CB')" style="flex:1;">Call Backs</button>
-        <button class="btn-gold" onclick="loadCBSales('SM')" style="flex:1;">Sales Made</button>
-        <button class="btn-outline" onclick="loadCBSales('all')" style="flex:1;">All</button>
-      </div>
-      <div id="cbSalesList"><div class="empty" style="padding:30px;text-align:center;color:var(--muted);">Click a filter above to load.</div></div>
-    </div>
-  </div>
-
-</div>
     </div>
   </div>
 </div>
@@ -904,18 +886,7 @@ document.querySelectorAll('.tab-btn').forEach(function(btn){
     if(tid==='tabHub'){renderAppts();initDialer();}
   });
 });
-document.getElementById('rightTabBar').querySelectorAll('.tab-btn').forEach(function(btn) {
-  btn.addEventListener('click', function() {
-    document.getElementById('rightTabBar').querySelectorAll('.tab-btn').forEach(function(b) {
-      b.classList.remove('active');
-    });
-    btn.classList.add('active');
-    var tab = btn.getAttribute('data-tab');
-    document.getElementById('tabAppts').style.display  = tab === 'tabAppts'  ? '' : 'none';
-    document.getElementById('tabCBSales').style.display = tab === 'tabCBSales' ? '' : 'none';
-    document.getElementById('tabAppts').classList.toggle('active', tab === 'tabAppts');
-  });
-});
+
 // ── CHIPS ────────────────────────────────────────
 var LU_CHIPS=[['NV','Nevada'],['TX','Texas'],['CA','California'],['FL','Florida'],['NY','New York'],['IL','Illinois'],['GA','Georgia'],['TN','Tennessee'],['CO','Colorado'],['AZ','Arizona'],['WA','Washington'],['OH','Ohio'],['Las Vegas','Las Vegas'],['Chicago','Chicago'],['Dallas','Dallas'],['Atlanta','Atlanta'],['Miami','Miami'],['Phoenix','Phoenix']];
 var CV_CHIPS=[['Nevada (PT)','Nevada'],['Texas (CT)','Texas'],['California (PT)','California'],['Florida (ET)','Florida'],['New York (ET)','New York'],['Illinois (CT)','Illinois'],['Georgia (ET)','Georgia'],['Tennessee (CT)','Tennessee'],['Arizona (AZ)','Arizona'],['Colorado (MT)','Colorado'],['Washington (PT)','Washington'],['Ohio (ET)','Ohio']];
@@ -1087,42 +1058,16 @@ function loadMeta(){meta=JSON.parse(localStorage.getItem(META_KEY)||'{}');}
 function saveMeta(){localStorage.setItem(META_KEY,JSON.stringify(meta));}
 function getCallCount(){return Object.keys(meta).length;}
 
-async function initDialer() {
-  document.getElementById('dialerSub').textContent = 'Loading... (may take 10-15 seconds)';
-  document.getElementById('noDataState').style.display = 'block';
-  document.getElementById('leadDisplay').style.display = 'none';
-  document.getElementById('dialerSub').textContent = 'Loading...';
-
-  const result = await apiGet({ action: 'getBDOLeads', empId: EMP_ID });
-  if (!result || !result.length) {
-    document.getElementById('dialerSub').textContent = 'No data loaded for today';
-    updateDialerStats();
-    return;
-  }
-
-  leads = result;
-  // Build meta from sheet data
-  meta = {};
-  leads.forEach((lead, i) => {
-    if (lead.callStatus || lead.dnc || lead.contactName || lead.truckType) {
-      meta[i] = {
-        status:      lead.callStatus || '',
-        dnc:         lead.dnc || false,
-        contactName: lead.contactName || '',
-        truckType:   lead.truckType || '',
-        calledAt:    lead.calledAt || ''
-      };
-    }
-  });
-
-  curIdx = parseInt(localStorage.getItem('leadIdx_' + EMP_ID) || '0');
-  if (curIdx >= leads.length) curIdx = 0;
-
-  document.getElementById('noDataState').style.display = 'none';
-  document.getElementById('leadDisplay').style.display = 'block';
-  document.getElementById('navCounter').style.display = '';
-
-  renderLead();
+function initDialer(){
+  loadLeads();loadMeta();
+  curIdx = parseInt(localStorage.getItem('leadIdx_'+EMP_ID)||'0');
+  if(curIdx >= leads.length) curIdx = 0;
+  var hasLeads = leads.length > 0;
+  document.getElementById('noDataState').style.display = hasLeads ? 'none' : 'block';
+  document.getElementById('leadDisplay').style.display = hasLeads ? 'block' : 'none';
+  var counter = document.getElementById('navCounter');
+  if(hasLeads){counter.style.display='';} else {counter.style.display='none';}
+  if(hasLeads) renderLead();
   updateDialerStats();
 }
 
@@ -1337,16 +1282,16 @@ function parseCSV(text){
   for(var i=start;i<lines.length;i++){
     var parts = lines[i].split(',').map(function(s){return s.trim().replace(/^"|"$/g,'');});
     if(parts.length < 2) continue;
-   results.push({
-  mc:       p[0]||'',
-  entity:   p[1]||'',
-  status:   p[2]||'',
-  power:    p[3]||'',
-  company:  p[4]||'',
-  address:  p[5]||'',
-  phone:    p[6]||'',
-  email:    p[7]||''
-});
+    results.push({
+      mc: parts[0]||'',
+      entityStatus: parts[1]||'',
+      power: parts[2]||'',
+      driver: parts[3]||'',
+      company: parts[4]||'',
+      address: parts[5]||'',
+      phone: parts[6]||'',
+      email: parts[7]||''
+    });
   }
   return results;
 }
