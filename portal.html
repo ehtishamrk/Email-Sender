@@ -634,6 +634,20 @@
       .row-2 { grid-template-columns: 1fr; }
       .tab-strip { width: 100%; overflow-x: auto; }
     }
+    .live-th {
+ font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+ color:var(--text-muted);padding:0 8px 12px 8px;border-bottom:1px solid var(--border);
+}
+.live-td {
+ padding:14px 8px;border-bottom:1px solid var(--border);vertical-align:middle;
+}
+.clocked-out-row td { opacity:0.45; }
+.live-clock-badge {
+ display:inline-block;padding:4px 14px;border-radius:20px;
+ font-weight:800;font-size:12px;letter-spacing:1px;
+}
+.live-clock-badge.in { background:#DCFCE7;color:#15803D; }
+.live-clock-badge.out { background:#F1F5F9;color:#64748B; }
   </style>
 </head>
 <body>
@@ -1895,44 +1909,138 @@ async function renderAdmin() {
   renderAdminLiveStatus();
 }
 
+// ─── PASTE THIS INTO portal.html — replaces renderAdminLiveStatus() ───
+var _liveTimer = null; // auto-refresh handle
+var _notifiedInactive = {}; // track who we already notified
 async function renderAdminLiveStatus() {
-  const el = document.getElementById('adminLiveContent');
-  if (!el) return;
-  el.innerHTML = `<div class="card-box"><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center;">Loading live status...</div></div>`;
-
-  const data = await apiGet({ action: 'getAllClock' });
-
-  let clockedInList = '', clockedOutList = '';
-  Object.entries(EMPLOYEES).forEach(([id, emp]) => {
-    // Use sheet data if available, fall back to localStorage
-    const sheetState = data ? data[id] : null;
-    const localState = load('clockState_' + id, null);
-    const state = sheetState || localState;
-    const isIn = state && state.clockedIn;
-    const since = isIn && state.timestamp ? new Date(state.timestamp).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : null;
-    const card = `<div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);">
-      <div style="width:10px;height:10px;border-radius:50%;background:${isIn ? 'var(--green)' : 'var(--red)'};flex-shrink:0;margin-top:2px;"></div>
-      <div style="flex:1;">
-        <div style="font-size:14px;font-weight:600;color:var(--text);">${emp.name}</div>
-        <div style="font-size:11px;color:var(--text-muted);">${id} · ${emp.designation || ''}</div>
-      </div>
-      <div style="font-size:12px;font-weight:600;color:${isIn ? 'var(--green)' : 'var(--text-muted)'};">
-        ${isIn ? '🟢 Since ' + since : '⚪ Not clocked in'}
-      </div>
-    </div>`;
-    if (isIn) clockedInList += card;
-    else clockedOutList += card;
-  });
-
-  el.innerHTML = `<div class="card-box">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;">Team Live Status</div>
-      <button class="btn-sm" onclick="renderAdminLiveStatus()" style="font-size:12px;padding:7px 16px;">↺ Refresh</button>
-    </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Live data from Google Sheets. Click refresh for latest.</div>
-    ${clockedInList || '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;">No one currently clocked in.</div>'}
-    ${clockedOutList}
-  </div>`;
+ const el = document.getElementById("adminLiveContent");
+ if (!el) return;
+ // Fetch both clock states and activity timestamps in parallel
+ const [clockData, activityData] = await Promise.all([
+ apiGet({ action: "getAllClock" }),
+ apiGet({ action: "getActivityData" })
+ ]);
+ const now = Date.now();
+ const INACTIVE_MS = 15 * 60 * 1000; // 15 minutes
+ // Build rows
+ let rows = "";
+ Object.entries(EMPLOYEES).forEach(([id, emp]) => {
+ const sheetState = clockData ? clockData[id] : null;
+ const localState = load("clockState_" + id, null);
+ const state = sheetState || localState;
+ const isIn = state && state.clockedIn;
+ const clockTs = isIn && state.timestamp ? new Date(state.timestamp) : null;
+ // Clock-in duration
+ let durationStr = "--";
+ if (clockTs) {
+ const diffMs = now - clockTs.getTime();
+ const h = Math.floor(diffMs / 3600000);
+ const m = Math.floor((diffMs % 3600000) / 60000);
+ durationStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
+ }
+ // Activity / idle detection
+ const lastActRaw = activityData ? activityData[id] : null;
+ const lastAct = lastActRaw ? new Date(lastActRaw).getTime() : null;
+ const idleMs = lastAct ? now - lastAct : null;
+ const isIdle = isIn && idleMs !== null && idleMs > INACTIVE_MS;
+ // Inactive notification (one toast per person per session)
+ if (isIdle && !_notifiedInactive[id]) {
+ _notifiedInactive[id] = true;
+ showAdminToast(`${emp.name} is inactive (${emp.designation})`);
+ }
+ if (!isIdle) _notifiedInactive[id] = false; // reset if active again
+ // Call count for BDOs (check meta stored per-BDO in Sessions/activity)
+ const isBDO = emp.designation && emp.designation.includes("Business Development");
+ let callCountCell = "";
+ if (isBDO && isIn) {
+ // We read callCount from activity data if the BDO page reports it
+ const rawCalls = activityData ? activityData[id + "_calls"] : null;
+ const callCount = rawCalls ? parseInt(rawCalls) : 0;
+ callCountCell = `<span style="font-size:13px;font-weight:700;color:var(--
+gold);">${callCount}</span>
+ <span style="font-size:10px;color:var(--text-muted);"> calls</span>`;
+ }
+ // Status badge
+ let statusHtml = "";
+ if (!isIn) {
+ statusHtml = `<span style="font-size:11px;font-weight:600;color:var(--textmuted);">Clocked Out</span>`;
+ } else if (isIdle) {
+ statusHtml = `<span style="padding:3px 10px;border-radius:20px;font-size:11px;fontweight:700;
+ background:#FEE2E2;color:#DC2626;">Inactive</span>`;
+ } else {
+ statusHtml = `<span style="padding:3px 10px;border-radius:20px;font-size:11px;fontweight:700;
+ background:#DCFCE7;color:#15803D;">Active</span>`;
+ }
+ // Clock badge (auto-switching every 3s handled via CSS animation class)
+ const clockInTime = clockTs ? clockTs.toLocaleTimeString("en-US",
+ {hour:"2-digit",minute:"2-digit"}) : "--";
+ const clockBadge = isIn
+ ? `<div class="live-clock-badge in">IN</div>
+ <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">since
+${clockInTime}</div>`
+ : `<div class="live-clock-badge out">OUT</div>`;
+ rows += `
+ <tr class="live-row ${isIn ? "" : "clocked-out-row"}">
+ <td class="live-td">
+ <div style="font-weight:700;font-size:14px;color:var(--text);">${emp.name}</div>
+ <div style="font-size:11px;color:var(--gold);font-weight:600;">${id}</div>
+ <div style="font-size:11px;color:var(--text-muted);">${emp.designation || ""}</div>
+ </td>
+ <td class="live-td" style="text-align:center;">
+ ${clockBadge}
+ </td>
+ <td class="live-td" style="text-align:center;">
+ <div style="font-size:14px;font-weight:700;color:var(--text);">${durationStr}</div>
+ ${callCountCell}
+ </td>
+ <td class="live-td" style="text-align:center;">${statusHtml}</td>
+ </tr>`;
+ });
+ el.innerHTML = `
+ <div class="card-box">
+ <div style="display:flex;align-items:center;justify-content:space-between;marginbottom:16px;">
+ <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;">Team Live
+Status</div>
+ <div style="display:flex;gap:8px;align-items:center;">
+ <span style="font-size:11px;color:var(--text-muted);">Auto-refreshes every
+30s</span>
+ <button class="btn-sm" onclick="renderAdminLiveStatus()" style="fontsize:12px;padding:7px 16px;">↺ Refresh</button>
+ </div>
+ </div>
+ <div style="overflow-x:auto;">
+ <table style="width:100%;border-collapse:collapse;">
+ <thead>
+ <tr>
+ <th class="live-th">Name</th>
+ <th class="live-th" style="text-align:center;">Clock</th>
+ <th class="live-th" style="text-align:center;">Duration / Calls</th>
+ <th class="live-th" style="text-align:center;">Status</th>
+ </tr>
+ </thead>
+ <tbody>${rows}</tbody>
+ </table>
+ </div>
+ </div>
+ <div id="adminToastContainer" style="position:fixed;top:24px;right:24px;zindex:9999;display:flex;flex-direction:column;gap:8px;"></div>
+ `;
+ // Auto-refresh every 30 seconds
+ clearTimeout(_liveTimer);
+ _liveTimer = setTimeout(renderAdminLiveStatus, 30000);
+}
+function showAdminToast(msg) {
+ const c = document.getElementById("adminToastContainer") ||
+ (() => { const d=document.createElement("div");
+ d.id="adminToastContainer";
+ d.style.cssText="position:fixed;top:24px;right:24px;z-index:9999;display:flex;flexdirection:column;gap:8px;";
+ document.body.appendChild(d); return d; })();
+ const t = document.createElement("div");
+ t.innerHTML = `🔴 <strong>Inactive Alert</strong><br>${msg}`;
+ t.style.cssText = "background:#1e293b;color:#f8fafc;padding:12px 18px;border-radius:12px;
+ font-size:13px;box-shadow:0 4px 24px rgba(0,0,0,0.35);border-left:4px solid #DC2626;
+ max-width:300px;cursor:pointer;";
+ t.onclick = () => t.remove();
+ c.appendChild(t);
+ setTimeout(() => t.remove(), 10000);
 }
 
 async function renderAdminAccess() {
