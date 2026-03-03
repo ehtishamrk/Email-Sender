@@ -1523,7 +1523,7 @@ document.getElementById('previewCsvBtn').addEventListener('click',function(){
   var prev=document.getElementById('csvPreview');
   prev.style.display='block';
   prev.innerHTML='<strong>'+rows.length+' records parsed:</strong><br>' +
-    rows.slice(0,5).map(function(r){return r.mc+' | '+r.driver+' | '+r.company+' | '+r.phone;}).join('<br>') +
+    rows.slice(0,5).map(function(r){return r.mc+' | '+r.company+' | '+r.phone+' | '+r.email;}).join('<br>') +
     (rows.length>5?'<br>...and '+(rows.length-5)+' more':'');
   document.getElementById('uploadErr').classList.remove('show');
 });
