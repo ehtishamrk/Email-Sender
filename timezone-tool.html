@@ -1146,94 +1146,66 @@ function loadMeta(){meta=JSON.parse(localStorage.getItem(META_KEY)||'{}');}
 function saveMeta(){localStorage.setItem(META_KEY,JSON.stringify(meta));}
 function getCallCount(){return Object.keys(meta).length;}
 
-function showDialer(hasLeads){
-  document.getElementById('noDataState').style.display = hasLeads ? 'none' : 'block';
-  document.getElementById('leadDisplay').style.display = hasLeads ? 'block' : 'none';
-  var counter = document.getElementById('navCounter');
-  if(counter){ counter.style.display = hasLeads ? '' : 'none'; }
-  if(hasLeads){ renderLead(); }
-  updateDialerStats();
-}
-
 function initDialer(){
-  loadLeads(); loadMeta();
-
-  // Clear leads from a previous day
-  var storedDate = localStorage.getItem('leadsDate_'+EMP_ID);
-  var todayDate  = new Date().toISOString().split('T')[0];
-  if(storedDate && storedDate !== todayDate){
-    leads = []; meta = {};
+  loadLeads();loadMeta();
+  var storedDate=localStorage.getItem('leadsDate_'+EMP_ID);
+  var todayDate=new Date().toISOString().split('T')[0];
+  if(storedDate&&storedDate!==todayDate){
+    leads=[];meta={};
     localStorage.removeItem(LEAD_KEY);
     localStorage.removeItem(META_KEY);
     localStorage.removeItem('leadIdx_'+EMP_ID);
     localStorage.removeItem('leadsDate_'+EMP_ID);
   }
-
-  // Leads already cached locally — render immediately
-  if(leads.length > 0){
-    curIdx = parseInt(localStorage.getItem('leadIdx_'+EMP_ID)||'0');
-    if(curIdx >= leads.length) curIdx = 0;
-    showDialer(true);
+  if(leads.length>0){
+    curIdx=parseInt(localStorage.getItem('leadIdx_'+EMP_ID)||'0');
+    if(curIdx>=leads.length)curIdx=0;
+    document.getElementById('noDataState').style.display='none';
+    document.getElementById('leadDisplay').style.display='block';
+    var c1=document.getElementById('navCounter');
+    if(c1)c1.style.display='';
+    renderLead();updateDialerStats();
     return;
   }
-
-  // No local cache — fetch from Google Sheet
-  document.getElementById('noDataState').style.display = 'block';
-  document.getElementById('leadDisplay').style.display = 'none';
-  document.getElementById('dialerSub').textContent = 'Fetching your leads...';
-
-  fetch(API + '?' + new URLSearchParams({action:'getBDOLeads', empId:EMP_ID}).toString())
-    .then(function(r){ return r.json(); })
-    .then(function(sheetLeads){
-      if(!Array.isArray(sheetLeads) || sheetLeads.length === 0){
-        document.getElementById('dialerSub').textContent = 'No data loaded';
-        updateDialerStats();
-        return;
+  document.getElementById('noDataState').style.display='block';
+  document.getElementById('leadDisplay').style.display='none';
+  document.getElementById('dialerSub').textContent='Fetching your leads...';
+  fetch(API+'?action=getBDOLeads&empId='+encodeURIComponent(EMP_ID))
+    .then(function(r){return r.json();})
+    .then(function(rows){
+      if(!Array.isArray(rows)||rows.length===0){
+        document.getElementById('dialerSub').textContent='No data loaded';
+        updateDialerStats();return;
       }
-      leads = sheetLeads.map(function(row){
-        return {
-          mc:           row.mc           || '',
-          entity:       row.entity       || '',
-          entityStatus: row.status       || '',
-          power:        row.power        || '',
-          company:      row.company      || '',
-          address:      row.address      || '',
-          phone:        row.phone        || '',
-          email:        row.email        || '',
-          callStatus:   row.callStatus   || '',
-          dnc:          row.dnc          || false,
-          contactName:  row.contactName  || '',
-          truckType:    row.truckType    || '',
-          rowIndex:     row.rowIndex
-        };
+      leads=rows.map(function(r){
+        return{mc:r.mc||'',entity:r.entity||'',entityStatus:r.status||'',
+          power:r.power||'',company:r.company||'',address:r.address||'',
+          phone:r.phone||'',email:r.email||'',callStatus:r.callStatus||'',
+          dnc:r.dnc||false,contactName:r.contactName||'',truckType:r.truckType||'',
+          rowIndex:r.rowIndex};
       });
-      // Rebuild meta from any statuses already saved in the sheet
-      meta = {};
-      leads.forEach(function(lead, i){
-        if(lead.callStatus || lead.dnc || lead.contactName){
-          meta[i] = {
-            status:      lead.callStatus || '',
-            dnc:         lead.dnc        || false,
-            contactName: lead.contactName|| '',
-            truckType:   lead.truckType  || ''
-          };
+      meta={};
+      leads.forEach(function(lead,i){
+        if(lead.callStatus||lead.dnc||lead.contactName){
+          meta[i]={status:lead.callStatus||'',dnc:lead.dnc||false,
+            contactName:lead.contactName||'',truckType:lead.truckType||''};
         }
       });
-      // Find first uncalled lead to start at
-      curIdx = 0;
-      for(var i=0; i<leads.length; i++){
-        if(!meta[i] || !meta[i].status){ curIdx = i; break; }
-      }
-      // Cache everything locally
-      localStorage.setItem(LEAD_KEY,               JSON.stringify(leads));
-      localStorage.setItem(META_KEY,               JSON.stringify(meta));
-      localStorage.setItem('leadIdx_'+EMP_ID,      curIdx);
-      localStorage.setItem('leadsDate_'+EMP_ID,    todayDate);
-      showDialer(true);
+      curIdx=0;
+      for(var i=0;i<leads.length;i++){if(!meta[i]||!meta[i].status){curIdx=i;break;}}
+      localStorage.setItem(LEAD_KEY,JSON.stringify(leads));
+      localStorage.setItem(META_KEY,JSON.stringify(meta));
+      localStorage.setItem('leadIdx_'+EMP_ID,curIdx);
+      localStorage.setItem('leadsDate_'+EMP_ID,todayDate);
+      document.getElementById('noDataState').style.display='none';
+      document.getElementById('leadDisplay').style.display='block';
+      var c2=document.getElementById('navCounter');
+      if(c2)c2.style.display='';
+      renderLead();updateDialerStats();
     })
     .catch(function(err){
-      console.error('initDialer fetch error:', err);
-      document.getElementById('dialerSub').textContent = 'Could not load leads — try refreshing';
+      console.error('Lead fetch error:',err);
+      document.getElementById('dialerSub').textContent='Could not load — try refreshing';
       updateDialerStats();
     });
 }
@@ -1457,19 +1429,16 @@ if(IS_ADMIN && params.get('admin')==='1'){
 }
 
 function parseCSV(text){
-  // Handles quoted fields that contain commas (e.g. "455 JOANNE CT, BARTONSVILLEPA")
   function splitLine(line){
-    var cols=[], cur='', inQ=false;
+    var cols=[],cur='',inQ=false;
     for(var i=0;i<line.length;i++){
       var ch=line[i];
       if(ch==='"'){
-        if(inQ && line[i+1]==='"'){cur+='"';i++;}
+        if(inQ&&line[i+1]==='"'){cur+='"';i++;}
         else{inQ=!inQ;}
-      } else if(ch===','&&!inQ){
-        cols.push(cur.trim()); cur='';
-      } else {
-        cur+=ch;
-      }
+      }else if(ch===','&&!inQ){
+        cols.push(cur.trim());cur='';
+      }else{cur+=ch;}
     }
     cols.push(cur.trim());
     return cols;
@@ -1482,7 +1451,6 @@ function parseCSV(text){
   for(var i=start;i<lines.length;i++){
     if(!lines[i].trim())continue;
     var p=splitLine(lines[i]);
-    // CSV column order: MC Number, Entity, Status, Power, Company Name, Physical Address, Phone Number, Email Address
     results.push({
       mc:           p[0]||'',
       entity:       p[1]||'',
@@ -1511,7 +1479,7 @@ document.getElementById('previewCsvBtn').addEventListener('click',function(){
   var prev=document.getElementById('csvPreview');
   prev.style.display='block';
   prev.innerHTML='<strong>'+rows.length+' records parsed:</strong><br>' +
-    rows.slice(0,5).map(function(r){return r.mc+' | '+r.company+' | '+r.phone+' | '+r.email;}).join('<br>') +
+    rows.slice(0,5).map(function(r){return r.mc+' | '+r.driver+' | '+r.company+' | '+r.phone;}).join('<br>') +
     (rows.length>5?'<br>...and '+(rows.length-5)+' more':'');
   document.getElementById('uploadErr').classList.remove('show');
 });
