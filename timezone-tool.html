@@ -1088,6 +1088,7 @@ function saveMeta(){localStorage.setItem(META_KEY,JSON.stringify(meta));}
 function getCallCount(){return Object.keys(meta).length;}
 
 async function initDialer() {
+  document.getElementById('dialerSub').textContent = 'Loading... (may take 10-15 seconds)';
   document.getElementById('noDataState').style.display = 'block';
   document.getElementById('leadDisplay').style.display = 'none';
   document.getElementById('dialerSub').textContent = 'Loading...';
