@@ -1956,8 +1956,7 @@ async function renderAdminLiveStatus() {
  // We read callCount from activity data if the BDO page reports it
  const rawCalls = activityData ? activityData[id + "_calls"] : null;
  const callCount = rawCalls ? parseInt(rawCalls) : 0;
- callCountCell = `<span style="font-size:13px;font-weight:700;color:var(--
-gold);">${callCount}</span>
+ callCountCell = `<span style="font-size:13px;font-weight:700;color:var(--gold);">${callCount}</span>
  <span style="font-size:10px;color:var(--text-muted);"> calls</span>`;
  }
  // Status badge
@@ -1965,11 +1964,9 @@ gold);">${callCount}</span>
  if (!isIn) {
  statusHtml = `<span style="font-size:11px;font-weight:600;color:var(--textmuted);">Clocked Out</span>`;
  } else if (isIdle) {
- statusHtml = `<span style="padding:3px 10px;border-radius:20px;font-size:11px;fontweight:700;
- background:#FEE2E2;color:#DC2626;">Inactive</span>`;
+ statusHtml = `<span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#FEE2E2;color:#DC2626;">Inactive</span>`;
  } else {
- statusHtml = `<span style="padding:3px 10px;border-radius:20px;font-size:11px;fontweight:700;
- background:#DCFCE7;color:#15803D;">Active</span>`;
+ statusHtml = `<span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#DCFCE7;color:#15803D;">Active</span>`;
  }
  // Clock badge (auto-switching every 3s handled via CSS animation class)
  const clockInTime = clockTs ? clockTs.toLocaleTimeString("en-US",
@@ -2035,9 +2032,7 @@ function showAdminToast(msg) {
  document.body.appendChild(d); return d; })();
  const t = document.createElement("div");
  t.innerHTML = `🔴 <strong>Inactive Alert</strong><br>${msg}`;
- t.style.cssText = "background:#1e293b;color:#f8fafc;padding:12px 18px;border-radius:12px;
- font-size:13px;box-shadow:0 4px 24px rgba(0,0,0,0.35);border-left:4px solid #DC2626;
- max-width:300px;cursor:pointer;";
+ t.style.cssText = "background:#1e293b;color:#f8fafc;padding:12px 18px;border-radius:12px;font-size:13px;box-shadow:0 4px 24px rgba(0,0,0,0.35);border-left:4px solid #DC2626;max-width:300px;cursor:pointer;";
  t.onclick = () => t.remove();
  c.appendChild(t);
  setTimeout(() => t.remove(), 10000);
