@@ -566,7 +566,33 @@ select.field-input{cursor:pointer}
     </div>
   </div>
 </div>
-
+<!-- CALLBACK TIME MODAL — paste above the statusModal -->
+<div class="modal-bg" id="callbackModal">
+ <div class="modal" style="max-width:380px;">
+ <div class="modal-hdr">
+ <div><div class="modal-title">🔴 Schedule Callback</div>
+ <div class="modal-sub">Enter the time the prospect asked to be called
+back.</div></div>
+ </div>
+ <div class="field">
+ <label class="field-label">Callback Date</label>
+ <input class="field-input" type="date" id="cbDate">
+ </div>
+ <div class="field">
+ <label class="field-label">Callback Time (their local)</label>
+ <input class="field-input" type="time" id="cbTime">
+ </div>
+ <div class="field">
+ <label class="field-label">Notes (optional)</label>
+ <input class="field-input" id="cbNotes" placeholder="e.g. Call after 3pm EST">
+ </div>
+ <div class="modal-actions">
+ <button class="btn-gold" id="saveCbBtn" style="flex:1;">Save Callback →</button>
+ <button class="btn-outline" id="cancelCbBtn">Cancel</button>
+ </div>
+ <div class="err" id="cbErr" style="margin-top:8px;"></div>
+ </div>
+</div>
 <!-- CALL STATUS MODAL (required on Next) -->
 <div class="modal-bg" id="statusModal">
   <div class="modal status-modal">
@@ -848,6 +874,55 @@ var STATUSES = [
   {code:'MV', name:'Moving Co.', color:'#7C3AED'}
 ];
 
+  // ── CALLBACK MODAL LOGIC ─────────────────────────
+document.getElementById("saveCbBtn").addEventListener("click", function() {
+ var date = document.getElementById("cbDate").value;
+ var time = document.getElementById("cbTime").value;
+ var notes = document.getElementById("cbNotes").value.trim();
+ if (!date || !time) {
+ document.getElementById("cbErr").textContent = "Please fill in date and time.";
+ return;
+ }
+ var lead = leads[curIdx] || {};
+ var cbRec = {
+ empId: EMP_ID,
+ date: date,
+ time: time,
+ notes: notes,
+ mc: lead.mc || "",
+ company: lead.company || "",
+ phone: lead.phone || "",
+ rowIndex: curIdx,
+ savedAt: new Date().toISOString()
+ };
+ // Save to Callbacks sheet via App Script
+ fetch(API, {method:"POST", headers:{"Content-Type":"text/plain"},
+ body: JSON.stringify({action:"saveCallback", callback: cbRec})
+ }).catch(function(){});
+ // Also store locally for quick display in search
+ var cbs = JSON.parse(localStorage.getItem("callbacks_"+EMP_ID)||"[]");
+ cbs.unshift(cbRec);
+ localStorage.setItem("callbacks_"+EMP_ID, JSON.stringify(cbs));
+ document.getElementById("callbackModal").classList.remove("show");
+ // Confirm status as CB now that we have time
+ if (!meta[curIdx]) meta[curIdx] = {};
+ meta[curIdx].status = "CB";
+ meta[curIdx].cbDate = date;
+ meta[curIdx].cbTime = time;
+ meta[curIdx].calledAt = new Date().toISOString();
+ saveMeta();
+ syncLeadMeta(curIdx);
+ if (curIdx < leads.length - 1) {
+ curIdx++;
+ localStorage.setItem("leadIdx_"+EMP_ID, curIdx);
+ }
+ renderLead(); updateDialerStats(); renderLeadSearch();
+});
+document.getElementById("cancelCbBtn").addEventListener("click", function(){
+ document.getElementById("callbackModal").classList.remove("show");
+});
+
+  
 // Build status grid
 var statusGrid = document.getElementById('statusGrid');
 statusGrid.innerHTML = STATUSES.map(function(s) {
@@ -1073,6 +1148,15 @@ function getCallCount(){return Object.keys(meta).length;}
 
 function initDialer(){
   loadLeads();loadMeta();
+  var storedDate = localStorage.getItem('leadsDate_'+EMP_ID);
+  var todayDate  = new Date().toISOString().split('T')[0];
+  if (storedDate && storedDate !== todayDate) {
+    leads = [];
+    localStorage.removeItem(LEAD_KEY);
+    localStorage.removeItem(META_KEY);
+    localStorage.removeItem('leadIdx_'+EMP_ID);
+    localStorage.removeItem('leadsDate_'+EMP_ID);
+  }
   curIdx = parseInt(localStorage.getItem('leadIdx_'+EMP_ID)||'0');
   if(curIdx >= leads.length) curIdx = 0;
   var hasLeads = leads.length > 0;
@@ -1088,15 +1172,17 @@ function renderLead(){
   if(!leads.length)return;
   var lead = leads[curIdx];
   var m = meta[curIdx] || {};
-  document.getElementById('leadName').textContent = lead.driver || lead.contactName || 'Unknown';
-  document.getElementById('leadCompany').textContent = lead.company || '--';
-  document.getElementById('leadPhone').textContent = lead.phone || '--';
-  document.getElementById('leadMC').textContent = lead.mc || '--';
-  document.getElementById('leadPower').textContent = lead.power || '--';
-  document.getElementById('leadDriver').textContent = lead.driver || '--';
-  document.getElementById('leadAddr').textContent = lead.address || '--';
-  document.getElementById('leadEntityStatus').textContent = lead.entityStatus || '--';
-  document.getElementById('leadEmail').textContent = lead.email || '--';
+  // ── NEW mapping (matches CSV: MC,Entity,Status,Power,Company,Address,Phone,Email) ──
+ document.getElementById("leadName").textContent = lead.company || lead.driver ||
+"Unknown";
+ document.getElementById("leadCompany").textContent = lead.company || "--";
+ document.getElementById("leadMC").textContent = lead.mc || "--";
+ document.getElementById("leadEntityStatus").textContent = lead.entityStatus || lead.status
+|| "--";
+ document.getElementById("leadPower").textContent = lead.power || "--";
+ document.getElementById("leadPhone").textContent = lead.phone || "--";
+ document.getElementById("leadAddr").textContent = lead.address || "--";
+ document.getElementById("leadEmail").textContent = lead.email || "--";
   // Status badge
   var sb = document.getElementById('leadStatusBadge');
   var status = m.status || 'New';
@@ -1156,19 +1242,29 @@ document.getElementById('confirmStatusBtn').addEventListener('click', function()
   meta[curIdx].status = selectedStatus;
   meta[curIdx].calledAt = new Date().toISOString();
   saveMeta();
-  etch(API, {method:"POST", headers:{"Content-Type":"text/plain"},
- body: JSON.stringify({
- action: "reportActivity",
- empId: EMP_ID,
- ts: new Date().toISOString(),
- callCount: Object.keys(meta).length // <── NEW: pass call count
- })}).catch(function(){});
+  fetch(API, {method:'POST', headers:{'Content-Type':'text/plain'},
+    body: JSON.stringify({
+      action:    'reportActivity',
+      empId:     EMP_ID,
+      ts:        new Date().toISOString(),
+      callCount: Object.keys(meta).length
+    })}).catch(function(){});
 
   // Sync to sheet
   syncLeadMeta(curIdx);
-  document.getElementById('statusModal').classList.remove('show');
-  // Move to next
-  if(curIdx < leads.length-1){curIdx++;localStorage.setItem('leadIdx_'+EMP_ID,curIdx);}
+document.getElementById('statusModal').classList.remove('show');
+
+  // If CB selected → show callback popup instead of advancing immediately
+  if (selectedStatus === 'CB') {
+    document.getElementById('cbDate').value = new Date().toLocaleDateString('en-CA');
+    document.getElementById('cbTime').value = '';
+    document.getElementById('cbNotes').value = '';
+    document.getElementById('cbErr').textContent = '';
+    document.getElementById('callbackModal').classList.add('show');
+    return; // advance happens inside saveCbBtn
+  }
+
+  if (curIdx < leads.length-1) { curIdx++; localStorage.setItem('leadIdx_'+EMP_ID, curIdx); }
   renderLead();
   updateDialerStats();
   renderLeadSearch();
@@ -1336,21 +1432,43 @@ document.getElementById('previewCsvBtn').addEventListener('click',function(){
   document.getElementById('uploadErr').classList.remove('show');
 });
 
-document.getElementById('loadCsvBtn').addEventListener('click',function(){
-  var text=document.getElementById('csvPasteInput').value;
-  var empId=document.getElementById('uploadEmpId').value;
-  var eEl=document.getElementById('uploadErr');
+document.getElementById('loadCsvBtn').addEventListener('click', async function(){
+  var text  = document.getElementById('csvPasteInput').value;
+  var empId = document.getElementById('uploadEmpId').value;
+  var eEl   = document.getElementById('uploadErr');
   eEl.classList.remove('show');
-  if(!text.trim()){eEl.textContent='No data entered.';eEl.classList.add('show');return;}
-  var rows=parseCSV(text);
-  if(!rows.length){eEl.textContent='No valid rows found. Check CSV format.';eEl.classList.add('show');return;}
-  // Save to that BDO's localStorage key
+  if (!text.trim()) { eEl.textContent='No data entered.'; eEl.classList.add('show'); return; }
+  var rows = parseCSV(text);
+  if (!rows.length) { eEl.textContent='No valid rows found.'; eEl.classList.add('show'); return; }
+
+  var btn = document.getElementById('loadCsvBtn');
+  btn.textContent = '⏳ Uploading...';
+  btn.disabled = true;
+
+  try {
+    var res  = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({action:'saveBDOData', empId: empId, leads: rows})});
+    var json = await res.json();
+    if (!json.success) throw new Error(json.error || 'Upload failed');
+  } catch(e) {
+    eEl.textContent = 'Sheet upload failed: ' + e.message;
+    eEl.classList.add('show');
+    btn.textContent = '✅ Load Data';
+    btn.disabled = false;
+    return;
+  }
+
+  // Also cache locally
   localStorage.setItem('leads_'+empId, JSON.stringify(rows));
-  localStorage.setItem('leadMeta_'+empId,'{}');
-  localStorage.setItem('leadIdx_'+empId,'0');
+  localStorage.setItem('leadMeta_'+empId, '{}');
+  localStorage.setItem('leadIdx_'+empId, '0');
+  localStorage.setItem('leadsDate_'+empId, new Date().toISOString().split('T')[0]);
+
+  document.getElementById('uploadSuccess').textContent = 'Loaded '+rows.length+' records for '+empId+' ✅';
   document.getElementById('uploadSuccess').classList.add('show');
-  document.getElementById('uploadSuccess').textContent='Loaded '+rows.length+' records for '+empId;
-  setTimeout(function(){document.getElementById('uploadSuccess').classList.remove('show');},3000);
+  btn.textContent = '✅ Load Data';
+  btn.disabled = false;
+  setTimeout(function(){ document.getElementById('uploadSuccess').classList.remove('show'); }, 4000);
 });
 
 document.getElementById('clearBdoDataBtn').addEventListener('click',function(){
