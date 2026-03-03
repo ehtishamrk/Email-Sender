@@ -2214,32 +2214,50 @@ function parsePortalCSV(text) {
   const results = [];
   let start = lines[0].toLowerCase().includes('mc') ? 1 : 0;
   for (let i = start; i < lines.length; i++) {
-    const p = lines[i].split(',').map(s => s.trim().replace(/^"|"$/g,''));
+const p = lines[i].split(/\t|,/).map(s => s.trim().replace(/^"|"$/g,''));
     if (p.length < 2) continue;
-   results.push({
-  mc:       p[0]||'',
-  entity:   p[1]||'',
-  status:   p[2]||'',
-  power:    p[3]||'',
-  company:  p[4]||'',
-  address:  p[5]||'',
-  phone:    p[6]||'',
-  email:    p[7]||''
-});
+    results.push({
+      mc:     p[0]||'',
+      entity: p[1]||'',
+      status: p[2]||'',
+      power:  p[3]||'',
+      company:p[4]||'',
+      address:p[5]||'',
+      phone:  p[6]||'',
+      email:  p[7]||''
+    });
   }
   return results;
 }
 
-function portalLoadCsv() {
+async function portalLoadCsv() {
   const empId = document.getElementById('portalUploadEmpId').value;
   const text  = document.getElementById('portalCsvPaste').value;
   if (!text.trim()) { showPortalMsg('No data entered.', false); return; }
   const rows = parsePortalCSV(text);
   if (!rows.length) { showPortalMsg('No valid rows found. Check CSV format.', false); return; }
-  localStorage.setItem('leads_' + empId, JSON.stringify(rows));
-  localStorage.setItem('leadMeta_' + empId, '{}');
-  localStorage.setItem('leadIdx_' + empId, '0');
-  showPortalMsg('Loaded ' + rows.length + ' records for ' + (BDO_NAMES[empId]||empId) + '.', true);
+  
+  showPortalMsg('Uploading ' + rows.length + ' records...', true);
+
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        action: 'saveBDOData',
+        empId: empId,
+        leads: rows
+      })
+    });
+    const result = await res.json();
+    if (result.success) {
+      showPortalMsg('✅ Loaded ' + result.count + ' records for ' + (BDO_NAMES[empId]||empId) + ' into Google Sheets.', true);
+    } else {
+      showPortalMsg('❌ Error: ' + (result.error || 'Unknown error'), false);
+    }
+  } catch(e) {
+    showPortalMsg('❌ Failed to reach server: ' + e.message, false);
+  }
 }
 
 function portalClearBdo() {
