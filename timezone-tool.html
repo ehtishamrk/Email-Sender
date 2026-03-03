@@ -1147,7 +1147,9 @@ function saveMeta(){localStorage.setItem(META_KEY,JSON.stringify(meta));}
 function getCallCount(){return Object.keys(meta).length;}
 
 function initDialer(){
-  loadLeads();loadMeta();
+  loadLeads(); loadMeta();
+
+  // Clear stale leads from a previous day
   var storedDate = localStorage.getItem('leadsDate_'+EMP_ID);
   var todayDate  = new Date().toISOString().split('T')[0];
   if (storedDate && storedDate !== todayDate) {
@@ -1157,14 +1159,81 @@ function initDialer(){
     localStorage.removeItem('leadIdx_'+EMP_ID);
     localStorage.removeItem('leadsDate_'+EMP_ID);
   }
+
+  // If no leads in localStorage, try fetching from Google Sheet
+  if (leads.length === 0) {
+    document.getElementById('noDataState').style.display = 'block';
+    document.getElementById('leadDisplay').style.display = 'none';
+    document.getElementById('dialerSub').textContent = 'Fetching your leads...';
+
+    fetch(API + '?action=getBDOLeads&empId=' + EMP_ID)
+      .then(function(r){ return r.json(); })
+      .then(function(sheetLeads){
+        if (!sheetLeads || !sheetLeads.length) {
+          document.getElementById('dialerSub').textContent = 'No data loaded';
+          return;
+        }
+        // Map sheet fields to local lead format
+        leads = sheetLeads.map(function(row) {
+          return {
+            mc:           row.mc           || '',
+            entity:       row.entity       || '',
+            entityStatus: row.status       || '',
+            power:        row.power        || '',
+            company:      row.company      || '',
+            address:      row.address      || '',
+            phone:        row.phone        || '',
+            email:        row.email        || '',
+            callStatus:   row.callStatus   || '',
+            dnc:          row.dnc          || false,
+            contactName:  row.contactName  || '',
+            truckType:    row.truckType    || '',
+            rowIndex:     row.rowIndex
+          };
+        });
+        // Rebuild meta from sheet data
+        leads.forEach(function(lead, i){
+          if (lead.callStatus || lead.dnc || lead.contactName) {
+            meta[i] = {
+              status:      lead.callStatus || '',
+              dnc:         lead.dnc        || false,
+              contactName: lead.contactName|| '',
+              truckType:   lead.truckType  || ''
+            };
+          }
+        });
+        // Cache locally
+        localStorage.setItem(LEAD_KEY, JSON.stringify(leads));
+        localStorage.setItem(META_KEY, JSON.stringify(meta));
+        localStorage.setItem('leadsDate_'+EMP_ID, todayDate);
+        // Find first uncalled lead
+        curIdx = 0;
+        for (var i = 0; i < leads.length; i++) {
+          if (!meta[i] || !meta[i].status) { curIdx = i; break; }
+        }
+        localStorage.setItem('leadIdx_'+EMP_ID, curIdx);
+        document.getElementById('noDataState').style.display = 'none';
+        document.getElementById('leadDisplay').style.display = 'block';
+        var counter = document.getElementById('navCounter');
+        if (counter) counter.style.display = '';
+        renderLead();
+        updateDialerStats();
+      })
+      .catch(function(){
+        document.getElementById('dialerSub').textContent = 'Failed to load — check connection';
+      });
+
+    return; // rest of init runs inside the .then() above
+  }
+
+  // Leads already in localStorage — just render normally
   curIdx = parseInt(localStorage.getItem('leadIdx_'+EMP_ID)||'0');
-  if(curIdx >= leads.length) curIdx = 0;
-  var hasLeads = leads.length > 0;
-  document.getElementById('noDataState').style.display = hasLeads ? 'none' : 'block';
-  document.getElementById('leadDisplay').style.display = hasLeads ? 'block' : 'none';
+  if (curIdx >= leads.length) curIdx = 0;
+  document.getElementById('noDataState').style.display = 'none';
+  document.getElementById('leadDisplay').style.display = 'block';
   var counter = document.getElementById('navCounter');
-  if(hasLeads){counter.style.display='';} else {counter.style.display='none';}
-  if(hasLeads) renderLead();
+  if (counter) counter.style.display = '';
+  renderLead();
   updateDialerStats();
 }
 
@@ -1177,8 +1246,7 @@ function renderLead(){
 "Unknown";
  document.getElementById("leadCompany").textContent = lead.company || "--";
  document.getElementById("leadMC").textContent = lead.mc || "--";
- document.getElementById("leadEntityStatus").textContent = lead.entityStatus || lead.status
-|| "--";
+ document.getElementById('leadEntityStatus').textContent = lead.entityStatus || lead.entity || lead.status || '--';
  document.getElementById("leadPower").textContent = lead.power || "--";
  document.getElementById("leadPhone").textContent = lead.phone || "--";
  document.getElementById("leadAddr").textContent = lead.address || "--";
@@ -1390,24 +1458,52 @@ if(IS_ADMIN && params.get('admin')==='1'){
 }
 
 function parseCSV(text){
-  var lines = text.trim().split('\n');
+  // Properly handles quoted fields containing commas
+  function splitCSVLine(line) {
+    var result = [];
+    var cur = '';
+    var inQuotes = false;
+    for (var c = 0; c < line.length; c++) {
+      var ch = line[c];
+      if (ch === '"') {
+        // Handle doubled quotes "" inside a quoted field
+        if (inQuotes && line[c+1] === '"') { cur += '"'; c++; }
+        else { inQuotes = !inQuotes; }
+      } else if (ch === ',' && !inQuotes) {
+        result.push(cur.trim());
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    result.push(cur.trim());
+    return result;
+  }
+
+  // Normalize line endings
+  var lines = text.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
   var results = [];
   var start = 0;
-  // Check if first line is header
+
+  // Skip header row if present
   var firstLine = lines[0].toLowerCase();
-  if(firstLine.includes('mc number')||firstLine.includes('company')||firstLine.includes('phone')) start=1;
-  for(var i=start;i<lines.length;i++){
-    var parts = lines[i].split(',').map(function(s){return s.trim().replace(/^"|"$/g,'');});
-    if(parts.length < 2) continue;
+  if (firstLine.includes('mc') || firstLine.includes('company') || firstLine.includes('phone') || firstLine.includes('entity')) {
+    start = 1;
+  }
+
+  for (var i = start; i < lines.length; i++) {
+    if (!lines[i].trim()) continue; // skip empty lines
+    var parts = splitCSVLine(lines[i]);
+    if (parts.length < 2) continue;
     results.push({
-      mc: parts[0]||'',
-      entityStatus: parts[1]||'',
-      power: parts[2]||'',
-      driver: parts[3]||'',
-      company: parts[4]||'',
-      address: parts[5]||'',
-      phone: parts[6]||'',
-      email: parts[7]||''
+      mc:           parts[0] || '',
+      entity:       parts[1] || '',
+      entityStatus: parts[2] || '',
+      power:        parts[3] || '',
+      company:      parts[4] || '',
+      address:      parts[5] || '',
+      phone:        parts[6] || '',
+      email:        parts[7] || ''
     });
   }
   return results;
