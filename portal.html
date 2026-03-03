@@ -1033,7 +1033,7 @@
               <textarea class="field-input" id="portalCsvPaste" placeholder="MC Number,Entity Status,Power,Driver,Company Name,Physical Address,Phone Number,Email Address" style="min-height:100px;font-size:11px;font-family:monospace;"></textarea>
             </div>
             <div style="font-size:11px;color:var(--text-muted);background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
-              <strong>Column order:</strong> MC Number, Entity Status, Power, Driver, Company Name, Physical Address, Phone Number, Email Address
+              <strong>Column order:</strong> MC Number, Entity, Status, Power, Company Name, Physical Address, Phone Number, Email Address
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
               <button class="btn-primary" style="flex:1;min-width:140px;" onclick="portalLoadCsv()">✅ Load Data</button>
@@ -2002,7 +2002,9 @@ ${clockInTime}</div>`
  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;">Team Live
 Status</div>
  <div style="display:flex;gap:8px;align-items:center;">
- <span style="font-size:11px;color:var(--text-muted);">Auto-refreshes every 30s</span>
+ <span style="font-size:11px;color:var(--text-muted);">Auto-refreshes every
+30s</span>
+ <button class="btn-sm" onclick="renderAdminLiveStatus()" style="fontsize:12px;padding:7px 16px;">↺ Refresh</button>
  </div>
  </div>
  <div style="overflow-x:auto;">
@@ -2029,11 +2031,13 @@ function showAdminToast(msg) {
  const c = document.getElementById("adminToastContainer") ||
  (() => { const d=document.createElement("div");
  d.id="adminToastContainer";
- d.style.cssText="position:fixed;top:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;";
+ d.style.cssText="position:fixed;top:24px;right:24px;z-index:9999;display:flex;flexdirection:column;gap:8px;";
  document.body.appendChild(d); return d; })();
  const t = document.createElement("div");
  t.innerHTML = `🔴 <strong>Inactive Alert</strong><br>${msg}`;
-t.style.cssText = "background:#1e293b;color:#f8fafc;padding:12px 18px;border-radius:12px;font-size:13px;box-shadow:0 4px 24px rgba(0,0,0,0.35);border-left:4px solid #DC2626;max-width:300px;cursor:pointer;";
+ t.style.cssText = "background:#1e293b;color:#f8fafc;padding:12px 18px;border-radius:12px;
+ font-size:13px;box-shadow:0 4px 24px rgba(0,0,0,0.35);border-left:4px solid #DC2626;
+ max-width:300px;cursor:pointer;";
  t.onclick = () => t.remove();
  c.appendChild(t);
  setTimeout(() => t.remove(), 10000);
@@ -2314,21 +2318,54 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function parsePortalCSV(text) {
-  const lines = text.trim().split('\n');
+  // Step 1: tokenise the entire CSV respecting quoted fields (including multi-line addresses)
+  function tokenise(raw) {
+    const rows = [];
+    let cur = [], field = '', inQ = false;
+    for (let i = 0; i < raw.length; i++) {
+      const ch = raw[i];
+      if (ch === '"') {
+        if (inQ && raw[i+1] === '"') { field += '"'; i++; }   // escaped ""
+        else { inQ = !inQ; }
+      } else if (ch === ',' && !inQ) {
+        cur.push(field.trim()); field = '';
+      } else if ((ch === '\n' || (ch === '\r' && raw[i+1] === '\n')) && !inQ) {
+        if (ch === '\r') i++;                                  // skip \r of \r\n
+        cur.push(field.trim()); field = '';
+        if (cur.some(f => f !== '')) rows.push(cur);
+        cur = [];
+      } else if (ch === '\r' && !inQ) {
+        // bare \r — treat as newline
+        cur.push(field.trim()); field = '';
+        if (cur.some(f => f !== '')) rows.push(cur);
+        cur = [];
+      } else {
+        field += ch;
+      }
+    }
+    cur.push(field.trim());
+    if (cur.some(f => f !== '')) rows.push(cur);
+    return rows;
+  }
+
+  const rows = tokenise(text);
   const results = [];
-  let start = lines[0].toLowerCase().includes('mc') ? 1 : 0;
-  for (let i = start; i < lines.length; i++) {
-const p = lines[i].split(/\t|,/).map(s => s.trim().replace(/^"|"$/g,''));
+  let start = 0;
+  if (rows.length && rows[0][0].toLowerCase().includes('mc')) start = 1;
+
+  for (let i = start; i < rows.length; i++) {
+    const p = rows[i];
     if (p.length < 2) continue;
+    // Columns: MC Number | Entity | Status | Power | Company Name | Physical Address | Phone Number | Email Address
     results.push({
-      mc:     p[0]||'',
-      entity: p[1]||'',
-      status: p[2]||'',
-      power:  p[3]||'',
-      company:p[4]||'',
-      address:p[5]||'',
-      phone:  p[6]||'',
-      email:  p[7]||''
+      mc:           p[0] || '',
+      entity:       p[1] || '',
+      entityStatus: p[2] || '',
+      power:        p[3] || '',
+      company:      p[4] || '',
+      address:      p[5] || '',
+      phone:        p[6] || '',
+      email:        p[7] || ''
     });
   }
   return results;
