@@ -744,12 +744,35 @@ function pingActivity() {
     }).catch(function(){});
   } catch(e) {}
 }
-['click','keydown','mousemove'].forEach(function(ev) {
-  document.addEventListener(ev, function() { pingActivity(); }, {passive:true});
-});
-pingActivity();
-setInterval(pingActivity, 120000); // ping every 2 min
+// Activity only pings on dialer navigation — not generic page interaction
+pingActivity(); // initial ping on load
 
+  // Track idle periods — check every 5 minutes
+var IDLE_THRESHOLD = 15 * 60 * 1000; // 15 min
+setInterval(function() {
+  if (EMP_ID === 'GUEST') return;
+  var idleMs = Date.now() - lastActivity;
+  if (idleMs > IDLE_THRESHOLD) {
+    // Record idle period in localStorage for attendance report
+    var idleLog = JSON.parse(localStorage.getItem('idleLog_'+EMP_ID)||'[]');
+    var last = idleLog[idleLog.length-1];
+    var nowStr = new Date().toISOString();
+    var todayStr = nowStr.split('T')[0];
+    // Only add new entry if not already tracking this idle period
+    if (!last || last.end || last.date !== todayStr) {
+      idleLog.push({date:todayStr, start: new Date(lastActivity).toISOString(), end:null});
+      localStorage.setItem('idleLog_'+EMP_ID, JSON.stringify(idleLog));
+    }
+  } else {
+    // Close any open idle period when activity resumes
+    var idleLog = JSON.parse(localStorage.getItem('idleLog_'+EMP_ID)||'[]');
+    var last = idleLog[idleLog.length-1];
+    if (last && !last.end) {
+      last.end = new Date().toISOString();
+      localStorage.setItem('idleLog_'+EMP_ID, JSON.stringify(idleLog));
+    }
+  }
+}, 5 * 60 * 1000);
 // ── LOCATIONS DB ─────────────────────────────────
 var LOCS = [
   {n:'Alabama',ab:['AL'],tz:'America/Chicago',t:'State',z:'ct'},
@@ -1267,11 +1290,13 @@ function updateDncToggle(){
 
 // Prev/Next
 document.getElementById('prevBtn').addEventListener('click', function(){
+  pingActivity();
   if(!leads.length)return;
   if(curIdx>0){curIdx--;localStorage.setItem('leadIdx_'+EMP_ID,curIdx);renderLead();}
 });
 
 document.getElementById('nextBtn').addEventListener('click', function(){
+  pingActivity();
   if(!leads.length)return;
   // Show call status modal before proceeding
   selectedStatus = null;
