@@ -1458,6 +1458,14 @@ function doLogin() {
     err.classList.remove('show');
     currentUser = { id, ...emp };
     store('session', { id });
+    // Register login session in sheet — invalidates any other browser's session
+    fetch(API, { method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ action:'setLoginSession', empId: id })
+    }).then(r => r.json()).then(res => {
+      if (res.token) {
+        localStorage.setItem('loginToken_' + id, res.token);
+      }
+    }).catch(() => {});
     enterPortal();
   } else {
     err.classList.add('show');
@@ -1520,6 +1528,21 @@ function enterPortal() {
   refreshStats();
   refreshLeaveHistory();
   startHeartbeat();
+  // Poll every 60s — if token no longer matches sheet, force logout
+if (window._sessionPollInterval) clearInterval(window._sessionPollInterval);
+window._sessionPollInterval = setInterval(function() {
+  const token = localStorage.getItem('loginToken_' + currentUser.id);
+  if (!token) return;
+  fetch(API + '?action=validateLoginSession&empId=' + encodeURIComponent(currentUser.id) + '&token=' + encodeURIComponent(token))
+    .then(r => r.json())
+    .then(res => {
+      if (!res.valid) {
+        clearInterval(window._sessionPollInterval);
+        alert('You have been logged in from another location. You will be logged out here.');
+        doLogout();
+      }
+    }).catch(() => {});
+}, 60000);
 }
 
 // ══════════════════════════════════════════════════════════════
