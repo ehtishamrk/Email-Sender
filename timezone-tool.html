@@ -1340,7 +1340,6 @@ function updateDncToggle(){
 
 // Prev/Next
 document.getElementById('prevBtn').addEventListener('click', function(){
-  pingActivity();
   if(curIdx>0){
     curIdx--;
     localStorage.setItem('leadIdx_'+EMP_ID, curIdx);
@@ -1353,7 +1352,6 @@ document.getElementById('prevBtn').addEventListener('click', function(){
 });
 
 document.getElementById('nextBtn').addEventListener('click', function(){
-  pingActivity();
   if(!meta[curIdx]||!meta[curIdx].status){
     selectedStatus = null;
     document.querySelectorAll('.status-opt').forEach(function(o){o.classList.remove('selected');});
