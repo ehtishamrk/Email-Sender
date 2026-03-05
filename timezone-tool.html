@@ -1405,6 +1405,8 @@ document.getElementById('statusModal').classList.remove('show');
       body:JSON.stringify({action:'reportActivity',empId:EMP_ID,ts:new Date().toISOString(),leadIdx:curIdx})
     }).catch(function(){});
   }
+  selectedStatus = null;
+  document.querySelectorAll('.status-opt').forEach(function(o){o.classList.remove('selected');});
   renderLead();
   updateDialerStats();
   renderLeadSearch();
