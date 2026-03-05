@@ -1355,12 +1355,15 @@ document.getElementById('prevBtn').addEventListener('click', function(){
 document.getElementById('nextBtn').addEventListener('click', function(){
   pingActivity();
   if(!meta[curIdx]||!meta[curIdx].status){
-    document.getElementById('statusMust').classList.add('show'); return;
+    selectedStatus = null;
+    document.querySelectorAll('.status-opt').forEach(function(o){o.classList.remove('selected');});
+    document.getElementById('statusMust').classList.remove('show');
+    document.getElementById('statusModal').classList.add('show');
+    return;
   }
   if(curIdx < leads.length-1){
     curIdx++;
     localStorage.setItem('leadIdx_'+EMP_ID, curIdx);
-    // Save position to sheet
     fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},
       body:JSON.stringify({action:'reportActivity',empId:EMP_ID,ts:new Date().toISOString(),leadIdx:curIdx})
     }).catch(function(){});
