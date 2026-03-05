@@ -1446,17 +1446,16 @@ function removeCb(i) {
 function syncLeadMeta(idx){
   var lead = leads[idx]||{};
   var m = meta[idx]||{};
+  var sheetRowIndex = (lead.rowIndex !== undefined) ? lead.rowIndex : idx;
   fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({
     action:'updateLeadMeta',
     empId:EMP_ID,
-    rowIndex:idx,
-    mc:lead.mc||'',
+    rowIndex:sheetRowIndex,
     callStatus:m.status||'',
     dnc:m.dnc||false,
     contactName:m.contactName||'',
     truckType:m.truckType||'',
-    calledAt:m.calledAt||'',
-    updatedAt:new Date().toISOString()
+    calledAt:m.calledAt||new Date().toISOString()
   })}).catch(function(){});
 }
 
