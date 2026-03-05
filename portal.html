@@ -1952,9 +1952,9 @@ async function renderAdminLiveStatus() {
  }
  if (!isIdle) _notifiedInactive[id] = false; // reset if active again
  // Call count for BDOs (check meta stored per-BDO in Sessions/activity)
- const isBDO = emp.designation && emp.designation.includes("Business Development");
- let callCountCell = "";
- if (isBDO && isIn) {
+const isDialerUser = !emp.isAdmin;
+let callCountCell = "";
+if (isDialerUser && isIn) {
  // We read callCount from activity data if the BDO page reports it
  const rawCalls = activityData ? activityData[id + "_calls"] : null;
  const callCount = rawCalls ? parseInt(rawCalls) : 0;
