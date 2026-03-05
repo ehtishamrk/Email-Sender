@@ -1226,17 +1226,40 @@ function initDialer(){
             contactName:lead.contactName||'',truckType:lead.truckType||''};
         }
       });
-      curIdx=0;
-      for(var i=0;i<leads.length;i++){if(!meta[i]||!meta[i].status){curIdx=i;break;}}
-      localStorage.setItem(LEAD_KEY,JSON.stringify(leads));
-      localStorage.setItem(META_KEY,JSON.stringify(meta));
-      localStorage.setItem('leadIdx_'+EMP_ID,curIdx);
-      localStorage.setItem('leadsDate_'+EMP_ID,todayDate);
-      document.getElementById('noDataState').style.display='none';
-      document.getElementById('leadDisplay').style.display='block';
-      var c2=document.getElementById('navCounter');
-      if(c2)c2.style.display='';
-      renderLead();updateDialerStats();
+      fetch(API+'?action=getActivityData')
+        .then(function(r){return r.json();})
+        .then(function(actData){
+          var savedIdx = actData ? parseInt(actData[EMP_ID+'_leadIdx']||'0') : 0;
+          if(savedIdx > 0 && savedIdx < leads.length){
+            curIdx = savedIdx;
+          } else {
+            curIdx = 0;
+            for(var i=0;i<leads.length;i++){if(!meta[i]||!meta[i].status){curIdx=i;break;}}
+          }
+          localStorage.setItem(LEAD_KEY,JSON.stringify(leads));
+          localStorage.setItem(META_KEY,JSON.stringify(meta));
+          localStorage.setItem('leadIdx_'+EMP_ID,curIdx);
+          localStorage.setItem('leadsDate_'+EMP_ID,todayDate);
+          document.getElementById('noDataState').style.display='none';
+          document.getElementById('leadDisplay').style.display='block';
+          var c2=document.getElementById('navCounter');
+          if(c2)c2.style.display='';
+          renderLead();updateDialerStats();
+        })
+        .catch(function(){
+          curIdx=0;
+          for(var i=0;i<leads.length;i++){if(!meta[i]||!meta[i].status){curIdx=i;break;}}
+          localStorage.setItem(LEAD_KEY,JSON.stringify(leads));
+          localStorage.setItem(META_KEY,JSON.stringify(meta));
+          localStorage.setItem('leadIdx_'+EMP_ID,curIdx);
+          localStorage.setItem('leadsDate_'+EMP_ID,todayDate);
+          document.getElementById('noDataState').style.display='none';
+          document.getElementById('leadDisplay').style.display='block';
+          var c2=document.getElementById('navCounter');
+          if(c2)c2.style.display='';
+          renderLead();updateDialerStats();
+        });
+      return;
     })
     .catch(function(err){
       console.error('Lead fetch error:',err);
@@ -1315,20 +1338,31 @@ function updateDncToggle(){
 // Prev/Next
 document.getElementById('prevBtn').addEventListener('click', function(){
   pingActivity();
-  if(!leads.length)return;
-  if(curIdx>0){curIdx--;localStorage.setItem('leadIdx_'+EMP_ID,curIdx);renderLead();}
+  if(curIdx>0){
+    curIdx--;
+    localStorage.setItem('leadIdx_'+EMP_ID, curIdx);
+    // Save position to sheet
+    fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'reportActivity',empId:EMP_ID,ts:new Date().toISOString(),leadIdx:curIdx})
+    }).catch(function(){});
+    renderLead();
+  }
 });
 
 document.getElementById('nextBtn').addEventListener('click', function(){
   pingActivity();
-  if(!leads.length)return;
-  // Show call status modal before proceeding
-  selectedStatus = null;
-  statusGrid.querySelectorAll('.status-opt').forEach(function(o){o.classList.remove('selected');});
-  document.getElementById('statusMust').classList.remove('show');
-  document.getElementById('statusModal').classList.add('show');
-  pingActivity();
-  statusPendingResolve = 'next';
+  if(!meta[curIdx]||!meta[curIdx].status){
+    document.getElementById('statusMust').classList.add('show'); return;
+  }
+  if(curIdx < leads.length-1){
+    curIdx++;
+    localStorage.setItem('leadIdx_'+EMP_ID, curIdx);
+    // Save position to sheet
+    fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'reportActivity',empId:EMP_ID,ts:new Date().toISOString(),leadIdx:curIdx})
+    }).catch(function(){});
+    renderLead(); updateDialerStats(); renderLeadSearch();
+  }
 });
 
 document.getElementById('confirmStatusBtn').addEventListener('click', function(){
@@ -1464,26 +1498,29 @@ function renderLeadSearch(){
 function renderCallbacks() {
   var el = document.getElementById('cbList');
   if (!el) return;
-  var cbs = JSON.parse(localStorage.getItem('callbacks_'+EMP_ID)||'[]');
-  if (!cbs.length) {
-    el.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center;padding:12px 0;">No callbacks scheduled.</div>';
-    return;
-  }
-  // Sort by callback date ascending
-  cbs.sort(function(a,b){ return (a.date+a.time).localeCompare(b.date+b.time); });
-  el.innerHTML = cbs.map(function(cb, i) {
-    var isPast = new Date(cb.date+'T'+cb.time) < new Date();
-    return '<div style="padding:10px 12px;border-radius:10px;background:var(--bg2);margin-bottom:8px;border-left:3px solid '+(isPast?'#E84545':'#3B82F6')+';">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-        '<div style="font-size:13px;font-weight:700;color:var(--text);">' + (cb.company||cb.mc||'Unknown') + '</div>' +
-        '<div style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:'+(isPast?'#FFF0F0':'#EFF6FF')+';color:'+(isPast?'#E84545':'#1D4ED8')+';">'+(isPast?'Overdue':'Upcoming')+'</div>' +
-      '</div>' +
-      '<div style="font-size:11px;color:var(--muted);margin-top:3px;">📅 ' + cb.date + ' at ' + cb.time + '</div>' +
-      '<div style="font-size:11px;color:var(--muted);">📞 ' + (cb.phone||'—') + '</div>' +
-      (cb.notes ? '<div style="font-size:11px;color:var(--text-mid);margin-top:4px;font-style:italic;">' + cb.notes + '</div>' : '') +
-      '<button onclick="removeCb('+i+')" style="margin-top:6px;font-size:10px;background:none;border:none;color:var(--muted);cursor:pointer;text-decoration:underline;">Remove</button>' +
-    '</div>';
-  }).join('');
+  fetch(API+'?action=getCallbacks&empId='+encodeURIComponent(EMP_ID))
+    .then(function(r){return r.json();})
+    .then(function(cbs){
+      if(!Array.isArray(cbs)||!cbs.length){
+        el.innerHTML='<div style="font-size:12px;color:var(--muted);text-align:center;padding:12px 0;">No callbacks scheduled.</div>';
+        return;
+      }
+      el.innerHTML = cbs.map(function(cb,i){
+        var isPast = new Date(cb.date+'T'+cb.time) < new Date();
+        return '<div style="padding:10px 12px;border-radius:10px;background:var(--bg2);margin-bottom:8px;border-left:3px solid '+(isPast?'#E84545':'#3B82F6')+';\">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+            '<div style="font-size:13px;font-weight:700;color:var(--text);">'+(cb.company||cb.mc||'Unknown')+'</div>' +
+            '<div style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:'+(isPast?'#FFF0F0':'#EFF6FF')+';color:'+(isPast?'#E84545':'#1D4ED8')+';\">'+(isPast?'Overdue':'Upcoming')+'</div>' +
+          '</div>' +
+          '<div style="font-size:11px;color:var(--muted);margin-top:3px;">📅 '+cb.date+' at '+cb.time+'</div>' +
+          '<div style="font-size:11px;color:var(--muted);">📞 '+(cb.phone||'—')+'</div>' +
+          (cb.notes?'<div style="font-size:11px;color:var(--text-mid);margin-top:4px;font-style:italic;">'+cb.notes+'</div>':'') +
+        '</div>';
+      }).join('');
+    })
+    .catch(function(){
+      el.innerHTML='<div style="font-size:12px;color:var(--muted);text-align:center;padding:12px 0;">Could not load callbacks.</div>';
+    });
 }
 
 function removeCb(i) {
