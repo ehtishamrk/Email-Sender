@@ -424,6 +424,10 @@ select.field-input{cursor:pointer}
               <div class="dialer-sub" id="dialerSub">Load today's data to begin</div>
             </div>
             <div id="dialerStatusBadge"></div>
+            <div id="leadLocalTime" style="text-align:right;display:none;">
+              <div style="font-size:18px;font-weight:800;color:#F5A623;letter-spacing:-1px;" id="leadLocalTimeClock">--:--</div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.45);" id="leadLocalTimeTz">Local time</div>
+            </div>
           </div>
           <div class="dialer-progress-bar-wrap"><div class="dialer-progress-bar" id="dialerProg" style="width:0%"></div></div>
           <div class="dialer-counter-row">
@@ -1268,6 +1272,26 @@ function renderLead(){
   updateDncToggle();
   document.getElementById('updateName').value = m.contactName || '';
   document.getElementById('updateTruck').value = m.truckType || '';
+  // Show current local time for lead's state
+  var addr = lead.address || '';
+  var stateMatch = addr.match(/\b([A-Z]{2})\b\s*\d{5}/);
+  var leadTz = null;
+  if (stateMatch) {
+    var ab = stateMatch[1];
+    var loc = LOCS.find(function(l){ return l.ab && l.ab.indexOf(ab) >= 0; });
+    if (loc) leadTz = loc.tz;
+  }
+  var ltEl = document.getElementById('leadLocalTime');
+  var ltClock = document.getElementById('leadLocalTimeClock');
+  var ltTz = document.getElementById('leadLocalTimeTz');
+  if (leadTz) {
+    ltEl.style.display = '';
+    window._leadTz = leadTz;
+    ltTz.textContent = (LOCS.find(function(l){return l.tz===leadTz;})||{}).z || leadTz;
+  } else {
+    ltEl.style.display = 'none';
+    window._leadTz = null;
+  }
 }
 
 function updateDialerStats(){
@@ -1725,7 +1749,22 @@ function editFromView(){var a=loadA().find(function(x){return String(x.id)===Str
 function deleteFromView(){if(confirm('Delete this appointment?'))deleteAppt(viewId);}
 
 function renderAppts(){
-  var all=loadA();
+  fetch(API+'?action=getAppointments&empId='+encodeURIComponent(EMP_ID))
+    .then(function(r){return r.json();})
+    .then(function(sheetAppts){
+      if(Array.isArray(sheetAppts) && sheetAppts.length){
+        var localAppts = loadA();
+        var sheetIds = sheetAppts.map(function(a){return String(a.createdAt);});
+        var localOnly = localAppts.filter(function(a){return !sheetIds.includes(String(a.createdAt));});
+        var merged = sheetAppts.concat(localOnly);
+        saveA(merged);
+      }
+      _doRenderAppts(loadA());
+    })
+    .catch(function(){ _doRenderAppts(loadA()); });
+}
+
+function _doRenderAppts(all){
   var tod=new Date().toLocaleDateString('en-CA');
   var MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var DA=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -1828,6 +1867,12 @@ if(params.get('tab')==='hub'){
 }
 
 })();
+  setInterval(function(){
+  if (!window._leadTz) return;
+  var t = new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', hour12:true, timeZone: window._leadTz});
+  var el = document.getElementById('leadLocalTimeClock');
+  if (el) el.textContent = t;
+}, 1000);
 </script>
 </body>
 </html>
