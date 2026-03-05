@@ -946,10 +946,13 @@ document.getElementById("saveCbBtn").addEventListener("click", function() {
  meta[curIdx].calledAt = new Date().toISOString();
  saveMeta();
  syncLeadMeta(curIdx);
- if (curIdx < leads.length - 1) {
- curIdx++;
- localStorage.setItem("leadIdx_"+EMP_ID, curIdx);
- }
+if (curIdx < leads.length - 1) {
+    curIdx++;
+    localStorage.setItem('leadIdx_'+EMP_ID, curIdx);
+    fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'reportActivity',empId:EMP_ID,ts:new Date().toISOString(),leadIdx:curIdx})
+    }).catch(function(){});
+  }
  renderLead(); updateDialerStats(); renderLeadSearch();
   renderCallbacks();
 });
@@ -1394,7 +1397,13 @@ document.getElementById('statusModal').classList.remove('show');
     return; // advance happens inside saveCbBtn
   }
 
-  if (curIdx < leads.length-1) { curIdx++; localStorage.setItem('leadIdx_'+EMP_ID, curIdx); }
+ if (curIdx < leads.length-1) {
+    curIdx++;
+    localStorage.setItem('leadIdx_'+EMP_ID, curIdx);
+    fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'reportActivity',empId:EMP_ID,ts:new Date().toISOString(),leadIdx:curIdx})
+    }).catch(function(){});
+  }
   renderLead();
   updateDialerStats();
   renderLeadSearch();
