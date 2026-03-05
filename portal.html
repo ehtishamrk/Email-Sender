@@ -1966,7 +1966,13 @@ async function renderAdminLiveStatus() {
  if (!isIn) {
  statusHtml = `<span style="font-size:11px;font-weight:600;color:var(--textmuted);">Clocked Out</span>`;
  } else if (isIdle) {
- statusHtml = `<span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#FEE2E2;color:#DC2626;">Inactive</span>`;
+ // lastAct is when they were last active — add 15min to get when "Inactive" badge appeared
+ const inactiveSinceMs = lastAct + INACTIVE_MS;
+ const inactiveMinsTotal = Math.floor((now - inactiveSinceMs) / 60000) + 15;
+ const inactiveSinceTime = new Date(inactiveSinceMs).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+ statusHtml = `<span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#FEE2E2;color:#DC2626;">Inactive</span>
+  <div style="font-size:10px;color:#DC2626;margin-top:3px;">since ${inactiveSinceTime}</div>
+  <div style="font-size:10px;color:var(--text-muted);">${inactiveMinsTotal}m idle</div>`;
  } else {
  statusHtml = `<span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#DCFCE7;color:#15803D;">Active</span>`;
  }
