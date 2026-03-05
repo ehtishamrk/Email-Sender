@@ -1016,12 +1016,7 @@
             <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Upload daily call list (500 records) for a BDO. Previous data is replaced.</div>
             <div class="field-wrap">
               <label class="field-label">Target BDO</label>
-              <select class="field-input" id="portalUploadEmpId">
-                <option value="HX-0003">HX-0003 — Rana Nouman Ahmad</option>
-                <option value="HX-0004">HX-0004 — Muhammad Ans</option>
-                <option value="HX-0005">HX-0005 — Sania Rafi</option>
-                <option value="HX-0006">HX-0006 — Farwa Qamar</option>
-              </select>
+              <select class="field-input" id="portalUploadEmpId"></select>
             </div>
             <div class="field-wrap">
               <label class="field-label">Upload CSV File</label>
@@ -2247,12 +2242,7 @@ function adminLeaveAction(id, status) {
 }
   // ── IDLE DETECTION ───────────────────────────────
 const BDO_IDS = ['HX-0003','HX-0004','HX-0005','HX-0006'];
-const BDO_NAMES = {
-  'HX-0003':'Rana Nouman Ahmad',
-  'HX-0004':'Muhammad Ans',
-  'HX-0005':'Sania Rafi',
-  'HX-0006':'Farwa Qamar'
-};
+const BDO_NAMES = Object.fromEntries(Object.entries(EMPLOYEES).map(([id,e]) => [id, e.name]));
 
 function getLastActivity(empId) {
   try { return parseInt(localStorage.getItem('hx_activity_' + empId) || '0'); } catch(e) { return 0; }
@@ -2312,6 +2302,16 @@ setInterval(() => {
 
 // ── CSV UPLOAD ───────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // Populate upload dropdown dynamically from EMPLOYEES
+  const uploadSel = document.getElementById('portalUploadEmpId');
+  if (uploadSel) {
+    Object.entries(EMPLOYEES).forEach(([id, emp]) => {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = id + ' — ' + emp.name;
+      uploadSel.appendChild(opt);
+    });
+  }
   const fileInput = document.getElementById('portalCsvFile');
   if (fileInput) {
     fileInput.addEventListener('change', function() {
