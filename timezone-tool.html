@@ -1343,7 +1343,7 @@ document.getElementById('confirmStatusBtn').addEventListener('click', function()
       action:    'reportActivity',
       empId:     EMP_ID,
       ts:        new Date().toISOString(),
-      callCount: Object.keys(meta).filter(function(k){ return meta[k] && meta[k].calledAt && meta[k].calledAt.split('T')[0] === new Date().toISOString().split('T')[0]; }).length
+      callCount: Object.keys(meta).filter(function(k){ return meta[k] && meta[k].status && meta[k].status !== ''; }).length
     })}).catch(function(){});
 
   // Sync to sheet
