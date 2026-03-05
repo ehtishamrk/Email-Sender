@@ -749,7 +749,7 @@ function pingActivity() {
   } catch(e) {}
 }
 // Activity only pings on dialer navigation — not generic page interaction
-pingActivity(); // initial ping on load
+// NOTE: No ping on page load — only real dialer actions count as activity
 
   // Track idle periods — check every 5 minutes
 var IDLE_THRESHOLD = 15 * 60 * 1000; // 15 min
