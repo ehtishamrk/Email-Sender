@@ -1733,6 +1733,12 @@ async function renderAttReport() {
     const inT     = new Date(e.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
     const outT    = e.outTs ? new Date(e.outTs).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—';
     const dur     = e.duration ? Math.floor(e.duration/60)+'h '+(e.duration%60)+'m' : '—';
+    const idleLog = load('idleLog_' + currentUser.id, []);
+const sessionDate = e.ts ? e.ts.split('T')[0] : '';
+const sessionIdleMins = idleLog
+  .filter(il => il.date === sessionDate && il.end)
+  .reduce((sum, il) => sum + Math.round((new Date(il.end) - new Date(il.start)) / 60000), 0);
+const idleStr = sessionIdleMins > 0 ? Math.floor(sessionIdleMins/60)+'h '+(sessionIdleMins%60)+'m idle' : '—';
     const dateStr = new Date(e.ts).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
     const autoTag = e.autoOut ? ' <span style="font-size:10px;color:var(--text-muted);">(auto)</span>' : '';
     return `<tr>
@@ -1740,11 +1746,12 @@ async function renderAttReport() {
       <td><span class="tag tag-in">↑ ${inT}</span></td>
       <td>${e.outTs ? '<span class="tag tag-out">↓ '+outT+'</span>' : '<span style="color:var(--text-muted);">—</span>'}${autoTag}</td>
       <td>${dur}</td>
+      <td>${sessionIdleMins > 0 ? '<span style="color:var(--red);font-size:12px;">'+idleStr+'</span>' : '<span style="color:var(--text-muted);">—</span>'}</td>
     </tr>`;
   }).join('');
   el.innerHTML = `<table class="att-log-table">
-    <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Duration</th></tr></thead>
-    <tbody>${rows}</tbody>
+<thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Duration</th><th>Idle Time</th></tr></thead>
+<tbody>${rows}</tbody>
   </table>`;
 }
 
@@ -2152,10 +2159,16 @@ async function renderAdminAttendance() {
           const inT     = new Date(e.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
           const outT    = e.outTs ? new Date(e.outTs).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—';
           const dur     = e.duration != null ? Math.floor(e.duration/60)+'h '+(e.duration%60)+'m' : '—';
+          const idleLog = load('idleLog_' + id, []);
+const sessionDate = e.ts ? e.ts.split('T')[0] : '';
+const sessionIdleMins = idleLog
+  .filter(il => il.date === sessionDate && il.end)
+  .reduce((sum, il) => sum + Math.round((new Date(il.end) - new Date(il.start)) / 60000), 0);
+const idleStr = sessionIdleMins > 0 ? Math.floor(sessionIdleMins/60)+'h '+(sessionIdleMins%60)+'m' : '—';
           const dateStr = new Date(e.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
           const autoFlag = e.autoOut ? ' <span style="font-size:10px;color:var(--text-muted);">(auto)</span>' : '';
           const outCell = e.outTs ? `<span class="tag tag-out">↓ ${outT}</span>${autoFlag}` : '<span style="color:var(--text-muted);">Still clocked in</span>';
-          return `<tr><td>${dateStr}</td><td><span class="tag tag-in">↑ ${inT}</span></td><td>${outCell}</td><td>${dur}</td></tr>`;
+          return `<tr><td>${dateStr}</td><td><span class="tag tag-in">↑ ${inT}</span></td><td>${outCell}</td><td>${dur}</td><td>${sessionIdleMins > 0 ? '<span style="color:var(--red);font-size:12px;">'+idleStr+'</span>' : '<span style="color:var(--text-muted);">—</span>'}</td></tr>`;
         } catch(e) { return ''; }
       }).join('');
       html += `<div class="card-box" style="margin-bottom:16px;">
@@ -2169,8 +2182,8 @@ async function renderAdminAttendance() {
           </div>
         </div>
         <table class="att-log-table">
-          <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Duration</th></tr></thead>
-          <tbody>${rows}</tbody>
+<thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Duration</th><th>Idle Time</th></tr></thead>
+<tbody>${rows}</tbody>
         </table>
       </div>`;
     }
