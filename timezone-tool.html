@@ -1704,54 +1704,320 @@ document.getElementById('cbDetailDelete').addEventListener('click', function(){
     renderCallbacks();
   });
 });
-// ── COLD EMAIL ─────────────────────────────────────────────
-function buildColdEmail(lead) {
-  var name    = lead.contactName || '';
-  var company = lead.company || lead.entity || 'your company';
-  var state   = lead.address ? (lead.address.split(',').pop()||'').trim() : '';
-  var truck   = lead.truckType || '';
-  var greeting = name ? ('Hi ' + name + ',') : 'Hi,';
-  var truckLine = truck ? ('We currently work with ' + truck + ' operators') : 'We work with trucking companies';
-  var subject = 'Quick question about ' + company;
-  var body =
-    greeting + '\n\n' +
-    'I came across ' + company + ' and wanted to reach out quickly.\n\n' +
-    truckLine + (state ? ' in ' + state : '') + ' and help them grow their revenue by connecting them with consistent freight.\n\n' +
-    'We\'ve helped similar companies increase their weekly gross significantly — would love to see if there\'s a fit for ' + company + ' as well.\n\n' +
-    'Would you be open to a quick 5-minute call this week?\n\n' +
-    'Best,\n' +
-    '[Your Name]\n' +
-    'Haulxify\n\n' +
-    '---\n' +
-    'Subject: ' + subject;
-  return { subject: subject, body: body };
+// ── COLD EMAIL (uses real Seq 1 HTML template) ───────────────
+const TRUCK_DATA = {
+  'Flatbed':    { gross: '$10,000', count: '13+' },
+  'Dry Van':    { gross: '$10,000', count: '40+' },
+  'Reefer':     { gross: '$12,000', count: '35+' },
+  'Step Deck':  { gross: '$10,000', count: '30+' },
+  'Lowboy':     { gross: '$10,000', count: '12+' },
+  'Box Truck':  { gross: '$7,000',  count: '18+' },
+  'Tanker':     { gross: '$10,000', count: '28+' },
+  'Power Only': { gross: '$8,000',  count: '22+' },
+  'Hotshot':    { gross: '$8,000',  count: '25+' },
+  'Car Hauler': { gross: '$10,000', count: '20+' },
+  'unknown':    { gross: '$10,000', count: '50+' },
+};
+
+let currentSeq = 1;
+
+// ══════════════════════════════════════════════════════════════
+//  SEQUENCE SELECT
+// ══════════════════════════════════════════════════════════════
+
+function emailHead(preheader) {
+  const bg = '#F2F0EC';
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="x-apple-disable-message-reformatting">
+<title>Haulxify</title>
+<style>
+*{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:collapse!important;}
+img{border:0;height:auto;line-height:100%;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;}
+body{margin:0!important;padding:0!important;width:100%!important;background-color:${bg};}
+a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important;font-size:inherit!important;font-family:inherit!important;font-weight:inherit!important;line-height:inherit!important;}
+@media only screen and (max-width:620px){
+  .email-wrap{width:100%!important;}
+  .mob-pad{padding-left:24px!important;padding-right:24px!important;}
+  .mob-block{display:block!important;width:100%!important;padding-right:0!important;padding-left:0!important;}
+  .mob-text-xl{font-size:38px!important;letter-spacing:-1.5px!important;}
+  .mob-text-lg{font-size:28px!important;}
+  .mob-hide{display:none!important;}
+  .mob-center{text-align:center!important;}
 }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:${bg};">
+<div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:${bg};">${preheader}&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${bg}">
+<tr><td align="center" style="padding:32px 16px 48px;">
+<table class="email-wrap" role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;">`;
+}
+
+function emailFoot() {
+  return `
+<!-- FOOTER -->
+<tr><td style="background-color:#FFFFFF;border-top:1px solid #E8E4DD;border-radius:0 0 4px 4px;padding:28px 40px;" class="mob-pad">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+<td valign="middle">
+  <span style="font-family:Georgia,'Times New Roman',serif;font-size:14px;font-weight:bold;color:#111111;letter-spacing:-0.3px;">Haulxify</span>
+  <span style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#999999;margin-left:8px;">Virtual Back Office</span><br>
+  <a href="https://haulxify.com" style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#AAAAAA;text-decoration:none;margin-top:4px;display:inline-block;">haulxify.com</a>
+</td>
+<td align="right" valign="middle">
+  <a href="#" style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#CCCCCC;text-decoration:none;letter-spacing:0.5px;">Unsubscribe</a>
+</td>
+</tr></table>
+</td></tr>
+</table></td></tr></table>
+</body></html>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  EMAIL 1 — COLD OUTREACH  (Premium Light B2B)
+// ══════════════════════════════════════════════════════════════
+
+function buildEmail1(v) {
+  const isUnknown = v.truck === 'unknown';
+  const td = TRUCK_DATA[v.truck] || TRUCK_DATA['unknown'];
+  const operatorsLabel = isUnknown ? `Operators in ${v.state}` : `${v.truck}s in ${v.state}`;
+  const bodyCopy1 = isUnknown
+    ? `We're already working with <strong style="color:#111111;font-weight:700;">${td.count} operators out of ${v.state}</strong>, and they're grossing over <strong style="color:#111111;font-weight:700;">${td.gross}/week</strong>.`
+    : `We're already working with <strong style="color:#111111;font-weight:700;">${td.count} ${v.truck} operators out of ${v.state}</strong>, and they're grossing over <strong style="color:#111111;font-weight:700;">${td.gross}/week</strong>.`;
+  const ctaStrong = isUnknown ? `${td.count} operators out of ${v.state} already made the switch.` : `${td.count} ${v.state} ${v.truck} operators already made the switch.`;
+  const preheader = isUnknown ? `Stop losing 10% of every load to dispatchers — there's a smarter way to run your operation.` : `Stop losing 10% of every load to dispatchers — there's a smarter way to run your ${v.truck} operation.`;
+
+  return emailHead(preheader) + `
+
+<!-- TOP NAV BAR -->
+<tr><td style="background-color:#111111;border-radius:4px 4px 0 0;padding:0;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr><td style="padding:16px 40px;" class="mob-pad">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td valign="middle">
+          <span style="font-family:Georgia,'Times New Roman',serif;font-size:17px;font-weight:bold;color:#FFFFFF;letter-spacing:-0.3px;">Haulxify</span>
+          <span style="font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#555555;text-transform:uppercase;letter-spacing:2.5px;margin-left:10px;">Virtual Back Office</span>
+        </td>
+        <td align="right" valign="middle">
+          <span style="font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#444444;background:#1E1E1E;border-radius:2px;padding:5px 12px;letter-spacing:1px;text-transform:uppercase;">Seq 01</span>
+        </td>
+      </tr></table>
+    </td></tr>
+  </table>
+</td></tr>
+
+<!-- HERO: HEADLINE -->
+<tr><td style="background-color:#FFFFFF;padding:60px 40px 48px;" class="mob-pad">
+  ${v.name || v.company ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:#F5A623;margin:0 0 24px 0;">${v.name ? 'Hey ' + v.name + ' —' : ''} ${v.company ? 'A note for ' + v.company : ''}</p>` : ''}
+  <h1 class="mob-text-xl" style="font-family:Georgia,'Times New Roman',serif;font-size:52px;font-weight:bold;color:#111111;line-height:1.04;margin:0;letter-spacing:-2.5px;">
+    Stop Paying<br>Dispatchers<br><span style="color:#F5A623;font-style:italic;">To Rob You.</span>
+  </h1>
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="40" style="margin:28px 0 0;"><tr><td height="4" bgcolor="#F5A623" style="line-height:4px;font-size:4px;border-radius:2px;">&nbsp;</td></tr></table>
+</td></tr>
+
+<!-- INTRO COPY -->
+<tr><td style="background-color:#FFFFFF;padding:0 40px 48px;border-bottom:1px solid #F0EDE8;" class="mob-pad">
+  <p style="font-family:Georgia,'Times New Roman',serif;font-size:20px;line-height:1.65;color:#333333;margin:0;font-style:italic;max-width:480px;">
+    Every load you run right now has a silent tax on it. It's called a dispatcher's commission — and it's taking <strong style="font-style:normal;color:#111111;">up to 10% of everything you earn.</strong>
+  </p>
+</td></tr>
+
+<!-- PAIN POINTS -->
+<tr><td style="background-color:#FAFAF8;padding:44px 40px;" class="mob-pad">
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:#AAAAAA;margin:0 0 32px 0;">Sound familiar?</p>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;"><tr>
+    <td valign="top" width="36" style="padding-top:3px;padding-right:20px;">
+      <div style="width:28px;height:28px;background:#111111;border-radius:4px;text-align:center;line-height:28px;font-family:Georgia,serif;font-size:12px;font-weight:bold;color:#F5A623;">01</div>
+    </td>
+    <td valign="top">
+      <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#444444;line-height:1.8;margin:0;">Dispatchers <strong style="color:#111111;">calling every hour</strong>, second-guessing your every decision on the road.</p>
+    </td>
+  </tr></table>
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px;"><tr><td height="1" bgcolor="#EEEBE5" style="line-height:1px;font-size:1px;">&nbsp;</td></tr></table>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;"><tr>
+    <td valign="top" width="36" style="padding-top:3px;padding-right:20px;">
+      <div style="width:28px;height:28px;background:#111111;border-radius:4px;text-align:center;line-height:28px;font-family:Georgia,serif;font-size:12px;font-weight:bold;color:#F5A623;">02</div>
+    </td>
+    <td valign="top">
+      <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#444444;line-height:1.8;margin:0;"><strong style="color:#111111;">Losing 10%+ of every load</strong> to commission — money you earned, handed straight over.</p>
+    </td>
+  </tr></table>
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px;"><tr><td height="1" bgcolor="#EEEBE5" style="line-height:1px;font-size:1px;">&nbsp;</td></tr></table>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+    <td valign="top" width="36" style="padding-top:3px;padding-right:20px;">
+      <div style="width:28px;height:28px;background:#111111;border-radius:4px;text-align:center;line-height:28px;font-family:Georgia,serif;font-size:12px;font-weight:bold;color:#F5A623;">03</div>
+    </td>
+    <td valign="top">
+      <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#444444;line-height:1.8;margin:0;"><strong style="color:#111111;">Drowning in paperwork</strong>, zero after-hours support, and no one in your corner when it matters.</p>
+    </td>
+  </tr></table>
+</td></tr>
+
+<!-- STAT BAND — gold bar -->
+<tr><td style="background-color:#F5A623;padding:0;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+    <td width="25%" valign="top" style="padding:32px 0 32px 40px;border-right:1px solid rgba(0,0,0,0.1);" class="mob-block mob-pad">
+      <p style="font-family:Georgia,'Times New Roman',serif;font-size:40px;font-weight:bold;color:#111111;margin:0 0 6px 0;line-height:1;letter-spacing:-1.5px;">${td.count}</p>
+      <p style="font-family:Arial,Helvetica,sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(0,0,0,0.45);margin:0;line-height:1.6;">${operatorsLabel}</p>
+    </td>
+    <td width="25%" valign="top" style="padding:32px 16px;border-right:1px solid rgba(0,0,0,0.1);text-align:center;" class="mob-block mob-pad">
+      <p style="font-family:Georgia,'Times New Roman',serif;font-size:40px;font-weight:bold;color:#111111;margin:0 0 6px 0;line-height:1;letter-spacing:-1.5px;">${td.gross}</p>
+      <p style="font-family:Arial,Helvetica,sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(0,0,0,0.45);margin:0;line-height:1.6;">Weekly Gross</p>
+    </td>
+    <td width="25%" valign="top" style="padding:32px 16px;border-right:1px solid rgba(0,0,0,0.1);text-align:center;background:rgba(0,0,0,0.06);" class="mob-block mob-pad">
+      <p style="font-family:Arial,Helvetica,sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(0,0,0,0.4);margin:0 0 3px 0;">As low as</p>
+      <p style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:bold;color:#111111;margin:0 0 6px 0;line-height:1;letter-spacing:-1px;">$3.50<span style="font-size:18px;">/hr</span></p>
+      <p style="font-family:Arial,Helvetica,sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(0,0,0,0.4);margin:0;">Flat. No % taken.</p>
+    </td>
+    <td width="25%" valign="top" style="padding:32px 40px 32px 16px;text-align:center;" class="mob-block mob-pad">
+      <p style="font-family:Georgia,'Times New Roman',serif;font-size:40px;font-weight:bold;color:#111111;margin:0 0 6px 0;line-height:1;letter-spacing:-1.5px;">0%</p>
+      <p style="font-family:Arial,Helvetica,sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(0,0,0,0.45);margin:0;line-height:1.6;">Commission<br>Taken</p>
+    </td>
+  </tr></table>
+</td></tr>
+
+<!-- BODY COPY + QUOTE -->
+<tr><td style="background-color:#FFFFFF;padding:52px 40px;" class="mob-pad">
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.85;color:#444444;margin:0 0 24px 0;">${bodyCopy1}</p>
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.85;color:#444444;margin:0 0 36px 0;">
+    Here's the thing though — instead of handing over a percentage of every load, they get to keep all of it. Because <strong style="color:#111111;">we don't charge a commission. Not a single cent of your gross.</strong>
+  </p>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:36px;">
+    <tr><td style="border-left:4px solid #F5A623;padding:20px 28px;background:#FAFAF8;">
+      <p style="font-family:Georgia,'Times New Roman',serif;font-size:17px;line-height:1.75;color:#333333;margin:0;font-style:italic;">
+        "We charge a simple hourly rate — as low as <strong style="font-style:normal;color:#111111;">$3.50/hr.</strong> No surprise deductions, no percentage grabs. You know exactly what you're paying — and you keep everything else."
+      </p>
+    </td></tr>
+  </table>
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.85;color:#444444;margin:0;">
+    Haulxify acts as your complete <strong style="color:#111111;">Virtual Back Office</strong> — handling every aspect of operations so you stay focused on the road and on growing <strong style="color:#111111;">${v.company}</strong>.
+  </p>
+</td></tr>
+
+<!-- SERVICES GRID -->
+<tr><td style="background-color:#FAFAF8;padding:48px 40px;border-top:1px solid #F0EDE8;" class="mob-pad">
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:#AAAAAA;margin:0 0 10px 0;">What you get</p>
+  <h2 class="mob-text-lg" style="font-family:Georgia,'Times New Roman',serif;font-size:30px;font-weight:bold;color:#111111;margin:0 0 32px 0;line-height:1.2;letter-spacing:-0.8px;">Everything We Handle For You</h2>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;"><tr>
+    <td width="50%" valign="top" style="padding-right:6px;" class="mob-block mob-pad">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="background:#FFFFFF;border:1px solid #E8E4DD;border-top:3px solid #111111;padding:18px 20px;margin-bottom:8px;">
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#111111;margin:0 0 6px 0;">Compliance &amp; Hiring</p>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#666666;line-height:1.65;margin:0;">Permits, insurance, compliance &amp; hiring handled end-to-end.</p>
+        </td>
+      </tr></table>
+    </td>
+    <td width="50%" valign="top" style="padding-left:6px;" class="mob-block mob-pad">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="background:#FFFFFF;border:1px solid #E8E4DD;border-top:3px solid #111111;padding:18px 20px;">
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#111111;margin:0 0 6px 0;">Route Planning</p>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#666666;line-height:1.65;margin:0;">Optimization to cut fuel costs &amp; empty miles on every run.</p>
+        </td>
+      </tr></table>
+    </td>
+  </tr></table>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;"><tr>
+    <td width="50%" valign="top" style="padding-right:6px;" class="mob-block mob-pad">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="background:#FFFFFF;border:1px solid #E8E4DD;border-top:3px solid #111111;padding:18px 20px;">
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#111111;margin:0 0 6px 0;">Invoice &amp; Factoring</p>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#666666;line-height:1.65;margin:0;">Invoice prep &amp; payment follow-ups so you always get paid fast.</p>
+        </td>
+      </tr></table>
+    </td>
+    <td width="50%" valign="top" style="padding-left:6px;" class="mob-block mob-pad">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="background:#FFFFFF;border:1px solid #E8E4DD;border-top:3px solid #111111;padding:18px 20px;">
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#111111;margin:0 0 6px 0;">Records Management</p>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#666666;line-height:1.65;margin:0;">Complete load docs, PODs &amp; records — always organized.</p>
+        </td>
+      </tr></table>
+    </td>
+  </tr></table>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+    <td width="50%" valign="top" style="padding-right:6px;" class="mob-block mob-pad">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="background:#FFFFFF;border:1px solid #E8E4DD;border-top:3px solid #111111;padding:18px 20px;">
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#111111;margin:0 0 6px 0;">IFTA &amp; Tax</p>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#666666;line-height:1.65;margin:0;">Fuel tax &amp; quarterly reporting via certified agents.*</p>
+        </td>
+      </tr></table>
+    </td>
+    <td width="50%" valign="top" style="padding-left:6px;" class="mob-block mob-pad">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="background:#FFFFFF;border:1px solid #E8E4DD;border-top:3px solid #111111;padding:18px 20px;">
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#111111;margin:0 0 6px 0;">Bookkeeping</p>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#666666;line-height:1.65;margin:0;">Expense tracking &amp; financial records done for you, always current.</p>
+        </td>
+      </tr></table>
+    </td>
+  </tr></table>
+</td></tr>
+
+<!-- CTA BLOCK -->
+<tr><td style="background-color:#111111;padding:52px 40px;" class="mob-pad">
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:#555555;margin:0 0 16px 0;text-align:center;">Ready to make the switch?</p>
+  <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:36px;font-weight:bold;color:#FFFFFF;line-height:1.15;margin:0 0 16px 0;text-align:center;letter-spacing:-1px;">So what are you waiting for?</h2>
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#777777;line-height:1.75;margin:0 auto 36px;max-width:400px;text-align:center;">${ctaStrong}</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto;">
+    <tr><td align="center" style="background:#F5A623;border-radius:3px;">
+      <a href="https://haulxify.com" target="_blank" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#111111;text-decoration:none;display:inline-block;padding:18px 56px;border-radius:3px;letter-spacing:0.3px;">Get Started Today &rarr;</a>
+    </td></tr>
+  </table>
+  <p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#444444;text-align:center;margin:20px 0 0 0;">No contracts. No commitments. Cancel anytime.</p>
+</td></tr>
+
+` + emailFoot();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  EMAIL 2 — FOLLOW-UP  (Premium Light B2B)
+// ══════════════════════════════════════════════════════════════
 
 document.getElementById('coldEmailBtn').addEventListener('click', function(){
   var lead = leads[curIdx];
   if(!lead){ alert('No lead loaded.'); return; }
-  var email = buildColdEmail(lead);
-  var fullText = 'Subject: ' + email.subject + '\n\n' + email.body;
 
-  // Copy to clipboard
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(fullText).then(function(){
-      var btn = document.getElementById('coldEmailBtn');
-      btn.textContent = '✓ Copied! Paste in Gmail (Ctrl+V)';
-      btn.style.background = 'linear-gradient(135deg,#065f46,#10b981)';
-      setTimeout(function(){ btn.textContent = '✉ Copy First Cold Email'; btn.style.background='linear-gradient(135deg,#1e3a5f,#2563EB)'; }, 3000);
+  // Map lead fields to email sender format
+  var v = {
+    name:    lead.contactName || '',
+    email:   lead.email || '',
+    company: lead.company || lead.entity || '',
+    state:   (lead.address || '').split(',').pop().trim().substring(0,2).toUpperCase() || 'your state',
+    truck:   lead.truckType || 'unknown'
+  };
+
+  var htmlEmail = buildEmail1(v);
+
+  // Copy HTML to clipboard
+  var copyDone = function() {
+    var btn = document.getElementById('coldEmailBtn');
+    btn.textContent = '✓ Copied! Paste in Gmail (Ctrl+V)';
+    btn.style.background = 'linear-gradient(135deg,#065f46,#10b981)';
+    setTimeout(function(){ btn.innerHTML = '&#9993; Copy First Cold Email'; btn.style.background='linear-gradient(135deg,#1e3a5f,#2563EB)'; }, 3500);
+  };
+
+  try {
+    var blob = new Blob([htmlEmail], {type: 'text/html'});
+    var item = new ClipboardItem({'text/html': blob});
+    navigator.clipboard.write([item]).then(copyDone).catch(function(){
+      // fallback: copy plain text version
+      navigator.clipboard.writeText(htmlEmail).then(copyDone);
     });
-  } else {
+  } catch(err) {
     var ta = document.createElement('textarea');
-    ta.value = fullText;
+    ta.value = htmlEmail;
     document.body.appendChild(ta);
     ta.select();
     document.execCommand('copy');
     document.body.removeChild(ta);
-    var btn = document.getElementById('coldEmailBtn');
-    btn.textContent = '✓ Copied! Paste in Gmail (Ctrl+V)';
-    btn.style.background = 'linear-gradient(135deg,#065f46,#10b981)';
-    setTimeout(function(){ btn.textContent = '✉ Copy First Cold Email'; btn.style.background='linear-gradient(135deg,#1e3a5f,#2563EB)'; }, 3000);
+    copyDone();
   }
 
   // Log to email tracking sheet
