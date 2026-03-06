@@ -577,6 +577,25 @@ select.field-input{cursor:pointer}
     </div>
   </div>
 </div>
+<!-- CALLBACK DETAIL MODAL -->
+<div class="modal-bg" id="cbDetailModal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-hdr">
+      <div><div class="modal-title" id="cbDetailTitle">Callback Details</div><div class="modal-sub" id="cbDetailSub"></div></div>
+      <button class="modal-x" id="cbDetailClose">&#10005;</button>
+    </div>
+    <div class="field"><label class="field-label">Company</label><div id="cbDetailCompany" style="font-size:14px;font-weight:700;color:var(--text);padding:6px 0;"></div></div>
+    <div class="field"><label class="field-label">Phone</label><div id="cbDetailPhone" style="font-size:13px;color:var(--text);padding:6px 0;"></div></div>
+    <div class="field"><label class="field-label">Reschedule Date</label><input class="field-input" type="date" id="cbDetailDate"></div>
+    <div class="field"><label class="field-label">Reschedule Time</label><input class="field-input" type="time" id="cbDetailTime"></div>
+    <div class="field"><label class="field-label">Notes</label><input class="field-input" type="text" id="cbDetailNotes" placeholder="Update notes..."></div>
+    <div class="err" id="cbDetailErr" style="margin-top:6px;"></div>
+    <div class="modal-actions">
+      <button class="btn-gold" id="cbDetailSave" style="flex:1;">Update Callback</button>
+      <button class="btn-outline" id="cbDetailDelete" style="color:#E84545;border-color:#E84545;">Delete</button>
+    </div>
+  </div>
+</div>
 <!-- CALLBACK TIME MODAL — paste above the statusModal -->
 <div class="modal-bg" id="callbackModal">
  <div class="modal" style="max-width:380px;">
@@ -1213,9 +1232,15 @@ function initDialer(){
             contactName:lead.contactName||'',truckType:lead.truckType||''};
         }
       });
-      // Restore position from sheet
+    // Restore position — reset if new batch detected
       var savedIdx = parseInt(localStorage.getItem('leadIdx_'+EMP_ID)||'0');
-      if(savedIdx > 0 && savedIdx < leads.length){
+      var storedLeadCount = parseInt(localStorage.getItem('leadCount_'+EMP_ID)||'0');
+      if(leads.length !== storedLeadCount){
+        // New batch uploaded — start from first uncalled lead
+        curIdx = 0;
+        for(var i=0;i<leads.length;i++){if(!meta[i]||!meta[i].status){curIdx=i;break;}}
+        localStorage.setItem('leadCount_'+EMP_ID, leads.length);
+      } else if(savedIdx > 0 && savedIdx < leads.length){
         curIdx = savedIdx;
       } else {
         curIdx = 0;
@@ -1472,40 +1497,152 @@ function renderLeadSearch(){
     });
   });
 }
+var _cbData = [];
+
+function parseCbTime(raw) {
+  var t = (raw||'').toString().trim();
+  if(!t) return '';
+  // Google Sheets stores time as decimal fraction of 24hrs e.g. 0.75 = 18:00
+  if(!t.includes(':') && !isNaN(parseFloat(t))) {
+    var totalMins = Math.round(parseFloat(t) * 24 * 60);
+    var hh = Math.floor(totalMins/60);
+    var mm = totalMins % 60;
+    return (hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm;
+  }
+  return t;
+}
+
+function parseCbDate(raw) {
+  var d = (raw||'').toString().trim();
+  if(!d) return '';
+  if(d.includes('T')) return d.split('T')[0];
+  return d;
+}
+
 function renderCallbacks() {
   var el = document.getElementById('cbList');
   if (!el) return;
   fetch(API+'?action=getCallbacks&empId='+encodeURIComponent(EMP_ID))
     .then(function(r){return r.json();})
     .then(function(cbs){
-      if(!Array.isArray(cbs)||!cbs.length){
+      _cbData = Array.isArray(cbs) ? cbs : [];
+      if(!_cbData.length){
         el.innerHTML='<div style="font-size:12px;color:var(--muted);text-align:center;padding:12px 0;">No callbacks scheduled.</div>';
         return;
       }
-      el.innerHTML = cbs.map(function(cb,i){
-        var isPast = new Date(cb.date+'T'+cb.time) < new Date();
-        return '<div style="padding:10px 12px;border-radius:10px;background:var(--bg2);margin-bottom:8px;border-left:3px solid '+(isPast?'#E84545':'#3B82F6')+';\">' +
+      el.innerHTML = _cbData.map(function(cb,i){
+        var cbDate = parseCbDate(cb.date);
+        var cbTime = parseCbTime(cb.time);
+        var cbDt = cbDate && cbTime ? new Date(cbDate+'T'+cbTime) : null;
+        var now = new Date();
+        var isPast = cbDt && cbDt < now;
+        var isOverdue24 = cbDt && (now - cbDt) > 86400000;
+        var borderColor = isOverdue24 ? '#F5A623' : (isPast ? '#E84545' : '#3B82F6');
+        var badge = isOverdue24 ? '⚠️ 24h+ Overdue' : (isPast ? 'Overdue' : 'Upcoming');
+        var badgeBg = isOverdue24 ? '#FFF8EC' : (isPast ? '#FFF0F0' : '#EFF6FF');
+        var badgeColor = isOverdue24 ? '#D97706' : (isPast ? '#E84545' : '#1D4ED8');
+        return '<div onclick="openCbDetail('+i+')" style="cursor:pointer;padding:10px 12px;border-radius:10px;background:var(--bg2);margin-bottom:8px;border-left:3px solid '+borderColor+';">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;">' +
             '<div style="font-size:13px;font-weight:700;color:var(--text);">'+(cb.company||cb.mc||'Unknown')+'</div>' +
-            '<div style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:'+(isPast?'#FFF0F0':'#EFF6FF')+';color:'+(isPast?'#E84545':'#1D4ED8')+';\">'+(isPast?'Overdue':'Upcoming')+'</div>' +
+            '<div style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:'+badgeBg+';color:'+badgeColor+';">'+badge+'</div>' +
           '</div>' +
-          '<div style="font-size:11px;color:var(--muted);margin-top:3px;">📅 '+cb.date+' at '+cb.time+'</div>' +
+          '<div style="font-size:11px;color:var(--muted);margin-top:3px;">📅 '+cbDate+' at '+cbTime+'</div>' +
           '<div style="font-size:11px;color:var(--muted);">📞 '+(cb.phone||'—')+'</div>' +
           (cb.notes?'<div style="font-size:11px;color:var(--text-mid);margin-top:4px;font-style:italic;">'+cb.notes+'</div>':'') +
         '</div>';
       }).join('');
+      checkOverdueCallbacks(_cbData);
     })
     .catch(function(){
       el.innerHTML='<div style="font-size:12px;color:var(--muted);text-align:center;padding:12px 0;">Could not load callbacks.</div>';
     });
 }
 
-function removeCb(i) {
-  var cbs = JSON.parse(localStorage.getItem('callbacks_'+EMP_ID)||'[]');
-  cbs.splice(i, 1);
-  localStorage.setItem('callbacks_'+EMP_ID, JSON.stringify(cbs));
-  renderCallbacks();
+function checkOverdueCallbacks(cbs) {
+  var overdue = cbs.filter(function(cb){
+    var cbDt = parseCbDate(cb.date) && parseCbTime(cb.time) ? new Date(parseCbDate(cb.date)+'T'+parseCbTime(cb.time)) : null;
+    return cbDt && (new Date() - cbDt) > 86400000;
+  });
+  var notif = document.getElementById('cbOverdueNotif');
+  if(!overdue.length){
+    if(notif) notif.style.display='none';
+    return;
+  }
+  if(!notif){
+    notif = document.createElement('div');
+    notif.id = 'cbOverdueNotif';
+    notif.style.cssText = 'position:fixed;top:70px;right:16px;z-index:9999;background:#1A1714;border:2px solid #F5A623;border-radius:14px;padding:14px 18px;max-width:300px;box-shadow:0 8px 32px rgba(0,0,0,0.4);';
+    document.body.appendChild(notif);
+  }
+  notif.innerHTML =
+    '<div style="font-size:13px;font-weight:700;color:#F5A623;margin-bottom:6px;">⚠️ '+overdue.length+' Overdue Callback'+(overdue.length>1?'s':'')+'</div>' +
+    '<div style="font-size:12px;color:#ccc;margin-bottom:10px;">'+(overdue.length>1?overdue.length+' callbacks are':' A callback is')+' more than 24 hours past due. Please reschedule or delete.</div>' +
+    '<div style="display:flex;gap:8px;">' +
+      '<button onclick="document.getElementById(\'cbOverdueNotif\').style.display=\'none\';" style="padding:7px 12px;border-radius:8px;background:none;border:1px solid #555;color:#aaa;font-size:12px;cursor:pointer;">Dismiss</button>' +
+    '</div>';
+  notif.style.display = 'block';
 }
+
+function openCbDetail(i) {
+  var cb = _cbData[i];
+  if(!cb) return;
+  var cbDate = parseCbDate(cb.date);
+  var cbTime = parseCbTime(cb.time);
+  document.getElementById('cbDetailTitle').textContent = cb.company||cb.mc||'Callback';
+  document.getElementById('cbDetailSub').textContent = '📅 '+cbDate+' at '+cbTime;
+  document.getElementById('cbDetailCompany').textContent = cb.company||cb.mc||'—';
+  document.getElementById('cbDetailPhone').textContent = cb.phone||'—';
+  document.getElementById('cbDetailDate').value = cbDate;
+  document.getElementById('cbDetailTime').value = cbTime;
+  document.getElementById('cbDetailNotes').value = cb.notes||'';
+  document.getElementById('cbDetailErr').textContent = '';
+  document.getElementById('cbDetailModal')._cbIdx = i;
+  document.getElementById('cbDetailModal').classList.add('show');
+}
+
+document.getElementById('cbDetailClose').addEventListener('click', function(){
+  document.getElementById('cbDetailModal').classList.remove('show');
+});
+
+document.getElementById('cbDetailSave').addEventListener('click', function(){
+  var newDate = document.getElementById('cbDetailDate').value;
+  var newTime = document.getElementById('cbDetailTime').value;
+  if(!newDate||!newTime){
+    document.getElementById('cbDetailErr').textContent='Please fill in date and time.';
+    return;
+  }
+  var i = document.getElementById('cbDetailModal')._cbIdx;
+  var cb = _cbData[i];
+  var updated = {
+    empId: EMP_ID, mc: cb.mc||'', company: cb.company||'',
+    phone: cb.phone||'', date: newDate, time: newTime,
+    notes: document.getElementById('cbDetailNotes').value.trim(),
+    savedAt: cb.savedAt, rowIndex: cb.rowIndex
+  };
+  fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify({action:'updateCallback', callback: updated})
+  }).then(function(){
+    document.getElementById('cbDetailModal').classList.remove('show');
+    renderCallbacks();
+  }).catch(function(){
+    document.getElementById('cbDetailErr').textContent='Could not save. Try again.';
+  });
+});
+
+document.getElementById('cbDetailDelete').addEventListener('click', function(){
+  var i = document.getElementById('cbDetailModal')._cbIdx;
+  var cb = _cbData[i];
+  if(!confirm('Delete callback for '+(cb.company||cb.mc||'this lead')+'?')) return;
+  fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify({action:'deleteCallback', empId: EMP_ID, savedAt: cb.savedAt})
+  }).then(function(){
+    document.getElementById('cbDetailModal').classList.remove('show');
+    renderCallbacks();
+  }).catch(function(){
+    document.getElementById('cbDetailModal').classList.remove('show');
+    renderCallbacks();
+  });
+});
 function syncLeadMeta(idx){
   var lead = leads[idx]||{};
   var m = meta[idx]||{};
@@ -1654,7 +1791,7 @@ document.getElementById('deleteFromViewBtn').addEventListener('click',deleteFrom
 document.getElementById('apptSearch').addEventListener('input',function(){renderApptList(loadA());});
 document.getElementById('apptFilter').addEventListener('change',function(){renderApptList(loadA());});
 
-['apptModal','viewModal','statusModal'].forEach(function(id){
+['apptModal','viewModal','statusModal','cbDetailModal'].forEach(function(id){
   document.getElementById(id).addEventListener('click',function(e){
     if(e.target===document.getElementById(id)){
       if(id!=='statusModal') document.getElementById(id).classList.remove('show');
