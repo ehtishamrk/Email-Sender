@@ -941,6 +941,7 @@ document.getElementById("saveCbBtn").addEventListener("click", function() {
  empId: EMP_ID,
  date: date,
  time: time,
+ dateForSheet: date + 'T12:00:00',
  notes: notes,
  mc: lead.mc || "",
  company: lead.company || "",
@@ -1031,8 +1032,7 @@ document.querySelectorAll('.tab-btn').forEach(function(btn){
     document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
     document.getElementById(tid).classList.add('active');
     btn.classList.add('active');
-    if(tid==='tabHub'){renderAppts();initDialer();}
-  });
+if(tid==='tabHub'){renderAppts();initDialer();renderCallbacks();}  });
 });
 
 // ── CHIPS ────────────────────────────────────────
