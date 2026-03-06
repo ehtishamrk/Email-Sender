@@ -1583,7 +1583,7 @@ function checkOverdueCallbacks(cbs) {
   notif.style.display = 'block';
 }
 
-function openCbDetail(i) {
+window.openCbDetail = function(i) {
   var cb = _cbData[i];
   if(!cb) return;
   var cbDate = parseCbDate(cb.date);
