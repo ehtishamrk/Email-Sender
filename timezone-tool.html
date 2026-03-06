@@ -930,10 +930,13 @@ document.getElementById("saveCbBtn").addEventListener("click", function() {
  savedAt: new Date().toISOString()
  };
  // Save to Callbacks sheet via App Script
- fetch(API, {method:"POST", headers:{"Content-Type":"text/plain"},
+fetch(API, {method:"POST", headers:{"Content-Type":"text/plain"},
  body: JSON.stringify({action:"saveCallback", callback: cbRec})
- }).catch(function(){});
- // Also store locally for quick display in search
+ }).then(function(){
+   renderCallbacks();
+ }).catch(function(){
+   renderCallbacks();
+ });
  var cbs = JSON.parse(localStorage.getItem("callbacks_"+EMP_ID)||"[]");
  cbs.unshift(cbRec);
  localStorage.setItem("callbacks_"+EMP_ID, JSON.stringify(cbs));
