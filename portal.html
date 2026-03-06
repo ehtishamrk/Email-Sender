@@ -890,7 +890,7 @@
             <div class="nav-card-title">Admin Panel</div>
             <div class="nav-card-desc">View team attendance reports and manage leave requests.</div>
           </div>
-<div class="nav-card" onclick="if(!clockedIn){alert('Please clock in before accessing the US Time Tool.');return;} window.open('timezone-tool.html?emp=' + currentUser.id, '_blank')">
+<div class="nav-card" onclick="if(!clockedIn){alert('Please clock in before accessing the US Time Tool.');return;} window.location.href='timezone-tool.html?emp=' + currentUser.id">
   <div class="nav-card-icon icon-blue">🕐</div>
   <div class="nav-card-title">US Time Tool</div>
   <div class="nav-card-desc">Check driver time zones and convert to Pakistan time instantly.</div>
@@ -985,6 +985,7 @@
           <button class="tab-item active" onclick="switchAdminTab('tabAttendance', this)">Attendance Reports</button>
           <button class="tab-item" onclick="switchAdminTab('tabLeaves', this)">Leave Management</button>
 <button class="tab-item" onclick="switchAdminTab('tabAccess', this)">Tool Access</button>
+          <button class="tab-item" onclick="switchAdminTab('tabPins', this); renderAdminPins();">Email PINs</button>
           <button class="tab-item" onclick="switchAdminTab('tabLive', this)">Live Status</button>
          <button class="tab-item" onclick="switchAdminTab('tabDataUpload', this)">Load Call Data</button>
        </div>
@@ -1002,6 +1003,11 @@
         <!-- Tool Access Tab -->
         <div id="tabAccess" style="display:none;">
           <div id="adminAccessContent"></div>
+        </div>
+
+        <!-- PIN Management Tab -->
+        <div id="tabPins" style="display:none;">
+          <div id="adminPinContent"></div>
         </div>
 
         <!-- Live Status Tab -->
@@ -1551,6 +1557,7 @@ window._sessionPollInterval = setInterval(function() {
 function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  history.pushState({ view: id }, '', '?view=' + id);
   if (id === 'viewEmail') {
     const f = document.getElementById('emailFrame');
     if (!f.src || f.src === window.location.href) f.src = EMAIL_SENDER_URL;
@@ -1571,7 +1578,7 @@ if (id === 'viewProfile') { loadProfile(); }
 }
 
 function switchAdminTab(tabId, btn) {
-document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive,#tabDataUpload').forEach(t => t.style.display = 'none');
+document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive,#tabDataUpload,#tabPins').forEach(t => t.style.display = 'none');
   document.getElementById(tabId).style.display = '';
   document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -1648,13 +1655,26 @@ function performClockOut(reason) {
       break;
     }
   }
+  // Calculate idle minutes for this session date
+  const sessionDate = inTsStr.split('T')[0];
+  const idleLog = load('idleLog_' + currentUser.id, []);
+  const idleMins = idleLog
+    .filter(il => il.date === sessionDate && il.end)
+    .reduce((sum, il) => sum + Math.round((new Date(il.end) - new Date(il.start)) / 60000), 0);
+  // Store idleMinutes on the log entry
+  for (let i = log.length - 1; i >= 0; i--) {
+    if (log[i].type === 'in' && log[i].outTs === outTsStr) {
+      log[i].idleMinutes = idleMins;
+      break;
+    }
+  }
   store('attLog_' + currentUser.id, log);
   store('clockState_' + currentUser.id, { clockedIn: false });
   clockedIn = false; clockInTimestamp = null;
   updateClockUI(false);
   refreshStats();
   apiPost({ action: 'setClockState', empId: currentUser.id, clockedIn: false, timestamp: null });
-  apiPost({ action: 'updateAttClockOut', empId: currentUser.id, ts: inTsStr, outTs: outTsStr, duration: durMins, autoOut: reason === 'auto' });
+  apiPost({ action: 'updateAttClockOut', empId: currentUser.id, ts: inTsStr, outTs: outTsStr, duration: durMins, autoOut: reason === 'auto', idleMinutes: idleMins });
   pushSessionToSheet(inTime, outTime, durMins, reason);
 }
 
@@ -1751,12 +1771,17 @@ async function renderAttReport() {
     const inT     = new Date(e.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
     const outT    = e.outTs ? new Date(e.outTs).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—';
     const dur     = e.duration ? Math.floor(e.duration/60)+'h '+(e.duration%60)+'m' : '—';
-    const idleLog = load('idleLog_' + currentUser.id, []);
-const sessionDate = e.ts ? e.ts.split('T')[0] : '';
-const sessionIdleMins = idleLog
-  .filter(il => il.date === sessionDate && il.end)
-  .reduce((sum, il) => sum + Math.round((new Date(il.end) - new Date(il.start)) / 60000), 0);
-const idleStr = sessionIdleMins > 0 ? Math.floor(sessionIdleMins/60)+'h '+(sessionIdleMins%60)+'m idle' : '—';
+    let sessionIdleMins = 0;
+    if (e.idleMinutes != null) {
+      sessionIdleMins = Number(e.idleMinutes) || 0;
+    } else {
+      const idleLog = load('idleLog_' + currentUser.id, []);
+      const sessionDate = e.ts ? e.ts.split('T')[0] : '';
+      sessionIdleMins = idleLog
+        .filter(il => il.date === sessionDate && il.end)
+        .reduce((sum, il) => sum + Math.round((new Date(il.end) - new Date(il.start)) / 60000), 0);
+    }
+    const idleStr = sessionIdleMins > 0 ? Math.floor(sessionIdleMins/60)+'h '+(sessionIdleMins%60)+'m idle' : '—';
     const dateStr = new Date(e.ts).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
     const autoTag = e.autoOut ? ' <span style="font-size:10px;color:var(--text-muted);">(auto)</span>' : '';
     return `<tr>
@@ -2142,6 +2167,49 @@ async function toggleToolAccess(empId, type, granted) {
   }
 }
 
+
+async function renderAdminPins() {
+  const el = document.getElementById('adminPinContent');
+  if (!el) return;
+  el.innerHTML = '<div class="card-box"><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center;">Loading employees...</div></div>';
+  const EMPLOYEES = Object.values(window.USERS || {}).filter(u => !u.isAdmin);
+  let html = '<div class="card-box">';
+  html += '<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Email Log PIN Management</div>';
+  html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;">Set a unique PIN for each BDO. They use this PIN to access their personal email outreach log.</div>';
+  EMPLOYEES.forEach(function(emp) {
+    html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);">${emp.name}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${emp.id} · ${emp.designation||''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="password" id="pin_${emp.id}" placeholder="Set PIN" maxlength="8"
+          style="width:100px;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;font-family:\'DM Sans\',sans-serif;text-align:center;letter-spacing:3px;">
+        <button onclick="saveEmpPin('${emp.id}')"
+          style="padding:8px 14px;border-radius:8px;background:var(--gold);color:#1A1714;font-weight:700;border:none;cursor:pointer;font-size:12px;font-family:\'Syne\',sans-serif;">Save</button>
+        <span id="pinStatus_${emp.id}" style="font-size:11px;color:var(--green);min-width:40px;"></span>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+async function saveEmpPin(empId) {
+  const pin = document.getElementById('pin_'+empId).value.trim();
+  if(!pin || pin.length < 3) { alert('PIN must be at least 3 characters.'); return; }
+  const status = document.getElementById('pinStatus_'+empId);
+  status.textContent = 'Saving...'; status.style.color = 'var(--text-muted)';
+  try {
+    await apiPost({ action: 'setEmailPin', empId: empId, pin: pin });
+    status.textContent = '✓ Saved'; status.style.color = 'var(--green)';
+    document.getElementById('pin_'+empId).value = '';
+    setTimeout(function(){ status.textContent = ''; }, 3000);
+  } catch(e) {
+    status.textContent = 'Error'; status.style.color = 'var(--red)';
+  }
+}
+
 function toggleEmailAccess(empId, granted) {
   store('emailAccess_' + empId, granted);
   const track = document.getElementById('eat_' + empId);
@@ -2183,12 +2251,17 @@ async function renderAdminAttendance() {
           const inT     = new Date(e.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
           const outT    = e.outTs ? new Date(e.outTs).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—';
           const dur     = e.duration != null ? Math.floor(e.duration/60)+'h '+(e.duration%60)+'m' : '—';
-          const idleLog = load('idleLog_' + id, []);
-const sessionDate = e.ts ? e.ts.split('T')[0] : '';
-const sessionIdleMins = idleLog
-  .filter(il => il.date === sessionDate && il.end)
-  .reduce((sum, il) => sum + Math.round((new Date(il.end) - new Date(il.start)) / 60000), 0);
-const idleStr = sessionIdleMins > 0 ? Math.floor(sessionIdleMins/60)+'h '+(sessionIdleMins%60)+'m' : '—';
+          let sessionIdleMins2 = 0;
+          if (e.idleMinutes != null) {
+            sessionIdleMins2 = Number(e.idleMinutes) || 0;
+          } else {
+            const idleLog2 = load('idleLog_' + id, []);
+            const sessionDate2 = e.ts ? e.ts.split('T')[0] : '';
+            sessionIdleMins2 = idleLog2
+              .filter(il => il.date === sessionDate2 && il.end)
+              .reduce((sum, il) => sum + Math.round((new Date(il.end) - new Date(il.start)) / 60000), 0);
+          }
+          const idleStr = sessionIdleMins2 > 0 ? Math.floor(sessionIdleMins2/60)+'h '+(sessionIdleMins2%60)+'m' : '—';
           const dateStr = new Date(e.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
           const autoFlag = e.autoOut ? ' <span style="font-size:10px;color:var(--text-muted);">(auto)</span>' : '';
           const outCell = e.outTs ? `<span class="tag tag-out">↓ ${outT}</span>${autoFlag}` : '<span style="color:var(--text-muted);">Still clocked in</span>';
@@ -2453,6 +2526,14 @@ function showPortalMsg(msg, success) {
   el.textContent = msg;
   setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
+
+// Browser back/forward button support
+window.addEventListener('popstate', function(e) {
+  const view = (e.state && e.state.view) ? e.state.view : 'viewDash';
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const el = document.getElementById(view);
+  if (el) el.classList.add('active');
+});
 </script>
 </body>
 </html>
