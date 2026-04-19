@@ -1289,7 +1289,26 @@ const auth = getAuth(_app);
 const db   = getFirestore(_app);
 
 window.__fb = { auth, db, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, deleteDoc, signOut, sendPasswordResetEmail };
-// ══════════════════════════════════════════════════════════════
+window.doLogin = doLogin;
+window.doLogout = doLogout;
+window.submitForgot = submitForgot;
+window.submitSignup = submitSignup;
+window.showModal = showModal;
+window.hideModal = hideModal;
+window.toggleClock = toggleClock;
+window.showView = showView;
+window.switchAdminTab = switchAdminTab;
+window.submitLeave = submitLeave;
+window.saveProfile = saveProfile;
+window.toggleDarkMode = toggleDarkMode;
+window.requestPasswordChange = requestPasswordChange;
+window.adminLeaveAction = adminLeaveAction;
+window.toggleToolAccess = toggleToolAccess;
+window.renderAdminPins = renderAdminPins;
+window.saveEmpPin = saveEmpPin;
+window.portalLoadCsv = portalLoadCsv;
+window.portalClearBdo = portalClearBdo;
+  // ══════════════════════════════════════════════════════════════
 //  CONFIG
 // ══════════════════════════════════════════════════════════════
 const EMPLOYEES = {}; // now loaded from Firestore
@@ -1352,11 +1371,20 @@ let clockInTimestamp = null;
   const tabWasClosed = lastHb === 0 || hbAge > 10000; // no heartbeat or stale = tab was closed
 
   // CASE 1: Normal refresh — pendingSession exists AND heartbeat is fresh
-  if (pending && pending.id && EMPLOYEES[pending.id] && !tabWasClosed) {
+if (pending && pending.id && !tabWasClosed) {
     store('pendingSession', null);
     store('session', { id: pending.id });
-    currentUser = { id: pending.id, ...EMPLOYEES[pending.id] };
-    document.addEventListener('DOMContentLoaded', () => enterPortal());
+    // Fetch profile from Firestore then enter portal
+    const { db, collection, query, where, getDocs } = window.__fb || {};
+    if (db) {
+      const q = query(collection(db, 'employees'), where('id', '==', pending.id));
+      getDocs(q).then(snap => {
+        if (!snap.empty) {
+          currentUser = { ...snap.docs[0].data() };
+          enterPortal();
+        }
+      });
+    }
     return;
   }
 
@@ -1486,8 +1514,7 @@ async function doLogin() {
 
     const profile = snap.docs[0].data();
 
-    // Sign in with Firebase Auth
-    const { signInWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+const { signInWithEmailAndPassword } = window.__fb;
     await signInWithEmailAndPassword(auth, profile.email, pass);
 
     err.classList.remove('show');
