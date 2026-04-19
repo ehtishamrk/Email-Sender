@@ -1596,12 +1596,9 @@ function enterPortal() {
   document.getElementById('voiceCard').style.display = voiceAccessLocal ? '' : 'none';
 
   // Then fetch latest from sheet and update
-  apiGet({ action: 'getToolAccess', empId: currentUser.id }).then(data => {
-    if (!data) return;
-    const emailOk = data.emailAccess !== null ? data.emailAccess : currentUser.hasEmailAccess;
-    const voiceOk = data.voiceAccess !== null ? data.voiceAccess : currentUser.hasVoiceAccess;
-    store('emailAccess_' + currentUser.id, emailOk);
-    store('voiceAccess_' + currentUser.id, voiceOk);
+fsGet('toolAccess', currentUser.id).then(data => {
+    const emailOk = data ? data.emailAccess : currentUser.hasEmailAccess;
+    const voiceOk = data ? data.voiceAccess : currentUser.hasVoiceAccess;
     document.getElementById('emailCard').style.display = emailOk ? '' : 'none';
     document.getElementById('voiceCard').style.display = voiceOk ? '' : 'none';
   });
@@ -2165,24 +2162,27 @@ async function renderAdminAccess() {
   if (!el) return;
   el.innerHTML = '<div class="card-box"><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center;">Loading access settings...</div></div>';
 
-  const sheetAccess = await apiGet({ action: 'getAllAccess' }) || {};
+  const allEmps = await fsGetAll('employees');
+  const allAccess = await fsGetAll('toolAccess');
 
   let html = '<div class="card-box">';
   html += '<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Tool Access Control</div>';
   html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">HX-0001 settings are locked and cannot be changed.</div>';
-  html += '<div style="font-size:12px;background:var(--gold-light);color:#8B5200;padding:10px 14px;border-radius:10px;margin-bottom:20px;">⚠️ Changes apply immediately. Employee will see updated access on their next login or page refresh.</div>';
+  html += '<div style="font-size:12px;background:var(--gold-light);color:#8B5200;padding:10px 14px;border-radius:10px;margin-bottom:20px;">⚠️ Changes apply immediately.</div>';
   html += `<div style="display:grid;grid-template-columns:1fr 80px 80px;gap:0;">
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;">Employee</div>
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Email</div>
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Voice</div>
   </div>`;
 
-  Object.entries(EMPLOYEES).forEach(([id, emp]) => {
-    const locked    = id === 'HX-0001';
-    const sheetRow  = sheetAccess[id];
-    // Sheet value takes priority over EMPLOYEES default
-    const hasEmail  = sheetRow ? Boolean(sheetRow.emailAccess) : emp.hasEmailAccess;
-    const hasVoice  = sheetRow ? Boolean(sheetRow.voiceAccess) : emp.hasVoiceAccess;
+  // Sort employees by id
+  const emps = Object.values(allEmps).sort((a,b) => a.id.localeCompare(b.id));
+
+  emps.forEach(emp => {
+    const locked   = emp.id === 'HX-0001';
+    const access   = allAccess[emp.id] || {};
+    const hasEmail = access.emailAccess !== undefined ? access.emailAccess : emp.hasEmailAccess;
+    const hasVoice = access.voiceAccess !== undefined ? access.voiceAccess : emp.hasVoiceAccess;
 
     const toggle = (type, checked, empId) => {
       if (locked) return `<div style="text-align:center;font-size:18px;">${checked ? '✅' : '—'}</div>`;
@@ -2196,10 +2196,10 @@ async function renderAdminAccess() {
     html += `<div style="display:grid;grid-template-columns:1fr 80px 80px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
       <div>
         <div style="font-size:14px;font-weight:600;color:var(--text);">${emp.name} ${locked ? '<span style="font-size:10px;color:var(--gold);background:var(--gold-light);padding:2px 8px;border-radius:20px;margin-left:6px;">LOCKED</span>' : ''}</div>
-        <div style="font-size:11px;color:var(--text-muted);">${id} · ${emp.designation || ''}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${emp.id} · ${emp.designation || ''}</div>
       </div>
-      ${toggle('email', hasEmail, id)}
-      ${toggle('voice', hasVoice, id)}
+      ${toggle('email', hasEmail, emp.id)}
+      ${toggle('voice', hasVoice, emp.id)}
     </div>`;
   });
 
@@ -2208,28 +2208,18 @@ async function renderAdminAccess() {
 }
 
 async function toggleToolAccess(empId, type, granted) {
-  if (empId === 'HX-0001') return; // locked
+  if (empId === 'HX-0001') return;
+  const current = await fsGet('toolAccess', empId) || {};
+  const emailVal = type === 'email' ? granted : (current.emailAccess !== undefined ? current.emailAccess : false);
+  const voiceVal = type === 'voice' ? granted : (current.voiceAccess !== undefined ? current.voiceAccess : false);
+  await fsSet('toolAccess', empId, { empId, emailAccess: emailVal, voiceAccess: voiceVal });
 
-  // Read current values from sheet first so we don't overwrite the other field
-  const current = await apiGet({ action: 'getToolAccess', empId });
-  const emailVal = type === 'email' ? granted : (current ? current.emailAccess : load('emailAccess_' + empId, EMPLOYEES[empId]?.hasEmailAccess));
-  const voiceVal = type === 'voice' ? granted : (current ? current.voiceAccess : load('voiceAccess_' + empId, EMPLOYEES[empId]?.hasVoiceAccess));
-
-  // Save to sheet
-  await apiPost({ action: 'setToolAccess', empId, emailAccess: emailVal, voiceAccess: voiceVal });
-
-  // Also save locally as cache
-  store('emailAccess_' + empId, emailVal);
-  store('voiceAccess_' + empId, voiceVal);
-
-  // Update toggle UI
   const track = document.getElementById('tgt_' + type + '_' + empId);
   const thumb = document.getElementById('tgthumb_' + type + '_' + empId);
   if (track) track.style.background = granted ? 'var(--gold)' : 'var(--border2)';
   if (thumb) thumb.style.left = granted ? '25px' : '3px';
 
-  // If toggling the currently logged-in user update their cards live
-  if (empId === currentUser.id) {
+  if (empId === window.__currentUser.id) {
     if (type === 'email') document.getElementById('emailCard').style.display = granted ? '' : 'none';
     if (type === 'voice') document.getElementById('voiceCard').style.display = granted ? '' : 'none';
   }
