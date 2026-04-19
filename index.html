@@ -1611,21 +1611,6 @@ fsGet('toolAccess', currentUser.id).then(data => {
   refreshStats();
   refreshLeaveHistory();
   startHeartbeat();
-  // Poll every 60s — if token no longer matches sheet, force logout
-if (window._sessionPollInterval) clearInterval(window._sessionPollInterval);
-window._sessionPollInterval = setInterval(function() {
-  const token = localStorage.getItem('loginToken_' + currentUser.id);
-  if (!token) return;
-  fetch(API + '?action=validateLoginSession&empId=' + encodeURIComponent(currentUser.id) + '&token=' + encodeURIComponent(token))
-    .then(r => r.json())
-    .then(res => {
-      if (!res.valid) {
-        clearInterval(window._sessionPollInterval);
-        alert('You have been logged in from another location. You will be logged out here.');
-        doLogout();
-      }
-    }).catch(() => {});
-}, 60000);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2230,7 +2215,8 @@ async function renderAdminPins() {
   const el = document.getElementById('adminPinContent');
   if (!el) return;
   el.innerHTML = '<div class="card-box"><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center;">Loading employees...</div></div>';
-  const EMPLOYEES = Object.values(window.USERS || {}).filter(u => !u.isAdmin);
+  const allEmps = await fsGetAll('employees');
+  const EMPLOYEES = Object.values(allEmps).filter(u => !u.isAdmin).sort((a,b) => a.id.localeCompare(b.id));
   let html = '<div class="card-box">';
   html += '<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Email Log PIN Management</div>';
   html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;">Set a unique PIN for each BDO. They use this PIN to access their personal email outreach log.</div>';
@@ -2259,7 +2245,7 @@ async function saveEmpPin(empId) {
   const status = document.getElementById('pinStatus_'+empId);
   status.textContent = 'Saving...'; status.style.color = 'var(--text-muted)';
   try {
-    await apiPost({ action: 'setEmailPin', empId: empId, pin: pin });
+    await fsSet('emailPins', empId, { empId, pin });
     status.textContent = '✓ Saved'; status.style.color = 'var(--green)';
     document.getElementById('pin_'+empId).value = '';
     setTimeout(function(){ status.textContent = ''; }, 3000);
