@@ -1336,24 +1336,44 @@ function stopHeartbeat() {
   // ══════════════════════════════════════════════════════════════
 //  API HELPERS
 // ══════════════════════════════════════════════════════════════
-async function apiGet(params) {
+// ══════════════════════════════════════════════════════════════
+//  FIRESTORE API — replaces Google Sheets
+// ══════════════════════════════════════════════════════════════
+const { db, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where } = window.__fb;
+
+async function fsGet(colPath, docId) {
   try {
-    const url = API + '?' + new URLSearchParams(params).toString();
-    const res = await fetch(url);
-    return await res.json();
+    const snap = await getDoc(doc(db, colPath, docId));
+    return snap.exists() ? snap.data() : null;
   } catch(e) { return null; }
 }
 
-async function apiPost(data) {
+async function fsSet(colPath, docId, data) {
   try {
-    const res = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(data)
-    });
-    return await res.json();
-  } catch(e) { return null; }
+    await setDoc(doc(db, colPath, docId), data, { merge: true });
+    return true;
+  } catch(e) { return false; }
 }
+
+async function fsGetAll(colPath) {
+  try {
+    const snap = await getDocs(collection(db, colPath));
+    const result = {};
+    snap.forEach(d => result[d.id] = d.data());
+    return result;
+  } catch(e) { return {}; }
+}
+
+async function fsGetSubcollection(colPath) {
+  try {
+    const snap = await getDocs(collection(db, colPath));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) { return []; }
+}
+
+// Legacy apiGet/apiPost stubs — now handled per-function via Firestore
+async function apiGet(params) { return null; }
+async function apiPost(data) { return null; }
 
 // ══════════════════════════════════════════════════════════════
 //  STATE
