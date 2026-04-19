@@ -1832,28 +1832,24 @@ async function renderAttReport() {
   if (!currentUser) return;
   const el = document.getElementById('attReportContent');
   el.innerHTML = '<div class="empty-state"><div class="empty-icon">🕐</div><div class="empty-text">Loading attendance...</div></div>';
-  const sheetLog = await apiGet({ action: 'getAttLog', empId: currentUser.id });
-  const log = (sheetLog && sheetLog.length) ? sheetLog : load('attLog_' + currentUser.id, []);
-  if (sheetLog && sheetLog.length) store('attLog_' + currentUser.id, log);
+  const sessions = await fsGetSubcollection('attendance/' + currentUser.id + '/sessions');
+  const log = sessions.map(s => ({
+    ts: s.clockIn,
+    outTs: s.clockOut,
+    duration: s.duration,
+    autoOut: s.autoOut,
+    date: s.date
+  })).sort((a, b) => new Date(b.ts) - new Date(a.ts));
+
   if (!log.length) {
     el.innerHTML = '<div class="empty-state"><div class="empty-icon">🕐</div><div class="empty-text">No attendance records yet. Clock in from the dashboard!</div></div>';
     return;
   }
-  const rows = [...log].reverse().map(e => {
-    const inT     = new Date(e.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-    const outT    = e.outTs ? new Date(e.outTs).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—';
-    const dur     = e.duration ? Math.floor(e.duration/60)+'h '+(e.duration%60)+'m' : '—';
-    let sessionIdleMins = 0;
-    if (e.idleMinutes != null) {
-      sessionIdleMins = Number(e.idleMinutes) || 0;
-    } else {
-      const idleLog = load('idleLog_' + currentUser.id, []);
-      const sessionDate = e.ts ? e.ts.split('T')[0] : '';
-      sessionIdleMins = idleLog
-        .filter(il => il.date === sessionDate && il.end)
-        .reduce((sum, il) => sum + Math.round((new Date(il.end) - new Date(il.start)) / 60000), 0);
-    }
-    const idleStr = sessionIdleMins > 0 ? Math.floor(sessionIdleMins/60)+'h '+(sessionIdleMins%60)+'m idle' : '—';
+
+  const rows = log.map(e => {
+    const inT    = new Date(e.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    const outT   = e.outTs ? new Date(e.outTs).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—';
+    const dur    = e.duration ? Math.floor(e.duration/60)+'h '+(e.duration%60)+'m' : '—';
     const dateStr = new Date(e.ts).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
     const autoTag = e.autoOut ? ' <span style="font-size:10px;color:var(--text-muted);">(auto)</span>' : '';
     return `<tr>
@@ -1861,15 +1857,15 @@ async function renderAttReport() {
       <td><span class="tag tag-in">↑ ${inT}</span></td>
       <td>${e.outTs ? '<span class="tag tag-out">↓ '+outT+'</span>' : '<span style="color:var(--text-muted);">—</span>'}${autoTag}</td>
       <td>${dur}</td>
-      <td>${sessionIdleMins > 0 ? '<span style="color:var(--red);font-size:12px;">'+idleStr+'</span>' : '<span style="color:var(--text-muted);">—</span>'}</td>
+      <td><span style="color:var(--text-muted);">—</span></td>
     </tr>`;
   }).join('');
+
   el.innerHTML = `<table class="att-log-table">
-<thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Duration</th><th>Idle Time</th></tr></thead>
-<tbody>${rows}</tbody>
+    <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Duration</th><th>Idle Time</th></tr></thead>
+    <tbody>${rows}</tbody>
   </table>`;
 }
-
 // ══════════════════════════════════════════════════════════════
 //  LEAVE REQUESTS
 // ══════════════════════════════════════════════════════════════
