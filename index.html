@@ -890,7 +890,7 @@
             <div class="nav-card-title">Admin Panel</div>
             <div class="nav-card-desc">View team attendance reports and manage leave requests.</div>
           </div>
-<div class="nav-card" onclick="if(!clockedIn){alert('Please clock in before accessing the US Time Tool.');return;} window.location.href='timezone-tool.html?emp=' + currentUser.id">
+<div class="nav-card" onclick="openTimeTool()">
   <div class="nav-card-icon icon-blue">🕐</div>
   <div class="nav-card-title">US Time Tool</div>
   <div class="nav-card-desc">Check driver time zones and convert to Pakistan time instantly.</div>
@@ -1308,6 +1308,11 @@ window.renderAdminPins = renderAdminPins;
 window.saveEmpPin = saveEmpPin;
 window.portalLoadCsv = portalLoadCsv;
 window.portalClearBdo = portalClearBdo;
+  window.openTimeTool = function() {
+  if (!window.__currentUser) { alert('Please clock in before accessing the US Time Tool.'); return; }
+  if (!clockedIn) { alert('Please clock in before accessing the US Time Tool.'); return; }
+  window.location.href = 'timezone-tool.html?emp=' + window.__currentUser.id;
+};
   // ══════════════════════════════════════════════════════════════
 //  CONFIG
 // ══════════════════════════════════════════════════════════════
@@ -1581,6 +1586,7 @@ function enterPortal() {
 
   // Admin card
 // Admin card
+  window.__currentUser = currentUser;
   document.getElementById('adminCard').style.display = currentUser.isAdmin ? '' : 'none';
   // Email sender card — based on hasEmailAccess flag (admin can toggle)
 // Show cards based on local cache first (instant), then sync from sheet
