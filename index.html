@@ -1522,7 +1522,8 @@ const { signInWithEmailAndPassword } = window.__fb;
     store('session', { id: profile.id });
     enterPortal();
 
-  } catch(e) {
+} catch(e) {
+    console.error('Login error:', e.code, e.message);
     err.classList.add('show');
     document.getElementById('empPass').value = '';
     document.getElementById('empPass').focus();
