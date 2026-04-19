@@ -1684,12 +1684,19 @@ function startClock() {
   clockInterval = setInterval(tick, 1000);
 }
 
-function resumeClockState() {
-  const saved = load('clockState_' + currentUser.id, null);
-  if (saved && saved.clockedIn) {
+async function resumeClockState() {
+  // Always trust Firestore over localStorage
+  const state = await fsGet('clockState', currentUser.id);
+  if (state && state.clockedIn) {
     clockedIn = true;
-    clockInTimestamp = new Date(saved.timestamp);
+    clockInTimestamp = new Date(state.timestamp);
+    store('clockState_' + currentUser.id, { clockedIn: true, timestamp: state.timestamp });
     updateClockUI(true);
+  } else {
+    clockedIn = false;
+    clockInTimestamp = null;
+    store('clockState_' + currentUser.id, { clockedIn: false });
+    updateClockUI(false);
   }
 }
 
