@@ -1339,10 +1339,9 @@ function stopHeartbeat() {
 // ══════════════════════════════════════════════════════════════
 //  FIRESTORE API — replaces Google Sheets
 // ══════════════════════════════════════════════════════════════
-const { db, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where } = window.__fb;
-
 async function fsGet(colPath, docId) {
   try {
+    const { db, doc, getDoc } = window.__fb;
     const snap = await getDoc(doc(db, colPath, docId));
     return snap.exists() ? snap.data() : null;
   } catch(e) { return null; }
@@ -1350,6 +1349,7 @@ async function fsGet(colPath, docId) {
 
 async function fsSet(colPath, docId, data) {
   try {
+    const { db, doc, setDoc } = window.__fb;
     await setDoc(doc(db, colPath, docId), data, { merge: true });
     return true;
   } catch(e) { return false; }
@@ -1357,6 +1357,7 @@ async function fsSet(colPath, docId, data) {
 
 async function fsGetAll(colPath) {
   try {
+    const { db, collection, getDocs } = window.__fb;
     const snap = await getDocs(collection(db, colPath));
     const result = {};
     snap.forEach(d => result[d.id] = d.data());
@@ -1366,11 +1367,11 @@ async function fsGetAll(colPath) {
 
 async function fsGetSubcollection(colPath) {
   try {
+    const { db, collection, getDocs } = window.__fb;
     const snap = await getDocs(collection(db, colPath));
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch(e) { return []; }
 }
-
 // Legacy apiGet/apiPost stubs — now handled per-function via Firestore
 async function apiGet(params) { return null; }
 async function apiPost(data) { return null; }
