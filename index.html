@@ -1270,18 +1270,29 @@
   </div>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDBd2hw7Gq1-mwR5evKF-YPcAGRYDNl3fw",
+  authDomain: "haulxify-employee-portal.firebaseapp.com",
+  projectId: "haulxify-employee-portal",
+  storageBucket: "haulxify-employee-portal.firebasestorage.app",
+  messagingSenderId: "170605105002",
+  appId: "1:170605105002:web:d5da4718f77fd1182adf13"
+};
+
+const _app = initializeApp(firebaseConfig);
+const auth = getAuth(_app);
+const db   = getFirestore(_app);
+
+window.__fb = { auth, db, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, deleteDoc, signOut, sendPasswordResetEmail };
 // ══════════════════════════════════════════════════════════════
 //  CONFIG
 // ══════════════════════════════════════════════════════════════
-const EMPLOYEES = {
-  'HX-0001': { password: 'Some,What1@',   name: 'Ehtisham Rana Khan',  isAdmin: true,  designation: 'Founder & CEO',    department: 'Leadership', email: 'founder@haulxify.com', joiningDate: '2025-01-01', hasEmailAccess: true,  hasVoiceAccess: true  },
-  'HX-0002': { password: 'Somewhat786@1', name: 'Zaighaum Rana Khan',  isAdmin: true,  designation: 'Co-founder & COO',    department: 'Leadership', email: 'muhammadzaighum@haulxify.com', joiningDate: '2025-01-01', hasEmailAccess: true,  hasVoiceAccess: true  },
-  'HX-0003': { password: 'mombalogistics',name: 'Rana Nouman Ahmad',   isAdmin: false, designation: 'Freight Coordinator',   department: 'Dispatch',   email: 'nouman@haulxify.com',   joiningDate: '2025-02-01', hasEmailAccess: true,  hasVoiceAccess: true  },
-  'HX-0004': { password: 'kingans',       name: 'Muhammad Ans',        isAdmin: false, designation: 'Business Development Officer',        department: 'Sales & Marketing',   email: 'ans.haulxify@.com',       joiningDate: '2026-1-22', hasEmailAccess: true,  hasVoiceAccess: true  },
-  'HX-0005': { password: '25feb2026',     name: 'Sania Rafi',          isAdmin: false, designation: 'Business Development Officer',       department: 'Sales & Marketing',   email: 'sania.haulxify@gmail.com',     joiningDate: '2025-02-25', hasEmailAccess: false, hasVoiceAccess: false },
-  'HX-0006': { password: 'faru@123',      name: 'Farwa Qamar',         isAdmin: false, designation: 'Email Marketer', department: 'Sales & Marketing', email: 'Farwaqamar91@gmail.com',     joiningDate: '2025-02-25', hasEmailAccess: false, hasVoiceAccess: false },
-};
+const EMPLOYEES = {}; // now loaded from Firestore
 const EMAIL_SENDER_URL = 'email-sender.html';
   const API = 'https://script.google.com/macros/s/AKfycbxkVYnxV3FmWq52UFipohgUXGV2RBC9S0EuZ_Wgj1xMn8pkY7WWfBZHtR9KeocPELC7/exec';
 
@@ -1396,22 +1407,22 @@ document.querySelectorAll('.modal-backdrop').forEach(m => {
 //  FORGOT PASSWORD
 // ══════════════════════════════════════════════════════════════
 async function submitForgot() {
-  const id  = document.getElementById('forgotId').value.trim();
+  const raw = document.getElementById('forgotId').value.trim();
   const res = document.getElementById('forgotResult');
+  if (!raw) { res.innerHTML = '<div style="color:var(--red);font-size:13px;">Please enter your Employee ID.</div>'; return; }
 
-  if (!id) {
-    res.innerHTML = '<div style="color:var(--red);font-size:13px;margin-bottom:12px;">Please enter your Employee ID.</div>';
-    return;
+  res.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">Sending...</div>';
+
+  try {
+    const { db, collection, query, where, getDocs, auth, sendPasswordResetEmail } = window.__fb;
+    const q    = query(collection(db, 'employees'), where('id', '==', 'HX-' + raw.padStart(4,'0')));
+    const snap = await getDocs(q);
+    if (snap.empty) throw new Error('not-found');
+    await sendPasswordResetEmail(auth, snap.docs[0].data().email);
+    res.innerHTML = '<div class="alert-success">✅ Password reset email sent.</div>';
+  } catch(e) {
+    res.innerHTML = '<div style="color:var(--red);font-size:13px;">Employee ID not found.</div>';
   }
-
-  res.innerHTML = '<div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Submitting...</div>';
-
-  const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSevY4X0yLHL3tufLPc93DckYXvYAwR2aCU9bxzVp6LBsUtZTw/formResponse';
-  const body = new URLSearchParams({ 'entry.93033223': 'HX-' + id });
-
-  try { await fetch(FORM_URL, { method: 'POST', mode: 'no-cors', body }); } catch(e) {}
-
-  res.innerHTML = '<div class="alert-success">✅ <strong>Request received.</strong><br>Your password will be sent to your assigned company email shortly.</div>';
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1454,36 +1465,50 @@ async function submitSignup() {
 // ══════════════════════════════════════════════════════════════
 //  LOGIN / LOGOUT
 // ══════════════════════════════════════════════════════════════
-function doLogin() {
+async function doLogin() {
   const raw  = document.getElementById('empId').value.trim();
-  const id   = 'HX-' + raw.padStart(4, '0');
   const pass = document.getElementById('empPass').value;
   const err  = document.getElementById('loginError');
-  const emp  = EMPLOYEES[id];
-  if (emp && emp.password === pass) {
+  const btn  = document.querySelector('.btn-primary');
+
+  if (!raw || !pass) { err.classList.add('show'); return; }
+
+  btn.textContent = 'Signing in…';
+  btn.disabled = true;
+
+  try {
+    // Find employee by ID in Firestore to get their email
+    const { db, collection, query, where, getDocs, auth } = window.__fb;
+    const q   = query(collection(db, 'employees'), where('id', '==', 'HX-' + raw.padStart(4,'0')));
+    const snap = await getDocs(q);
+
+    if (snap.empty) throw new Error('not-found');
+
+    const profile = snap.docs[0].data();
+
+    // Sign in with Firebase Auth
+    const { signInWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+    await signInWithEmailAndPassword(auth, profile.email, pass);
+
     err.classList.remove('show');
-    currentUser = { id, ...emp };
-    store('session', { id });
-    // Register login session in sheet — invalidates any other browser's session
-    fetch(API, { method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ action:'setLoginSession', empId: id })
-    }).then(r => r.json()).then(res => {
-      if (res.token) {
-        localStorage.setItem('loginToken_' + id, res.token);
-      }
-    }).catch(() => {});
+    currentUser = { ...profile };
+    store('session', { id: profile.id });
     enterPortal();
-  } else {
+
+  } catch(e) {
     err.classList.add('show');
     document.getElementById('empPass').value = '';
     document.getElementById('empPass').focus();
+  } finally {
+    btn.textContent = 'Sign In →';
+    btn.disabled = false;
   }
 }
 
-function doLogout() {
+async function doLogout() {
   stopHeartbeat();
-  // Auto-clock-out if still clocked in
   if (clockedIn) performClockOut('auto');
+  await window.__fb.signOut(window.__fb.auth);
   currentUser = null; clockedIn = false; clockInTimestamp = null;
   store('session', null);
   clearInterval(clockInterval);
