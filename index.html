@@ -1013,7 +1013,7 @@
     </div>
     <div id="forgotResult"></div>
     <div style="display:flex;gap:10px;margin-top:8px;">
-      <button class="btn-gold" onclick="submitForgot()">Submit Request</button>
+      <button class="btn-orange" onclick="submitForgot()">Submit Request</button>
       <button class="btn-outline" onclick="hideModal('modalForgot')">Cancel</button>
     </div>
   </div>
@@ -1070,7 +1070,7 @@
         </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:4px;">
-        <button class="btn-gold" onclick="submitSignup()">Submit Request →</button>
+        <button class="btn-orange" onclick="submitSignup()">Submit Request →</button>
         <button class="btn-outline" onclick="hideModal('modalSignup')">Cancel</button>
       </div>
     </div>
@@ -1101,13 +1101,13 @@
         <div class="nav-user-info">
           <div class="nav-user-name" id="navName">—</div>
           <div class="nav-user-id" id="navId">—</div>
-          <div style="font-size:10px;color:var(--text-muted);text-align:right;" id="navDesig">—</div>
+          <div style="font-size:10px;color:var(--text-muted);" id="navDesig">—</div>
         </div>
         <div class="nav-avatar" id="navAvatar">?</div>
       </div>
-<button class="nav-logout-btn" onclick="showView('viewProfile')" style="background:var(--bg2);border-color:var(--border2);color:var(--text-mid);">👤 Profile</button>
-      <button class="nav-logout-btn" onclick="showView('viewSettings')" style="background:var(--bg2);border-color:var(--border2);color:var(--text-mid);">⚙️</button>
-      <button class="nav-logout-btn" onclick="doLogout()">Sign Out</button>    </div>
+<button class="nav-btn" onclick="showView('viewProfile')">👤 Profile</button>
+<button class="nav-btn" onclick="showView('viewSettings')">⚙️ Settings</button>
+<button class="nav-btn nav-btn-danger" onclick="doLogout()">Sign Out</button>
   </div>
 
   <!-- Main -->
@@ -1254,7 +1254,7 @@
             <label class="field-label">Reason <span style="font-weight:400;color:var(--text-muted);text-transform:none;letter-spacing:0;">(optional)</span></label>
             <textarea class="field-input" id="leaveReason" placeholder="Brief description..."></textarea>
           </div>
-          <button class="btn-gold" onclick="submitLeave()" style="width:auto;padding:12px 28px;">Submit Request →</button>
+          <button class="btn-orange" onclick="submitLeave()" style="width:auto;padding:12px 28px;">Submit Request →</button>
           <div id="leaveSubmitMsg" style="margin-top:12px;"></div>
         </div>
 
@@ -1507,7 +1507,7 @@
             <label class="field-label">Current Address</label>
             <textarea class="field-input" id="pf_address" placeholder="Your current residential address" style="min-height:80px;"></textarea>
           </div>
-          <button class="btn-gold" onclick="saveProfile()" style="width:auto;padding:12px 28px;">Save Changes →</button>
+          <button class="btn-orange" onclick="saveProfile()" style="width:auto;padding:12px 28px;">Save Changes →</button>
           <div id="pfSaveMsg" style="margin-top:12px;"></div>
         </div>
       </div>
@@ -2298,31 +2298,7 @@ function toggleDarkMode(on) {
 }
 
 function applyDarkMode(on) {
-  const r = document.documentElement.style;
-  if (on) {
-    r.setProperty('--bg',         '#1A1714');
-    r.setProperty('--bg2',        '#2D2520');
-    r.setProperty('--surface',    '#242018');
-    r.setProperty('--border',     '#3D3830');
-    r.setProperty('--border2',    '#4D4840');
-    r.setProperty('--text',       '#F4F1EC');
-    r.setProperty('--text-mid',   '#C4BDB5');
-    r.setProperty('--text-muted', '#7A746C');
-    // Fix buttons that use hardcoded dark colors
-    document.documentElement.style.setProperty('--btn-primary-bg',   '#F4F1EC');
-    document.documentElement.style.setProperty('--btn-primary-color','#1A1714');
-  } else {
-    r.setProperty('--bg',         '#F4F1EC');
-    r.setProperty('--bg2',        '#EDE9E1');
-    r.setProperty('--surface',    '#FFFFFF');
-    r.setProperty('--border',     '#E8E3DA');
-    r.setProperty('--border2',    '#D9D3C8');
-    r.setProperty('--text',       '#1A1714');
-    r.setProperty('--text-mid',   '#5A5550');
-    r.setProperty('--text-muted', '#9B958D');
-    document.documentElement.style.setProperty('--btn-primary-bg',   '#1A1714');
-    document.documentElement.style.setProperty('--btn-primary-color','#F4F1EC');
-  }
+  document.documentElement.setAttribute('data-theme', on ? 'dark' : 'light');
 }
 
 async function requestPasswordChange() {
@@ -2369,7 +2345,7 @@ async function renderAdminUsers() {
         </select>
       </div>
     </div>
-    <button class="btn-gold" onclick="addNewUser()" style="width:auto;padding:12px 28px;">Add Employee →</button>
+    <button class="btn-orange" onclick="addNewUser()" style="width:auto;padding:12px 28px;">Add Employee →</button>
     <div id="addUserMsg" style="margin-top:12px;"></div>
   </div>
 
