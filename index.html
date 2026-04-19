@@ -2294,67 +2294,61 @@ async function renderAdminAttendance() {
   const el = document.getElementById('adminAttContent');
   if (!el) return;
   el.innerHTML = '<div class="card-box"><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center;">Loading attendance data...</div></div>';
+
+  // Fetch all employees from Firestore
+  const allEmps = await fsGetAll('employees');
   let html = '';
-  try {
-    for (const [id, emp] of Object.entries(EMPLOYEES)) {
-      const sheetLog = await apiGet({ action: 'getAttLog', empId: id });
-      const rawLog   = (sheetLog && sheetLog.length) ? sheetLog : load('attLog_' + id, []);
-      const log      = Array.isArray(rawLog) ? rawLog.filter(e => e && e.ts) : [];
-      if (!log.length) {
-        html += `<div class="card-box" style="margin-bottom:16px;">
-          <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);margin-bottom:12px;">
-            ${emp.name} <span style="font-size:12px;font-weight:400;color:var(--text-muted);">(${id})</span>
-          </div>
-          <div class="empty-state" style="padding:16px 0;"><div class="empty-text">No records yet.</div></div>
-        </div>`;
-        continue;
-      }
-      const allRows = [...log].reverse();
-      const thisMonth = new Date().toISOString().substring(0,7);
-      let totalMin = 0;
-      allRows.forEach(e => { if (e.ts && e.ts.startsWith(thisMonth) && e.duration) totalMin += Number(e.duration); });
-      const totalHrsStr = totalMin ? Math.floor(totalMin/60)+'h '+(totalMin%60)+'m this month' : '';
-      const rows = allRows.map(e => {
-        try {
-          const inT     = new Date(e.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-          const outT    = e.outTs ? new Date(e.outTs).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—';
-          const dur     = e.duration != null ? Math.floor(e.duration/60)+'h '+(e.duration%60)+'m' : '—';
-          let sessionIdleMins2 = 0;
-          if (e.idleMinutes != null) {
-            sessionIdleMins2 = Number(e.idleMinutes) || 0;
-          } else {
-            const idleLog2 = load('idleLog_' + id, []);
-            const sessionDate2 = e.ts ? e.ts.split('T')[0] : '';
-            sessionIdleMins2 = idleLog2
-              .filter(il => il.date === sessionDate2 && il.end)
-              .reduce((sum, il) => sum + Math.round((new Date(il.end) - new Date(il.start)) / 60000), 0);
-          }
-          const idleStr = sessionIdleMins2 > 0 ? Math.floor(sessionIdleMins2/60)+'h '+(sessionIdleMins2%60)+'m' : '—';
-          const dateStr = new Date(e.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-          const autoFlag = e.autoOut ? ' <span style="font-size:10px;color:var(--text-muted);">(auto)</span>' : '';
-          const outCell = e.outTs ? `<span class="tag tag-out">↓ ${outT}</span>${autoFlag}` : '<span style="color:var(--text-muted);">Still clocked in</span>';
-          return `<tr><td>${dateStr}</td><td><span class="tag tag-in">↑ ${inT}</span></td><td>${outCell}</td><td>${dur}</td><td>${sessionIdleMins > 0 ? '<span style="color:var(--red);font-size:12px;">'+idleStr+'</span>' : '<span style="color:var(--text-muted);">—</span>'}</td></tr>`;
-        } catch(e) { return ''; }
-      }).join('');
+
+  for (const uid of Object.keys(allEmps)) {
+    const emp = allEmps[uid];
+    const sessions = await fsGetSubcollection('attendance/' + emp.id + '/sessions');
+    const log = sessions.map(s => ({
+      ts: s.clockIn, outTs: s.clockOut,
+      duration: s.duration, autoOut: s.autoOut, date: s.date
+    })).sort((a, b) => new Date(b.ts) - new Date(a.ts));
+
+    if (!log.length) {
       html += `<div class="card-box" style="margin-bottom:16px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
-          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--text);">
-            ${emp.name} <span style="font-size:12px;font-weight:400;color:var(--text-muted);">(${id})</span>
-          </div>
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-            ${totalHrsStr ? `<span class="tag tag-in">${totalHrsStr}</span>` : ''}
-            <span style="font-size:12px;color:var(--text-muted);">${allRows.length} session${allRows.length!==1?'s':''}</span>
-          </div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);margin-bottom:12px;">
+          ${emp.name} <span style="font-size:12px;font-weight:400;color:var(--text-muted);">(${emp.id})</span>
         </div>
-        <table class="att-log-table">
-<thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Duration</th><th>Idle Time</th></tr></thead>
-<tbody>${rows}</tbody>
-        </table>
+        <div class="empty-state" style="padding:16px 0;"><div class="empty-text">No records yet.</div></div>
       </div>`;
+      continue;
     }
-  } catch(err) {
-    html = `<div class="card-box"><div class="empty-state"><div class="empty-text">Error loading data: ${err.message}</div></div></div>`;
+
+    const thisMonth = new Date().toISOString().substring(0,7);
+    let totalMin = 0;
+    log.forEach(e => { if (e.ts && e.ts.startsWith(thisMonth) && e.duration) totalMin += Number(e.duration); });
+    const totalHrsStr = totalMin ? Math.floor(totalMin/60)+'h '+(totalMin%60)+'m this month' : '';
+
+    const rows = log.map(e => {
+      const inT    = new Date(e.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+      const outT   = e.outTs ? new Date(e.outTs).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—';
+      const dur    = e.duration != null ? Math.floor(e.duration/60)+'h '+(e.duration%60)+'m' : '—';
+      const dateStr = new Date(e.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      const autoFlag = e.autoOut ? ' <span style="font-size:10px;color:var(--text-muted);">(auto)</span>' : '';
+      const outCell = e.outTs ? `<span class="tag tag-out">↓ ${outT}</span>${autoFlag}` : '<span style="color:var(--text-muted);">Still clocked in</span>';
+      return `<tr><td>${dateStr}</td><td><span class="tag tag-in">↑ ${inT}</span></td><td>${outCell}</td><td>${dur}</td><td><span style="color:var(--text-muted);">—</span></td></tr>`;
+    }).join('');
+
+    html += `<div class="card-box" style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--text);">
+          ${emp.name} <span style="font-size:12px;font-weight:400;color:var(--text-muted);">(${emp.id})</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          ${totalHrsStr ? `<span class="tag tag-in">${totalHrsStr}</span>` : ''}
+          <span style="font-size:12px;color:var(--text-muted);">${log.length} session${log.length!==1?'s':''}</span>
+        </div>
+      </div>
+      <table class="att-log-table">
+        <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Duration</th><th>Idle Time</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
   }
+
   el.innerHTML = html || '<div class="card-box"><div class="empty-state"><div class="empty-text">No attendance data yet.</div></div></div>';
 }
 
