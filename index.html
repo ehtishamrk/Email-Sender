@@ -987,6 +987,7 @@
 <button class="tab-item" onclick="switchAdminTab('tabAccess', this)">Tool Access</button>
           <button class="tab-item" onclick="switchAdminTab('tabPins', this); renderAdminPins();">Email PINs</button>
           <button class="tab-item" onclick="switchAdminTab('tabLive', this)">Live Status</button>
+<button class="tab-item" onclick="switchAdminTab('tabUsers', this)">Manage Users</button>
          <button class="tab-item" onclick="switchAdminTab('tabDataUpload', this)">Load Call Data</button>
        </div>
 
@@ -1010,6 +1011,11 @@
           <div id="adminPinContent"></div>
         </div>
 
+<!-- Manage Users Tab -->
+<div id="tabUsers" style="display:none;">
+  <div id="adminUsersContent"></div>
+</div>
+        
         <!-- Live Status Tab -->
         <div id="tabLive" style="display:none;">
           <div id="adminLiveContent"></div>
@@ -1308,6 +1314,10 @@ window.renderAdminPins = renderAdminPins;
 window.saveEmpPin = saveEmpPin;
 window.portalLoadCsv = portalLoadCsv;
 window.portalClearBdo = portalClearBdo;
+  window.addNewUser = addNewUser;
+window.toggleAdminRole = toggleAdminRole;
+window.removeUser = removeUser;
+window.renderAdminUsers = renderAdminUsers;
   window.openTimeTool = function() {
   if (!window.__currentUser) { alert('Please clock in before accessing the US Time Tool.'); return; }
   if (!clockedIn) { alert('Please clock in before accessing the US Time Tool.'); return; }
@@ -1640,7 +1650,7 @@ if (id === 'viewProfile') { loadProfile(); }
 }
 
 function switchAdminTab(tabId, btn) {
-document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive,#tabDataUpload,#tabPins').forEach(t => t.style.display = 'none');
+document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive,#tabDataUpload,#tabPins,#tabUsers').forEach(t => t.style.display = 'none');
   document.getElementById(tabId).style.display = '';
   document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -2014,8 +2024,126 @@ async function renderAdmin() {
   renderAdminLeaves();
   renderAdminAccess();
   renderAdminLiveStatus();
+  renderAdminUsers();
 }
 
+async function renderAdminUsers() {
+  const el = document.getElementById('adminUsersContent');
+  if (!el) return;
+
+  const allEmps = await fsGetAll('employees');
+  const emps = Object.values(allEmps).sort((a,b) => a.id.localeCompare(b.id));
+
+  let html = `
+  <div class="card-box" style="margin-bottom:20px;">
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Add New Employee</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Creates Firebase Auth account and Firestore profile.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+      <div class="field-wrap" style="margin:0;"><label class="field-label">Full Name</label><input class="field-input" id="nu_name" placeholder="John Smith"></div>
+      <div class="field-wrap" style="margin:0;"><label class="field-label">Employee ID (digits only)</label><input class="field-input" id="nu_id" placeholder="0007" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+      <div class="field-wrap" style="margin:0;"><label class="field-label">Email</label><input class="field-input" id="nu_email" type="email" placeholder="john@haulxify.com"></div>
+      <div class="field-wrap" style="margin:0;"><label class="field-label">Password</label><input class="field-input" id="nu_pass" type="password" placeholder="Min 6 characters"></div>
+      <div class="field-wrap" style="margin:0;"><label class="field-label">Designation</label><input class="field-input" id="nu_desig" placeholder="Freight Coordinator"></div>
+      <div class="field-wrap" style="margin:0;"><label class="field-label">Department</label><input class="field-input" id="nu_dept" placeholder="Dispatch"></div>
+      <div class="field-wrap" style="margin:0;"><label class="field-label">Joining Date</label><input class="field-input" id="nu_join" type="date"></div>
+      <div class="field-wrap" style="margin:0;">
+        <label class="field-label">Role</label>
+        <select class="field-input" id="nu_admin">
+          <option value="false">Employee</option>
+          <option value="true">Admin</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-gold" onclick="addNewUser()" style="width:auto;padding:12px 28px;">Add Employee →</button>
+    <div id="addUserMsg" style="margin-top:12px;"></div>
+  </div>
+
+  <div class="card-box">
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;">Current Employees</div>`;
+
+  emps.forEach(emp => {
+    const isLocked = emp.id === 'HX-0001';
+    html += `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">${emp.name} ${isLocked ? '<span style="font-size:10px;color:var(--gold);background:var(--gold-light);padding:2px 8px;border-radius:20px;margin-left:6px;">LOCKED</span>' : ''}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${emp.id} · ${emp.designation || ''} · ${emp.email}</div>
+        <div style="margin-top:4px;">
+          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${emp.isAdmin ? 'var(--gold-light)' : 'var(--bg2)'};color:${emp.isAdmin ? '#8B5200' : 'var(--text-muted)'};">${emp.isAdmin ? 'Admin' : 'Employee'}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        ${!isLocked ? `
+        <button onclick="toggleAdminRole('${emp.uid}','${emp.id}',${!emp.isAdmin})"
+          style="padding:8px 14px;border-radius:10px;background:var(--bg2);border:1.5px solid var(--border2);color:var(--text-mid);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          ${emp.isAdmin ? 'Remove Admin' : 'Make Admin'}
+        </button>
+        <button onclick="removeUser('${emp.uid}','${emp.name}')"
+          style="padding:8px 14px;border-radius:10px;background:#FFF0F0;border:1.5px solid #FFCACA;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          Remove
+        </button>` : ''}
+      </div>
+    </div>`;
+  });
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+async function addNewUser() {
+  const name  = document.getElementById('nu_name').value.trim();
+  const idRaw = document.getElementById('nu_id').value.trim();
+  const email = document.getElementById('nu_email').value.trim();
+  const pass  = document.getElementById('nu_pass').value.trim();
+  const desig = document.getElementById('nu_desig').value.trim();
+  const dept  = document.getElementById('nu_dept').value.trim();
+  const join  = document.getElementById('nu_join').value.trim();
+  const isAdmin = document.getElementById('nu_admin').value === 'true';
+  const msg   = document.getElementById('addUserMsg');
+
+  if (!name || !idRaw || !email || !pass || !desig || !dept || !join) {
+    msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Please fill in all fields.</div>'; return;
+  }
+
+  const empId = 'HX-' + idRaw.padStart(4, '0');
+  msg.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">Creating account...</div>';
+
+  try {
+    // Create Firebase Auth account
+    const { auth } = window.__fb;
+    const { createUserWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+
+    // Save to Firestore
+    await fsSet('employees', cred.user.uid, {
+      uid: cred.user.uid, id: empId, name, email,
+      designation: desig, department: dept,
+      joiningDate: join, isAdmin,
+      hasEmailAccess: false, hasVoiceAccess: false,
+      createdAt: new Date().toISOString()
+    });
+
+    msg.innerHTML = '<div class="alert-success">✅ Employee added successfully.</div>';
+    ['nu_name','nu_id','nu_email','nu_pass','nu_desig','nu_dept','nu_join'].forEach(id => document.getElementById(id).value = '');
+    setTimeout(() => renderAdminUsers(), 1500);
+  } catch(e) {
+    msg.innerHTML = `<div style="color:var(--red);font-size:13px;">Error: ${e.message}</div>`;
+  }
+}
+
+async function toggleAdminRole(uid, empId, makeAdmin) {
+  if (!confirm(`${makeAdmin ? 'Grant admin rights to' : 'Remove admin rights from'} ${empId}?`)) return;
+  await fsSet('employees', uid, { isAdmin: makeAdmin });
+  renderAdminUsers();
+}
+
+async function removeUser(uid, name) {
+  if (!confirm(`Remove ${name} from the portal? This cannot be undone.`)) return;
+  const { db, doc, deleteDoc } = window.__fb;
+  await deleteDoc(doc(db, 'employees', uid));
+  renderAdminUsers();
+}
+  
 // ─── PASTE THIS INTO portal.html — replaces renderAdminLiveStatus() ───
 var _liveTimer = null;
 
