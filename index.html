@@ -1288,7 +1288,7 @@ const _app = initializeApp(firebaseConfig);
 const auth = getAuth(_app);
 const db   = getFirestore(_app);
 
-window.__fb = { auth, db, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, deleteDoc, signOut, sendPasswordResetEmail };
+window.__fb = { auth, db, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, deleteDoc, signOut, sendPasswordResetEmail, signInWithEmailAndPassword };
 window.doLogin = doLogin;
 window.doLogout = doLogout;
 window.submitForgot = submitForgot;
