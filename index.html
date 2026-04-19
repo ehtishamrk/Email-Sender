@@ -1435,15 +1435,21 @@ let clockInTimestamp = null;
         clockedIn: false, timestamp: null, empId
       });
 
-      // Find and update the open session in Firestore
-      const sessionId = load('lastSessionId_' + empId, null);
-      if (sessionId) {
-        await fsSet('attendance/' + empId + '/sessions', sessionId, {
+      // Find and update the open session in Firestore by querying for null clockOut
+    const { db, collection, getDocs, query, where } = window.__fb;
+    try {
+      const sessSnap = await getDocs(
+        query(collection(db, 'attendance/' + empId + '/sessions'), where('clockOut', '==', null))
+      );
+      sessSnap.forEach(async (d) => {
+        await fsSet('attendance/' + empId + '/sessions', d.id, {
           clockOut: outTs,
           duration: durMins,
           autoOut: true
         });
-      }
+      });
+    } catch(e) {}
+
 
       // Clear localStorage clock state
       store('clockState_' + empId, { clockedIn: false });
