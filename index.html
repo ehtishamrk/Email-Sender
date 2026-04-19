@@ -1701,61 +1701,53 @@ function resumeClockState() {
   }
 }
 
-function toggleClock() {
+async function toggleClock() {
   if (!clockedIn) {
     clockedIn = true;
     clockInTimestamp = new Date();
     const tsStr = clockInTimestamp.toISOString();
+    const sessionId = tsStr.replace(/[:.]/g, '-');
     store('clockState_' + currentUser.id, { clockedIn: true, timestamp: tsStr });
-    const log = load('attLog_' + currentUser.id, []);
-    log.push({ type: 'in', ts: tsStr, date: today() });
-    store('attLog_' + currentUser.id, log);
     updateClockUI(true);
-    apiPost({ action: 'setClockState', empId: currentUser.id, clockedIn: true, timestamp: tsStr });
-    apiPost({ action: 'addAttEntry', empId: currentUser.id, ts: tsStr, date: today() });
+    // Save to Firestore
+    await fsSet('clockState', currentUser.id, { clockedIn: true, timestamp: tsStr, empId: currentUser.id });
+    await fsSet('attendance/' + currentUser.id + '/sessions', sessionId, {
+      empId: currentUser.id,
+      empName: currentUser.name,
+      clockIn: tsStr,
+      date: today(),
+      clockOut: null,
+      duration: null,
+      autoOut: false
+    });
+    store('lastSessionId_' + currentUser.id, sessionId);
   } else {
     performClockOut('manual');
   }
 }
 
-function performClockOut(reason) {
+async function performClockOut(reason) {
   if (!clockedIn) return;
   const outTime  = new Date();
   const inTime   = clockInTimestamp || outTime;
-  const inTsStr  = inTime.toISOString();
   const outTsStr = outTime.toISOString();
-  const log = load('attLog_' + currentUser.id, []);
-  let durMins = 0;
-  for (let i = log.length - 1; i >= 0; i--) {
-    if (log[i].type === 'in' && !log[i].outTs) {
-      log[i].outTs    = outTsStr;
-      durMins         = Math.round((outTime - new Date(log[i].ts)) / 60000);
-      log[i].duration = durMins;
-      log[i].autoOut  = reason === 'auto';
-      break;
-    }
-  }
-  // Calculate idle minutes for this session date
-  const sessionDate = inTsStr.split('T')[0];
-  const idleLog = load('idleLog_' + currentUser.id, []);
-  const idleMins = idleLog
-    .filter(il => il.date === sessionDate && il.end)
-    .reduce((sum, il) => sum + Math.round((new Date(il.end) - new Date(il.start)) / 60000), 0);
-  // Store idleMinutes on the log entry
-  for (let i = log.length - 1; i >= 0; i--) {
-    if (log[i].type === 'in' && log[i].outTs === outTsStr) {
-      log[i].idleMinutes = idleMins;
-      break;
-    }
-  }
-  store('attLog_' + currentUser.id, log);
+  const durMins  = Math.round((outTime - inTime) / 60000);
+  const sessionId = load('lastSessionId_' + currentUser.id, null);
+
   store('clockState_' + currentUser.id, { clockedIn: false });
   clockedIn = false; clockInTimestamp = null;
   updateClockUI(false);
   refreshStats();
-  apiPost({ action: 'setClockState', empId: currentUser.id, clockedIn: false, timestamp: null });
-  apiPost({ action: 'updateAttClockOut', empId: currentUser.id, ts: inTsStr, outTs: outTsStr, duration: durMins, autoOut: reason === 'auto', idleMinutes: idleMins });
-  pushSessionToSheet(inTime, outTime, durMins, reason);
+
+  // Save to Firestore
+  await fsSet('clockState', currentUser.id, { clockedIn: false, timestamp: null, empId: currentUser.id });
+  if (sessionId) {
+    await fsSet('attendance/' + currentUser.id + '/sessions', sessionId, {
+      clockOut: outTsStr,
+      duration: durMins,
+      autoOut: reason === 'auto'
+    });
+  }
 }
 
 async function pushSessionToSheet(inTime, outTime, durationMins, reason) {
