@@ -1797,14 +1797,17 @@ window.addEventListener('beforeunload', () => {
 // ══════════════════════════════════════════════════════════════
 //  STATS
 // ══════════════════════════════════════════════════════════════
-function refreshStats() {
+async function refreshStats() {
   if (!currentUser) return;
-  const log = load('attLog_' + currentUser.id, []);
+  const sessions = await fsGetSubcollection('attendance/' + currentUser.id + '/sessions');
   const thisMonth = new Date().toISOString().substring(0,7);
-  const daysSet = new Set(log.filter(e => e.type==='in' && e.ts.startsWith(thisMonth)).map(e => e.date));
+  const daysSet = new Set(sessions.filter(s => s.clockIn && s.clockIn.startsWith(thisMonth)).map(s => s.date));
   document.getElementById('statDays').textContent = daysSet.size;
-  const leaves = load('leaveRequests', []).filter(l => l.empId === currentUser.id && l.status === 'pending');
-  document.getElementById('statLeave').textContent = leaves.length;
+
+  const { db, collection, query, where, getDocs } = window.__fb;
+  const q = query(collection(db, 'leaveRequests'), where('empId', '==', currentUser.id), where('status', '==', 'pending'));
+  const snap = await getDocs(q);
+  document.getElementById('statLeave').textContent = snap.size;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1851,7 +1854,7 @@ async function renderAttReport() {
 // ══════════════════════════════════════════════════════════════
 //  LEAVE REQUESTS
 // ══════════════════════════════════════════════════════════════
-function submitLeave() {
+async function submitLeave() {
   const type   = document.getElementById('leaveType').value;
   const from   = document.getElementById('leaveFrom').value;
   const to     = document.getElementById('leaveTo').value;
@@ -1860,17 +1863,13 @@ function submitLeave() {
   if (!from || !to) { msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Please select both dates.</div>'; return; }
   if (new Date(to) < new Date(from)) { msg.innerHTML = '<div style="color:var(--red);font-size:13px;">End date cannot be before start date.</div>'; return; }
 
-  const requests = load('leaveRequests', []);
-  requests.push({
-    id: Date.now(),
-    empId: currentUser.id,
-    empName: currentUser.name,
+  const id = currentUser.id + '_' + Date.now();
+  await fsSet('leaveRequests', id, {
+    id, empId: currentUser.id, empName: currentUser.name,
     type, from, to, reason,
     status: 'pending',
-    submittedAt: new Date().toISOString(),
-    history: []
+    submittedAt: new Date().toISOString()
   });
-  store('leaveRequests', requests);
 
   msg.innerHTML = '<div class="alert-success">✅ <strong>Request submitted!</strong><br>Your manager will review it shortly.</div>';
   document.getElementById('leaveFrom').value = '';
@@ -1881,16 +1880,23 @@ function submitLeave() {
   refreshStats();
 }
 
-function refreshLeaveHistory() {
+async function refreshLeaveHistory() {
   if (!currentUser) return;
-  const requests = load('leaveRequests', []).filter(l => l.empId === currentUser.id);
   const el = document.getElementById('leaveHistoryContent');
   if (!el) return;
+  el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">Loading...</div></div>';
+
+  const { db, collection, query, where, getDocs } = window.__fb;
+  const q = query(collection(db, 'leaveRequests'), where('empId', '==', currentUser.id));
+  const snap = await getDocs(q);
+  const requests = snap.docs.map(d => d.data()).sort((a,b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+
   if (!requests.length) {
     el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No leave requests yet.</div></div>'; return;
   }
+
   const statusBadge = s => `<span class="tag tag-${s}">${s.charAt(0).toUpperCase()+s.slice(1)}</span>`;
-  const rows = [...requests].reverse().map(r => `
+  const rows = requests.map(r => `
     <tr>
       <td>${new Date(r.submittedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
       <td>${r.type.charAt(0).toUpperCase()+r.type.slice(1)}</td>
@@ -1898,6 +1904,7 @@ function refreshLeaveHistory() {
       <td>${r.reason || '—'}</td>
       <td>${statusBadge(r.status)}</td>
     </tr>`).join('');
+
   el.innerHTML = `<table class="att-log-table">
     <thead><tr><th>Submitted</th><th>Type</th><th>Dates</th><th>Reason</th><th>Status</th></tr></thead>
     <tbody>${rows}</tbody>
@@ -2283,22 +2290,27 @@ async function renderAdminAttendance() {
   el.innerHTML = html || '<div class="card-box"><div class="empty-state"><div class="empty-text">No attendance data yet.</div></div></div>';
 }
 
-function renderAdminLeaves() {
+async function renderAdminLeaves() {
   const el = document.getElementById('adminLeaveContent');
   if (!el) return;
-  const requests = load('leaveRequests', []);
+  el.innerHTML = '<div class="card-box"><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center;">Loading...</div></div>';
+
+  const all = await fsGetAll('leaveRequests');
+  const requests = Object.values(all).sort((a,b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+
   if (!requests.length) {
     el.innerHTML = '<div class="card-box"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No leave requests.</div></div></div>'; return;
   }
-  const pending   = requests.filter(r => r.status === 'pending');
-  const resolved  = requests.filter(r => r.status !== 'pending');
+
+  const pending  = requests.filter(r => r.status === 'pending');
+  const resolved = requests.filter(r => r.status !== 'pending');
 
   const renderCard = (r, showActions) => {
     const badge = `<span class="tag tag-${r.status}">${r.status.charAt(0).toUpperCase()+r.status.slice(1)}</span>`;
     const actions = showActions ? `
       <div class="leave-card-actions">
-        <button class="btn-approve" onclick="adminLeaveAction(${r.id},'approved')">✓ Approve</button>
-        <button class="btn-reject"  onclick="adminLeaveAction(${r.id},'rejected')">✗ Reject</button>
+        <button class="btn-approve" onclick="adminLeaveAction('${r.id}','approved')">✓ Approve</button>
+        <button class="btn-reject"  onclick="adminLeaveAction('${r.id}','rejected')">✗ Reject</button>
       </div>` : badge;
     return `<div class="leave-card">
       <div class="leave-card-info">
@@ -2323,17 +2335,14 @@ function renderAdminLeaves() {
   el.innerHTML = `<div class="card-box">${html}</div>`;
 }
 
-function adminLeaveAction(id, status) {
-  const requests = load('leaveRequests', []);
-  const req = requests.find(r => r.id === id);
-  if (req) {
-    req.status = status;
-    req.resolvedAt = new Date().toISOString();
-    req.resolvedBy = currentUser.id;
-  }
-  store('leaveRequests', requests);
+async function adminLeaveAction(id, status) {
+  await fsSet('leaveRequests', id, {
+    status,
+    resolvedAt: new Date().toISOString(),
+    resolvedBy: currentUser.id
+  });
   renderAdminLeaves();
-  refreshLeaveHistory(); // in case same admin is also employee
+  refreshLeaveHistory();
 }
   // ── IDLE DETECTION ───────────────────────────────
 const BDO_IDS = ['HX-0003','HX-0004','HX-0005','HX-0006'];
