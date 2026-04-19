@@ -1399,61 +1399,65 @@ let clockInterval = null;
 let clockedIn = false;
 let clockInTimestamp = null;
 // ── AUTO-RESTORE SESSION ON REFRESH ──
-(function restoreSession() {
-  const pending     = load('pendingSession', null);
-  const saved       = load('session', null);
-  const lastHb      = parseInt(localStorage.getItem('hb_ts') || '0');
-  const hbAge       = Date.now() - lastHb;
-  const tabWasClosed = lastHb === 0 || hbAge > 10000; // no heartbeat or stale = tab was closed
+(async function restoreSession() {
+  const pending      = load('pendingSession', null);
+  const saved        = load('session', null);
+  const lastHb       = parseInt(localStorage.getItem('hb_ts') || '0');
+  const hbAge        = Date.now() - lastHb;
+  const tabWasClosed = lastHb === 0 || hbAge > 10000;
 
-  // CASE 1: Normal refresh — pendingSession exists AND heartbeat is fresh
-if (pending && pending.id && !tabWasClosed) {
+  // CASE 1: Normal refresh — heartbeat is fresh
+  if (pending && pending.id && !tabWasClosed) {
     store('pendingSession', null);
     store('session', { id: pending.id });
-    // Fetch profile from Firestore then enter portal
-    const { db, collection, query, where, getDocs } = window.__fb || {};
-    if (db) {
-      const q = query(collection(db, 'employees'), where('id', '==', pending.id));
-      getDocs(q).then(snap => {
-        if (!snap.empty) {
-          currentUser = { ...snap.docs[0].data() };
-          enterPortal();
-        }
-      });
+    const { db, collection, query, where, getDocs } = window.__fb;
+    const q = query(collection(db, 'employees'), where('id', '==', pending.id));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      currentUser = { ...snap.docs[0].data() };
+      enterPortal();
     }
     return;
   }
 
-  // CASE 2: Tab was closed — force clockout + logout
+  // CASE 2: Tab was closed — auto clockout then force login
   if (tabWasClosed && saved && saved.id) {
-    const empId     = saved.id;
-    const clockState = JSON.parse(localStorage.getItem('clockState_' + empId) || 'null');
+    const empId = saved.id;
+    const clockState = load('clockState_' + empId, null);
+
     if (clockState && clockState.clockedIn && clockState.timestamp) {
       const inTs    = clockState.timestamp;
       const outTs   = new Date().toISOString();
       const durMins = Math.round((new Date(outTs) - new Date(inTs)) / 60000);
-      // Push clockout to sheet
-      fetch(API, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ action:'setClockState', empId, clockedIn: false, timestamp: null }) }).catch(()=>{});
-      fetch(API, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ action:'updateAttClockOut', empId, ts: inTs, outTs, duration: durMins, autoOut: true }) }).catch(()=>{});
-      // Update localStorage clockstate and attLog
-      localStorage.setItem('clockState_' + empId, JSON.stringify({ clockedIn: false }));
-      const log = JSON.parse(localStorage.getItem('attLog_' + empId) || '[]');
-      for (let i = log.length-1; i >= 0; i--) {
-        if (log[i].type === 'in' && !log[i].outTs) {
-          log[i].outTs = outTs; log[i].duration = durMins; log[i].autoOut = true; break;
-        }
+
+      // Update Firestore clockState
+      await fsSet('clockState', empId, {
+        clockedIn: false, timestamp: null, empId
+      });
+
+      // Find and update the open session in Firestore
+      const sessionId = load('lastSessionId_' + empId, null);
+      if (sessionId) {
+        await fsSet('attendance/' + empId + '/sessions', sessionId, {
+          clockOut: outTs,
+          duration: durMins,
+          autoOut: true
+        });
       }
-      localStorage.setItem('attLog_' + empId, JSON.stringify(log));
+
+      // Clear localStorage clock state
+      store('clockState_' + empId, { clockedIn: false });
+      localStorage.removeItem('lastSessionId_' + empId);
     }
-    // Force logout — clear everything
+
+    // Force logout — clear session and show login
     store('session', null);
     store('pendingSession', null);
     localStorage.removeItem('hb_ts');
-    // Show login screen (default — do nothing, page loads to login)
     return;
   }
 
-  // CASE 3: No session at all — show login (default)
+  // CASE 3: No session — show login (default)
   store('pendingSession', null);
 })();
 
