@@ -715,8 +715,8 @@
   /* ══════════════════════════════════════
      INNER VIEWS
   ══════════════════════════════════════ */
-.view-shell      { max-width: 760px;  margin: 0 auto; padding: 24px 48px 60px; }
-.view-shell-wide { max-width: 1100px; margin: 0 auto; padding: 24px 48px 60px; }
+.view-shell      { max-width: 760px;  margin: 0 auto; padding: 32px 48px 60px; }
+.view-shell-wide { max-width: 1100px; margin: 0 auto; padding: 32px 48px 60px; }
   .back-row { margin-bottom: 28px; }
 
   .back-link {
@@ -728,10 +728,13 @@
 
   .back-link:hover { color: var(--orange); }
 
-  .view-header { margin-bottom: 32px; }
+  .view-header { margin-bottom: 24px; }
+
+#viewProfile .view-shell,
+#viewSettings .view-shell { padding-top: 0; }
 
 #viewProfile .view-header,
-#viewSettings .view-header { margin-bottom: 16px; }
+#viewSettings .view-header { margin-bottom: 12px; padding-top: 0; }
 
 #viewProfile .view-title,
 #viewSettings .view-title { font-size: 20px; margin-bottom: 4px; }
