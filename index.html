@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <img src="logo.webp" alt="H" style="width:32px;height:32px;border-radius:9px;object-fit:cover;">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Haulxify — Employee Portal</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
@@ -688,11 +689,12 @@
   .nav-card:hover::before { transform: scaleX(1); }
   .nav-card:hover::after { color: var(--orange); right: 18px; }
 
-  .nav-card-icon {
-    width: 44px; height: 44px; border-radius: var(--r-md);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px; margin-bottom: 16px;
-  }
+.nav-card-icon {
+  width: 44px; height: 44px; border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; margin-bottom: 16px;
+  line-height: 1; text-align: center;
+}
 
   .icon-navy   { background: rgba(13,25,41,0.07); }
   .icon-orange { background: var(--orange-a10); }
@@ -1022,6 +1024,16 @@
     .row-2 { grid-template-columns:1fr; }
     .tab-strip { overflow-x:auto; }
   }
+  .modal-close {
+  position: absolute; top: 20px; right: 20px;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--surface2); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 16px; color: var(--text-muted);
+  transition: all var(--t); line-height: 1;
+}
+.modal-close:hover { background: var(--red-bg); border-color: var(--red-border); color: var(--red); }
+.modal-box { position: relative; }
 </style>
 </head>
 <body>
@@ -1035,7 +1047,7 @@
     <div class="lp-form-wrap">
 
       <div class="lp-brand">
-        <div class="lp-brand-mark">H</div>
+        <img src="logo.webp" alt="H" style="width:40px;height:40px;border-radius:12px;object-fit:cover;">
         <div>
           <div class="lp-brand-name">Haulxify</div>
           <div class="lp-brand-tag">Employee Portal</div>
@@ -1083,7 +1095,7 @@
     <div class="lp-right-glow lp-glow-3"></div>
 
     <div class="lp-right-inner">
-      <div class="lp-right-logo">H</div>
+      <div class="lp-right-logo"><img src="logo.webp" alt="H" style="width:48px;height:48px;border-radius:14px;object-fit:cover;"></div>
       <div class="lp-right-title">Your work,<br><span>beautifully</span><br>organized.</div>
       <div class="lp-right-sub">Everything your team needs — attendance, leaves, tools, and real-time status — in one elegant workspace.</div>
 
@@ -1132,10 +1144,10 @@
       </div>
     </div>
     <div id="forgotResult"></div>
-    <div style="display:flex;gap:10px;margin-top:8px;">
-      <button class="btn-orange" onclick="submitForgot()">Submit Request</button>
-      <button class="btn-outline" onclick="hideModal('modalForgot')">Cancel</button>
-    </div>
+<button class="modal-close" onclick="hideModal('modalForgot')">✕</button>
+<div style="margin-top:8px;">
+  <button class="btn-orange" onclick="submitForgot()">Send Reset Email</button>
+</div>
   </div>
 </div>
 
@@ -1189,17 +1201,17 @@
           <input class="field-input" type="password" id="su_pass" placeholder="Min 8 characters">
         </div>
       </div>
-      <div style="display:flex;gap:10px;margin-top:4px;">
-        <button class="btn-orange" onclick="submitSignup()">Submit Request →</button>
-        <button class="btn-outline" onclick="hideModal('modalSignup')">Cancel</button>
-      </div>
+<button class="modal-close" onclick="hideModal('modalSignup')">✕</button>
+<div style="margin-top:4px;">
+  <button class="btn-orange" onclick="submitSignup()">Submit Request →</button>
+</div>
     </div>
     <div id="signupSuccess" style="display:none;">
       <div class="alert-success">
         ✅ <strong>Request submitted successfully!</strong><br>
         You'll receive an email with your login credentials within 24 hours. Welcome to the Haulxify team!
       </div>
-      <button class="btn-outline" style="margin-top:14px;width:100%;" onclick="hideModal('modalSignup')">Close</button>
+      <button class="btn-ghost" style="margin-top:14px;" onclick="hideModal('modalSignup')">Close</button>
     </div>
   </div>
 </div>
@@ -1212,7 +1224,7 @@
   <!-- Top Nav -->
   <div class="topnav">
     <div class="nav-left">
-      <div class="nav-logo-mark">H</div>
+      <img src="logo.webp" alt="H" style="width:32px;height:32px;border-radius:9px;object-fit:cover;">
       <div class="nav-logo-text">Haulxify</div>
       <div class="nav-badge">Employee Portal</div>
     </div>
