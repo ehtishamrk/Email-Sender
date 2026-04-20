@@ -715,9 +715,8 @@
   /* ══════════════════════════════════════
      INNER VIEWS
   ══════════════════════════════════════ */
-  .view-shell      { max-width: 760px;  margin: 0 auto; padding: 40px 48px 60px; }
-  .view-shell-wide { max-width: 1100px; margin: 0 auto; padding: 40px 48px 60px; }
-
+.view-shell      { max-width: 760px;  margin: 0 auto; padding: 24px 48px 60px; }
+.view-shell-wide { max-width: 1100px; margin: 0 auto; padding: 24px 48px 60px; }
   .back-row { margin-bottom: 28px; }
 
   .back-link {
@@ -1013,17 +1012,64 @@
   /* ══════════════════════════════════════
      RESPONSIVE
   ══════════════════════════════════════ */
-  @media (max-width: 768px) {
-    .lp-left { width:100%; min-width:unset; padding:40px 28px; }
-    .lp-right { display:none; }
-    .topnav { padding:0 20px; }
-    .dash-hero { padding:36px 24px 32px; }
-    .dash-clock-strip { padding:16px 24px; }
-    .clock-btns { width:100%; margin-left:0; }
-    .dash-content, .view-shell, .view-shell-wide { padding:24px 20px 48px; }
-    .row-2 { grid-template-columns:1fr; }
-    .tab-strip { overflow-x:auto; }
-  }
+@media (max-width: 768px) {
+  /* Login */
+  .lp-left { width:100%; min-width:unset; padding:36px 24px; }
+  .lp-right { display:none; }
+  .lp-heading { font-size:28px; }
+
+  /* Nav */
+  .topnav { padding:0 16px; height:56px; }
+  .nav-badge { display:none; }
+  .nav-user-info { display:none; }
+  .nav-logo-text { font-size:15px; }
+  .nav-btn { padding:6px 10px; font-size:11px; }
+
+  /* Hero */
+  .dash-hero { padding:32px 20px 28px; }
+  .dash-headline { font-size:26px; letter-spacing:-1px; }
+
+  /* Clock strip */
+  .dash-clock-strip { padding:14px 20px; gap:12px; }
+  .clock-time-big { font-size:24px; }
+  .clock-btns { width:100%; margin-left:0; }
+  .btn-clock-in, .btn-clock-out { flex:1; text-align:center; padding:10px 16px; }
+
+  /* Content */
+  .dash-content { padding:20px 16px 48px; }
+  .view-shell, .view-shell-wide { padding:20px 16px 48px; }
+
+  /* Grid */
+  .cards-grid { grid-template-columns:1fr 1fr; gap:10px; }
+  .nav-card { padding:20px 16px; }
+  .nav-card-title { font-size:13px; }
+  .nav-card-desc { font-size:11px; }
+  .stats-row { grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .stat-chip { padding:14px 16px; }
+  .stat-chip-val { font-size:20px; }
+
+  /* Forms */
+  .row-2 { grid-template-columns:1fr; }
+  .modal-box { padding:28px 20px; }
+
+  /* Tabs */
+  .tab-strip { overflow-x:auto; width:100%; }
+
+  /* Tables */
+  .att-log-table th, .att-log-table td { padding:10px 10px; font-size:11px; }
+
+  /* Admin */
+  .leave-card { flex-direction:column; align-items:flex-start; }
+  .leave-card-actions { width:100%; }
+  .btn-approve, .btn-reject { flex:1; text-align:center; }
+}
+
+@media (max-width: 480px) {
+  .cards-grid { grid-template-columns:1fr; }
+  .stats-row { grid-template-columns:1fr 1fr; }
+  .nav-right { gap:4px; }
+  .nav-btn { padding:5px 8px; font-size:10px; }
+}
   .modal-close {
   position: absolute; top: 20px; right: 20px;
   width: 32px; height: 32px; border-radius: 50%;
@@ -1114,15 +1160,6 @@
           <div class="lp-stat-val">24/7</div>
           <div class="lp-stat-label">Access</div>
         </div>
-      </div>
-    </div>
-
-    <!-- Floating card decoration -->
-    <div class="lp-float-card">
-      <div class="lp-float-dot"></div>
-      <div>
-        <div class="lp-float-title">Team Online</div>
-        <div class="lp-float-sub">3 members active now</div>
       </div>
     </div>
   </div>
@@ -1223,11 +1260,11 @@
 
   <!-- Top Nav -->
   <div class="topnav">
-    <div class="nav-left">
-      <img src="images/logo.webp" alt="H" style="width:32px;height:32px;border-radius:9px;object-fit:cover;">
-      <div class="nav-logo-text">Haulxify</div>
-      <div class="nav-badge">Employee Portal</div>
-    </div>
+<div class="nav-left" onclick="showView('viewDash')" style="cursor:pointer;">
+  <img src="images/logo.webp" alt="H" style="width:32px;height:32px;border-radius:9px;object-fit:cover;">
+  <div class="nav-logo-text">Haulxify</div>
+  <div class="nav-badge">Employee Portal</div>
+</div>
     <div class="nav-right">
       <div class="nav-user">
         <div class="nav-user-info">
@@ -1237,6 +1274,7 @@
         </div>
         <div class="nav-avatar" id="navAvatar">?</div>
       </div>
+<button class="nav-btn" onclick="showView('viewDash')">🏠 Home</button>
 <button class="nav-btn" onclick="showView('viewProfile')">👤 Profile</button>
 <button class="nav-btn" onclick="showView('viewSettings')">⚙️ Settings</button>
 <button class="nav-btn nav-btn-danger" onclick="doLogout()">Sign Out</button>
@@ -1333,9 +1371,6 @@
     <!-- ── ATTENDANCE REPORT ── -->
     <div id="viewAttendance" class="view">
       <div class="view-shell-wide">
-        <div class="back-row">
-          <button class="back-link" onclick="showView('viewDash')">← Back to Dashboard</button>
-        </div>
         <div class="view-header">
           <div class="view-title">My Attendance</div>
           <div class="view-sub">Your complete clock-in / clock-out history.</div>
@@ -1351,9 +1386,6 @@
     <!-- ── LEAVE REQUEST ── -->
     <div id="viewLeave" class="view">
       <div class="view-shell">
-        <div class="back-row">
-          <button class="back-link" onclick="showView('viewDash')">← Back to Dashboard</button>
-        </div>
         <div class="view-header">
           <div class="view-title">Leave Requests</div>
           <div class="view-sub">Submit new requests and track their status.</div>
@@ -1403,9 +1435,6 @@
     <!-- ── ADMIN PANEL ── -->
     <div id="viewAdmin" class="view">
       <div class="view-shell-wide">
-        <div class="back-row">
-          <button class="back-link" onclick="showView('viewDash')">← Back to Dashboard</button>
-        </div>
         <div class="view-header">
           <div class="view-title">Admin Panel 🛡️</div>
           <div class="view-sub">Manage team attendance and leave requests.</div>
@@ -1488,9 +1517,6 @@
     <!-- ── GOOGLE VOICE VIEW ── -->
     <div id="viewVoice" class="view">
       <div class="view-shell-wide">
-        <div class="back-row">
-          <button class="back-link" onclick="showView('viewDash')">← Back to Dashboard</button>
-        </div>
         <div class="view-header">
           <div class="view-title">Google Voice</div>
           <div class="view-sub">Your Haulxify team line — calls, texts, voicemail, all in one place.</div>
@@ -1602,9 +1628,6 @@
 <!-- ── PROFILE VIEW ── -->
     <div id="viewProfile" class="view">
       <div class="view-shell">
-        <div class="back-row">
-          <button class="back-link" onclick="showView('viewDash')">← Back to Dashboard</button>
-        </div>
         <div class="view-header">
           <div class="view-title">My Profile 👤</div>
           <div class="view-sub">Your employment information. Contact fields can be updated by you.</div>
@@ -1648,9 +1671,6 @@
     <!-- ── SETTINGS VIEW ── -->
     <div id="viewSettings" class="view">
       <div class="view-shell">
-        <div class="back-row">
-          <button class="back-link" onclick="showView('viewDash')">← Back to Dashboard</button>
-        </div>
         <div class="view-header">
           <div class="view-title">Settings ⚙️</div>
           <div class="view-sub">Manage your account and portal preferences.</div>
