@@ -730,6 +730,12 @@
 
   .view-header { margin-bottom: 32px; }
 
+#viewProfile .view-header,
+#viewSettings .view-header { margin-bottom: 16px; }
+
+#viewProfile .view-title,
+#viewSettings .view-title { font-size: 20px; margin-bottom: 4px; }
+  
   .view-title {
     font-family: var(--font-d); font-size: 26px; font-weight: 800;
     color: var(--text); letter-spacing: -0.8px; margin-bottom: 6px;
@@ -2450,11 +2456,15 @@ function applyDarkMode(on) {
 
 async function requestPasswordChange() {
   const msg = document.getElementById('settingsMsg');
-  const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSevY4X0yLHL3tufLPc93DckYXvYAwR2aCU9bxzVp6LBsUtZTw/formResponse';
-  const body = new URLSearchParams({ 'entry.93033223': currentUser.id + ' (password change request)' });
-  try { await fetch(FORM_URL, { method: 'POST', mode: 'no-cors', body }); } catch(e) {}
-  msg.innerHTML = '<div class="alert-success">✅ Password change request submitted. You\'ll receive your new password via company email.</div>';
-  setTimeout(() => msg.innerHTML = '', 5000);
+  msg.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">Sending reset email...</div>';
+  try {
+    const { auth, sendPasswordResetEmail } = window.__fb;
+    await sendPasswordResetEmail(auth, currentUser.email);
+    msg.innerHTML = '<div class="alert-success">✅ Password reset email sent to <strong>' + currentUser.email + '</strong>. Check your inbox.</div>';
+  } catch(e) {
+    msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Failed to send reset email. Try again.</div>';
+  }
+  setTimeout(() => msg.innerHTML = '', 6000);
 }
 async function renderAdmin() {
   if (!currentUser || !currentUser.isAdmin) return;
