@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <img src="logo.webp" alt="H" style="width:32px;height:32px;border-radius:9px;object-fit:cover;">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/webp" href="images/logo.webp">
   <title>Haulxify — Employee Portal</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
 <style>
@@ -1047,7 +1047,7 @@
     <div class="lp-form-wrap">
 
       <div class="lp-brand">
-        <img src="logo.webp" alt="H" style="width:40px;height:40px;border-radius:12px;object-fit:cover;">
+        <img src="images/logo.webp" alt="H" style="width:40px;height:40px;border-radius:12px;object-fit:cover;">
         <div>
           <div class="lp-brand-name">Haulxify</div>
           <div class="lp-brand-tag">Employee Portal</div>
@@ -1095,7 +1095,7 @@
     <div class="lp-right-glow lp-glow-3"></div>
 
     <div class="lp-right-inner">
-      <div class="lp-right-logo"><img src="logo.webp" alt="H" style="width:48px;height:48px;border-radius:14px;object-fit:cover;"></div>
+      <div class="lp-right-logo"><img src="images/logo.webp" alt="H" style="width:48px;height:48px;border-radius:14px;object-fit:cover;"></div>
       <div class="lp-right-title">Your work,<br><span>beautifully</span><br>organized.</div>
       <div class="lp-right-sub">Everything your team needs — attendance, leaves, tools, and real-time status — in one elegant workspace.</div>
 
@@ -1224,7 +1224,7 @@
   <!-- Top Nav -->
   <div class="topnav">
     <div class="nav-left">
-      <img src="logo.webp" alt="H" style="width:32px;height:32px;border-radius:9px;object-fit:cover;">
+      <img src="images/logo.webp" alt="H" style="width:32px;height:32px;border-radius:9px;object-fit:cover;">
       <div class="nav-logo-text">Haulxify</div>
       <div class="nav-badge">Employee Portal</div>
     </div>
@@ -1241,7 +1241,7 @@
 <button class="nav-btn" onclick="showView('viewSettings')">⚙️ Settings</button>
 <button class="nav-btn nav-btn-danger" onclick="doLogout()">Sign Out</button>
   </div>
-
+</div>
   <!-- Main -->
   <div class="portal-main">
 
@@ -1251,7 +1251,7 @@
       <div class="dash-hero">
         <div class="dash-hero-inner">
           <div class="dash-eyebrow" id="dashEyebrow">Good morning</div>
-          <div class="dash-headline"><span id="dashName">there</span>,<br>ready to <span class="gold">crush it</span> today?</div>
+          <div class="dash-headline"><span id="dashName">there</span>,<br>ready to <span class="accent">crush it</span> today?</div>
           <div class="dash-sub" id="dashDate">—</div>
         </div>
       </div>
@@ -1474,7 +1474,7 @@
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
               <button class="btn-primary" style="flex:1;min-width:140px;" onclick="portalLoadCsv()">✅ Load Data</button>
-              <button class="btn-outline" style="flex:0 0 auto;" onclick="portalClearBdo()">🗑 Clear Data</button>
+              <button class="btn-ghost" style="flex:0 0 auto;width:auto;padding:13px 20px;" onclick="portalClearBdo()">🗑 Clear Data</button>
             </div>
             <div id="portalUploadMsg" style="display:none;margin-top:12px;padding:10px 14px;border-radius:10px;font-size:13px;"></div>
           </div>
@@ -1973,11 +1973,11 @@ async function doLogin() {
   const raw  = document.getElementById('empId').value.trim();
   const pass = document.getElementById('empPass').value;
   const err  = document.getElementById('loginError');
-  const btn  = document.querySelector('.btn-primary');
+  const btn  = document.querySelector('.btn-signin');
 
   if (!raw || !pass) { err.classList.add('show'); return; }
 
-  btn.textContent = 'Signing in…';
+  btn.querySelector('span').textContent = 'Signing in…';
   btn.disabled = true;
 
   try {
@@ -2004,7 +2004,7 @@ const { signInWithEmailAndPassword } = window.__fb;
     document.getElementById('empPass').value = '';
     document.getElementById('empPass').focus();
   } finally {
-    btn.textContent = 'Sign In →';
+    btn.querySelector('span').textContent = 'Sign In';
     btn.disabled = false;
   }
 }
@@ -2484,10 +2484,10 @@ async function renderAdminUsers() {
     html += `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px;">
       <div>
-        <div style="font-size:14px;font-weight:600;color:var(--text);">${emp.name} ${isLocked ? '<span style="font-size:10px;color:var(--gold);background:var(--gold-light);padding:2px 8px;border-radius:20px;margin-left:6px;">LOCKED</span>' : ''}</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">${emp.name} ${isLocked ? '<span style="font-size:10px;color:var(--orange);background:var(--orange-a10);padding:2px 8px;border-radius:20px;margin-left:6px;">LOCKED</span>' : ''}</div>
         <div style="font-size:11px;color:var(--text-muted);">${emp.id} · ${emp.designation || ''} · ${emp.email}</div>
         <div style="margin-top:4px;">
-          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${emp.isAdmin ? 'var(--gold-light)' : 'var(--bg2)'};color:${emp.isAdmin ? '#8B5200' : 'var(--text-muted)'};">${emp.isAdmin ? 'Admin' : 'Employee'}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${emp.isAdmin ? 'var(--orange-a10)' : 'var(--bg2)'};color:${emp.isAdmin ? '#8B5200' : 'var(--text-muted)'};">${emp.isAdmin ? 'Admin' : 'Employee'}</span>
         </div>
       </div>
       <div style="display:flex;gap:8px;">
@@ -2603,7 +2603,7 @@ async function renderAdminLiveStatus() {
       <tr class="${isIn ? '' : 'clocked-out-row'}">
         <td class="live-td">
           <div style="font-weight:700;font-size:14px;color:var(--text);">${emp.name}</div>
-          <div style="font-size:11px;color:var(--gold);font-weight:600;">${emp.id}</div>
+          <div style="font-size:11px;color:var(--orange);font-weight:600;">${emp.id}</div>
           <div style="font-size:11px;color:var(--text-muted);">${emp.designation || ''}</div>
         </td>
         <td class="live-td" style="text-align:center;">${clockBadge}</td>
@@ -2661,7 +2661,7 @@ async function renderAdminAccess() {
   let html = '<div class="card-box">';
   html += '<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Tool Access Control</div>';
   html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">HX-0001 settings are locked and cannot be changed.</div>';
-  html += '<div style="font-size:12px;background:var(--gold-light);color:#8B5200;padding:10px 14px;border-radius:10px;margin-bottom:20px;">⚠️ Changes apply immediately.</div>';
+  html += '<div style="font-size:12px;background:var(--orange-a10);color:var(--orange-dk);padding:10px 14px;border-radius:10px;margin-bottom:20px;">⚠️ Changes apply immediately.</div>';
   html += `<div style="display:grid;grid-template-columns:1fr 80px 80px;gap:0;">
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;">Employee</div>
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Email</div>
@@ -2681,14 +2681,14 @@ async function renderAdminAccess() {
       if (locked) return `<div style="text-align:center;font-size:18px;">${checked ? '✅' : '—'}</div>`;
       return `<label style="display:flex;justify-content:center;position:relative;width:48px;height:26px;cursor:pointer;margin:auto;">
         <input type="checkbox" onchange="toggleToolAccess('${empId}','${type}',this.checked)" ${checked ? 'checked' : ''} style="opacity:0;width:0;height:0;">
-        <span style="position:absolute;inset:0;background:${checked ? 'var(--gold)' : 'var(--border2)'};border-radius:26px;transition:0.3s;" id="tgt_${type}_${empId}"></span>
+        <span style="position:absolute;inset:0;background:${checked ? 'var(--orange)' : 'var(--border2)'};border-radius:26px;transition:0.3s;" id="tgt_${type}_${empId}"></span>
         <span style="position:absolute;left:${checked ? '25px' : '3px'};top:3px;width:20px;height:20px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.2);" id="tgthumb_${type}_${empId}"></span>
       </label>`;
     };
 
     html += `<div style="display:grid;grid-template-columns:1fr 80px 80px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
       <div>
-        <div style="font-size:14px;font-weight:600;color:var(--text);">${emp.name} ${locked ? '<span style="font-size:10px;color:var(--gold);background:var(--gold-light);padding:2px 8px;border-radius:20px;margin-left:6px;">LOCKED</span>' : ''}</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">${emp.name} ${locked ? '<span style="font-size:10px;color:var(--orange);background:var(--orange-a10);padding:2px 8px;border-radius:20px;margin-left:6px;">LOCKED</span>' : ''}</div>
         <div style="font-size:11px;color:var(--text-muted);">${emp.id} · ${emp.designation || ''}</div>
       </div>
       ${toggle('email', hasEmail, emp.id)}
@@ -2709,7 +2709,7 @@ async function toggleToolAccess(empId, type, granted) {
 
   const track = document.getElementById('tgt_' + type + '_' + empId);
   const thumb = document.getElementById('tgthumb_' + type + '_' + empId);
-  if (track) track.style.background = granted ? 'var(--gold)' : 'var(--border2)';
+  if (track) track.style.background = granted ? 'var(--orange)' : 'var(--border2)';
   if (thumb) thumb.style.left = granted ? '25px' : '3px';
 
   if (empId === window.__currentUser.id) {
@@ -2738,7 +2738,7 @@ async function renderAdminPins() {
         <input type="password" id="pin_${emp.id}" placeholder="Set PIN" maxlength="8"
           style="width:100px;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;font-family:\'DM Sans\',sans-serif;text-align:center;letter-spacing:3px;">
         <button onclick="saveEmpPin('${emp.id}')"
-          style="padding:8px 14px;border-radius:8px;background:var(--gold);color:#1A1714;font-weight:700;border:none;cursor:pointer;font-size:12px;font-family:\'Syne\',sans-serif;">Save</button>
+          style="padding:8px 14px;border-radius:var(--r-full);background:var(--orange);color:#fff;;font-weight:700;border:none;cursor:pointer;font-size:12px;font-family:\'Syne\',sans-serif;">Save</button>
         <span id="pinStatus_${emp.id}" style="font-size:11px;color:var(--green);min-width:40px;"></span>
       </div>
     </div>`;
@@ -2766,7 +2766,7 @@ function toggleEmailAccess(empId, granted) {
   store('emailAccess_' + empId, granted);
   const track = document.getElementById('eat_' + empId);
   const thumb = document.getElementById('eathumb_' + empId);
-  if (track) track.style.background = granted ? 'var(--gold)' : 'var(--border2)';
+  if (track) track.style.background = granted ? 'var(--orange)' : 'var(--border2)';
   if (thumb) thumb.style.left = granted ? '25px' : '3px';
   // If toggling for currently logged-in user, update their card live
   if (empId === currentUser.id) {
