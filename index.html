@@ -2414,7 +2414,7 @@ function renderVoiceView() {
 // ══════════════════════════════════════════════════════════════
 //  PROFILE
 // ══════════════════════════════════════════════════════════════
-function loadProfile() {
+async function loadProfile() {
   if (!currentUser) return;
   document.getElementById('pf_name').textContent    = currentUser.name;
   document.getElementById('pf_id').textContent      = currentUser.id;
@@ -2422,21 +2422,29 @@ function loadProfile() {
   document.getElementById('pf_dept').textContent    = currentUser.department || '—';
   document.getElementById('pf_email').textContent   = currentUser.email || '—';
   document.getElementById('pf_joining').textContent = currentUser.joiningDate || '—';
-  const personal = load('profilePersonal_' + currentUser.id, {});
-  document.getElementById('pf_blood').textContent   = personal.blood || '—';
-  document.getElementById('pf_phone').value         = personal.phone || '';
-  document.getElementById('pf_emergency').value     = personal.emergency || '';
-  document.getElementById('pf_address').value       = personal.address || '';
-}
+  document.getElementById('pf_blood').textContent   = currentUser.bloodGroup || '—';
 
-function saveProfile() {
-  const personal = {
-    phone:     document.getElementById('pf_phone').value.trim(),
-    emergency: document.getElementById('pf_emergency').value.trim(),
-    address:   document.getElementById('pf_address').value.trim(),
-  };
-  store('profilePersonal_' + currentUser.id, personal);
-  const msg = document.getElementById('pfSaveMsg');
+  // Load editable fields from Firestore
+  const data = await fsGet('employees', currentUser.uid);
+  document.getElementById('pf_phone').value     = data?.phone     || currentUser.phone     || '';
+  document.getElementById('pf_emergency').value = data?.emergency || currentUser.emergency || '';
+  document.getElementById('pf_address').value   = data?.address   || currentUser.address   || '';
+}
+async function saveProfile() {
+  const phone     = document.getElementById('pf_phone').value.trim();
+  const emergency = document.getElementById('pf_emergency').value.trim();
+  const address   = document.getElementById('pf_address').value.trim();
+  const msg       = document.getElementById('pfSaveMsg');
+
+  msg.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">Saving...</div>';
+
+  await fsSet('employees', currentUser.uid, { phone, emergency, address });
+
+  // Also update local cache
+  currentUser.phone     = phone;
+  currentUser.emergency = emergency;
+  currentUser.address   = address;
+
   msg.innerHTML = '<div class="alert-success">✅ Profile updated successfully.</div>';
   setTimeout(() => msg.innerHTML = '', 3000);
 }
