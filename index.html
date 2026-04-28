@@ -1945,11 +1945,10 @@ async function submitForgot() {
   res.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">Sending...</div>';
 
   try {
-    const { db, collection, query, where, getDocs, auth, sendPasswordResetEmail } = window.__fb;
-    const q    = query(collection(db, 'employees'), where('id', '==', 'HX-' + raw.padStart(4,'0')));
-    const snap = await getDocs(q);
-    if (snap.empty) throw new Error('not-found');
-    await sendPasswordResetEmail(auth, snap.docs[0].data().email);
+const { db, doc, getDoc, auth, sendPasswordResetEmail } = window.__fb;
+    const indexDoc = await getDoc(doc(db, 'loginIndex', 'HX-' + raw.padStart(4,'0')));
+    if (!indexDoc.exists()) throw new Error('not-found');
+    await sendPasswordResetEmail(auth, indexDoc.data().email);
     res.innerHTML = '<div class="alert-success">✅ Password reset email sent.</div>';
   } catch(e) {
     res.innerHTML = '<div style="color:var(--red);font-size:13px;">Employee ID not found.</div>';
@@ -1999,6 +1998,7 @@ async function submitSignup() {
 async function doLogin() {
   const raw  = document.getElementById('empId').value.trim();
   const pass = document.getElementById('empPass').value;
+    const password = pass;
   const err  = document.getElementById('loginError');
   const btn  = document.querySelector('.btn-signin');
 
@@ -2009,16 +2009,21 @@ async function doLogin() {
 
   try {
     // Find employee by ID in Firestore to get their email
-    const { db, collection, query, where, getDocs, auth } = window.__fb;
-    const q   = query(collection(db, 'employees'), where('id', '==', 'HX-' + raw.padStart(4,'0')));
-    const snap = await getDocs(q);
+const { db, doc, getDoc, auth } = window.__fb;
+    const indexDoc = await getDoc(doc(db, 'loginIndex', 'HX-' + raw.padStart(4,'0')));
 
-    if (snap.empty) throw new Error('not-found');
+    if (!indexDoc.exists()) throw new Error('not-found');
 
-    const profile = snap.docs[0].data();
+    const { email, uid } = indexDoc.data();
 
-const { signInWithEmailAndPassword } = window.__fb;
-    await signInWithEmailAndPassword(auth, profile.email, pass);
+    // Now sign in with Firebase Auth
+    const { signInWithEmailAndPassword } = window.__fb;
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+
+    // Fetch full profile from Firestore (requires auth)
+    const empSnap = await getDoc(doc(db, 'employees', uid));
+    if (!empSnap.exists()) throw new Error('no-profile');
+    const profile = empSnap.data();
 
     err.classList.remove('show');
     currentUser = { ...profile };
