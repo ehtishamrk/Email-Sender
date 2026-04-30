@@ -1775,11 +1775,23 @@ window.portalClearBdo = portalClearBdo;
 window.toggleAdminRole = toggleAdminRole;
 window.removeUser = removeUser;
 window.renderAdminUsers = renderAdminUsers;
-  window.openTimeTool = function() {
-  if (!window.__currentUser) { alert('Please clock in before accessing the US Time Tool.'); return; }
-  if (!clockedIn) { alert('Please clock in before accessing the US Time Tool.'); return; }
-  window.location.href = 'timezone-tool.html?emp=' + window.__currentUser.id;
+window.openTimeTool = function() {
+  if (!window.__currentUser) {
+    alert('Please sign in before accessing the US Time Tool.');
+    return;
+  }
+
+  if (!clockedIn) {
+    alert('Please clock in before accessing the US Time Tool.');
+    return;
+  }
+
+  localStorage.setItem('hx_active_emp', window.__currentUser.id);
+  localStorage.setItem('hx_active_admin', window.__currentUser.isAdmin ? 'true' : 'false');
+
+  window.location.href = 'timezone-tool.html';
 };
+
   // ══════════════════════════════════════════════════════════════
 //  CONFIG
 // ══════════════════════════════════════════════════════════════
