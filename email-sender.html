@@ -487,7 +487,7 @@ function updatePreview() {
       </div>`;
     return;
   }
-  const html = buildEmail(v);
+  const html = safeEmailHtml(buildEmail(v));
   const container = document.getElementById('previewContainer');
   // Use srcdoc in an iframe for isolation
   let iframe = container.querySelector('iframe');
@@ -502,7 +502,9 @@ function updatePreview() {
     container.innerHTML = '';
     container.appendChild(iframe);
   }
-  iframe.srcdoc = html;
+  iframe.setAttribute('sandbox', 'allow-same-origin');
+iframe.srcdoc = html;
+
   iframe.onload = function() {
     try { this.style.height = this.contentDocument.body.scrollHeight + 'px'; } catch(e) {}
   };
@@ -523,6 +525,15 @@ function escapeHtml(value) {
   });
 }
 
+function safeEmailHtml(html) {
+  return String(html || '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/\son\w+\s*=\s*(['"]).*?\1/gi, '')
+    .replace(/\son\w+\s*=\s*[^\s>]+/gi, '')
+    .replace(/javascript:/gi, '');
+}
+
+  
 function n(name, fallback) {
   return (name && name.length > 0) ? name : (fallback || 'there');
 }
@@ -1137,6 +1148,7 @@ function buildEmail5(v) {
 //  CLIPBOARD & UI
 // ══════════════════════════════════════════════════════════════
 async function copyHtmlToClipboard(html) {
+    html = safeEmailHtml(html);
   try {
     const blob = new Blob([html], { type: 'text/html' });
     await navigator.clipboard.write([new ClipboardItem({ 'text/html': blob })]);
@@ -1168,7 +1180,7 @@ async function doSend() {
   const v = getValues(false);
   if (!v) return;
   hideStatus();
-  const html = buildEmail(v);
+  const html = safeEmailHtml(buildEmail(v));
   const subject = encodeURIComponent(SEQ_CONFIG[currentSeq].subject(v));
   const gmailURL = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(v.email)}&su=${subject}`;
   const copied = await copyHtmlToClipboard(html);
@@ -1187,10 +1199,18 @@ async function doSend() {
 function doPreview() {
   const v = getValues(false);
   if (!v) return;
+
+  const html = safeEmailHtml(buildEmail(v));
   const w = window.open('', '_blank');
-  if (w) { w.document.write(buildEmail(v)); w.document.close(); }
-  else alert('Please allow popups for this page.');
+
+  if (w) {
+    w.document.write(html);
+    w.document.close();
+  } else {
+    alert('Please allow popups for this page.');
+  }
 }
+
 </script>
 </body>
 </html>
