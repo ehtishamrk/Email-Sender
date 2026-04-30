@@ -2113,20 +2113,28 @@ document.getElementById('emailLogPinSubmit').addEventListener('click', function(
   if(!pin){ document.getElementById('emailLogPinErr').textContent = 'Please enter your PIN.'; return; }
   var btn = document.getElementById('emailLogPinSubmit');
   btn.textContent = 'Checking...'; btn.disabled = true;
-  fetch(API+'?action=verifyEmailPin&empId='+encodeURIComponent(EMP_ID)+'&pin='+encodeURIComponent(pin))
-    .then(function(r){return r.json();})
-    .then(function(res){
-      btn.textContent = 'Unlock'; btn.disabled = false;
-      if(res.valid){
-        _emailLogUnlocked = true;
-        showEmailLogContent();
-      } else {
-        document.getElementById('emailLogPinErr').textContent = res.reason || 'Incorrect PIN.';
-      }
-    }).catch(function(){
-      btn.textContent = 'Unlock'; btn.disabled = false;
-      document.getElementById('emailLogPinErr').textContent = 'Could not verify. Check connection.';
-    });
+fetch(API, {
+  method: 'POST',
+  headers: {'Content-Type': 'text/plain'},
+  body: JSON.stringify({
+    action: 'verifyEmailPin',
+    empId: EMP_ID,
+    pin: pin
+  })
+})
+  .then(function(r){return r.json();})
+  .then(function(res){
+    btn.textContent = 'Unlock'; btn.disabled = false;
+    if(res.valid){
+      _emailLogUnlocked = true;
+      showEmailLogContent();
+    } else {
+      document.getElementById('emailLogPinErr').textContent = res.reason || 'Incorrect PIN.';
+    }
+  }).catch(function(){
+    btn.textContent = 'Unlock'; btn.disabled = false;
+    document.getElementById('emailLogPinErr').textContent = 'Could not verify. Check connection.';
+  });
 });
 
 document.getElementById('emailLogPin').addEventListener('keydown', function(e){
