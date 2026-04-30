@@ -1735,7 +1735,7 @@
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getAuth, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -1869,72 +1869,87 @@ let clockedIn = false;
 let clockInTimestamp = null;
 // ── AUTO-RESTORE SESSION ON REFRESH ──
 (async function restoreSession() {
-  const pending      = load('pendingSession', null);
-  const saved        = load('session', null);
-  const lastHb       = parseInt(localStorage.getItem('hb_ts') || '0');
-  const hbAge        = Date.now() - lastHb;
-  const tabWasClosed = lastHb === 0 || hbAge > 10000;
+  const authUser = await new Promise(resolve => {
+    const unsubscribe = onAuthStateChanged(auth, user => {
+      unsubscribe();
+      resolve(user);
+    });
+  });
 
-  // CASE 1: Normal refresh — heartbeat is fresh
-  if (pending && pending.id && !tabWasClosed) {
+  if (!authUser) {
     store('pendingSession', null);
-    store('session', { id: pending.id });
-    const { db, collection, query, where, getDocs } = window.__fb;
-    const q = query(collection(db, 'employees'), where('id', '==', pending.id));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      currentUser = { ...snap.docs[0].data() };
-      enterPortal();
-    }
+    store('session', null);
     return;
   }
 
-  // CASE 2: Tab was closed — auto clockout then force login
-  if (tabWasClosed && saved && saved.id) {
-    const empId = saved.id;
+  const empSnap = await getDoc(doc(db, 'employees', authUser.uid));
+  if (!empSnap.exists()) {
+    await signOut(auth);
+    store('pendingSession', null);
+    store('session', null);
+    return;
+  }
+
+  const profile = empSnap.data();
+  const pending = load('pendingSession', null);
+  const saved = load('session', null);
+  const lastHb = parseInt(localStorage.getItem('hb_ts') || '0');
+  const hbAge = Date.now() - lastHb;
+  const tabWasClosed = lastHb === 0 || hbAge > 10000;
+
+  if (pending && pending.id === profile.id && !tabWasClosed) {
+    store('pendingSession', null);
+    store('session', { id: profile.id });
+    currentUser = { ...profile };
+    enterPortal();
+    return;
+  }
+
+  if (tabWasClosed && saved && saved.id === profile.id) {
+    const empId = profile.id;
     const clockState = load('clockState_' + empId, null);
 
     if (clockState && clockState.clockedIn && clockState.timestamp) {
-      const inTs    = clockState.timestamp;
-      const outTs   = new Date().toISOString();
+      const inTs = clockState.timestamp;
+      const outTs = new Date().toISOString();
       const durMins = Math.round((new Date(outTs) - new Date(inTs)) / 60000);
 
-      // Update Firestore clockState
       await fsSet('clockState', empId, {
-        clockedIn: false, timestamp: null, empId
+        clockedIn: false,
+        timestamp: null,
+        empId
       });
 
-      // Find and update the open session in Firestore by querying for null clockOut
-    const { db, collection, getDocs, query, where } = window.__fb;
-    try {
-      const sessSnap = await getDocs(
-        query(collection(db, 'attendance/' + empId + '/sessions'), where('clockOut', '==', null))
-      );
-      sessSnap.forEach(async (d) => {
-        await fsSet('attendance/' + empId + '/sessions', d.id, {
-          clockOut: outTs,
-          duration: durMins,
-          autoOut: true
+      try {
+        const sessSnap = await getDocs(
+          query(collection(db, 'attendance/' + empId + '/sessions'), where('clockOut', '==', null))
+        );
+
+        sessSnap.forEach(async d => {
+          await fsSet('attendance/' + empId + '/sessions', d.id, {
+            clockOut: outTs,
+            duration: durMins,
+            autoOut: true
+          });
         });
-      });
-    } catch(e) {}
+      } catch (e) {}
 
-
-      // Clear localStorage clock state
       store('clockState_' + empId, { clockedIn: false });
       localStorage.removeItem('lastSessionId_' + empId);
     }
 
-    // Force logout — clear session and show login
     store('session', null);
     store('pendingSession', null);
     localStorage.removeItem('hb_ts');
+    await signOut(auth);
     return;
   }
 
-  // CASE 3: No session — show login (default)
-  store('pendingSession', null);
+  store('session', { id: profile.id });
+  currentUser = { ...profile };
+  enterPortal();
 })();
+
 
 // ══════════════════════════════════════════════════════════════
 //  MODAL HELPERS
