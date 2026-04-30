@@ -126,7 +126,8 @@
      SCREENS
   ══════════════════════════════════════ */
   .screen { position:relative; z-index:1; }
-  #loginScreen { min-height:100vh; display:flex; align-items:stretch; }
+  #loginScreen { min-height:100vh; display:none; align-items:stretch; }
+#loginScreen.show { display:flex; }
   #portalScreen { display:none; min-height:100vh; flex-direction:column; }
   #portalScreen.show { display:flex; }
 
@@ -1884,19 +1885,21 @@ let clockInTimestamp = null;
     });
   });
 
-  if (!authUser) {
-    store('pendingSession', null);
-    store('session', null);
-    return;
-  }
+if (!authUser) {
+  store('pendingSession', null);
+  store('session', null);
+  showLoginScreen();
+  return;
+}
 
   const empSnap = await getDoc(doc(db, 'employees', authUser.uid));
-  if (!empSnap.exists()) {
-    await signOut(auth);
-    store('pendingSession', null);
-    store('session', null);
-    return;
-  }
+if (!empSnap.exists()) {
+  await signOut(auth);
+  store('pendingSession', null);
+  store('session', null);
+  showLoginScreen();
+  return;
+}
 
   const profile = empSnap.data();
   const pending = load('pendingSession', null);
@@ -1962,7 +1965,19 @@ let clockInTimestamp = null;
 // ══════════════════════════════════════════════════════════════
 //  MODAL HELPERS
 // ══════════════════════════════════════════════════════════════
-function showModal(id) { document.getElementById(id).classList.add('show'); }
+function showLoginScreen() {
+  const login = document.getElementById('loginScreen');
+  login.style.display = '';
+  login.classList.add('show');
+}
+
+function hideLoginScreen() {
+  const login = document.getElementById('loginScreen');
+  login.classList.remove('show');
+  login.style.display = 'none';
+}
+
+  function showModal(id) { document.getElementById(id).classList.add('show'); }
 function hideModal(id) { document.getElementById(id).classList.remove('show'); }
 
 document.querySelectorAll('.modal-backdrop').forEach(m => {
@@ -2088,7 +2103,7 @@ async function doLogout() {
   currentUser = null; clockedIn = false; clockInTimestamp = null;
   store('session', null);
   clearInterval(clockInterval);
-  document.getElementById('loginScreen').style.display = 'flex';
+  showLoginScreen();
   document.getElementById('portalScreen').classList.remove('show');
   document.getElementById('empId').value = '';
   document.getElementById('empPass').value = '';
@@ -2097,7 +2112,7 @@ async function doLogout() {
 }
 
 function enterPortal() {
-  document.getElementById('loginScreen').style.display = 'none';
+  hideLoginScreen();
   document.getElementById('portalScreen').classList.add('show');
 
   // Populate nav
