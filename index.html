@@ -2530,12 +2530,12 @@ async function renderAdminUsers() {
   let html = `
   <div class="card-box" style="margin-bottom:20px;">
     <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Add New Employee</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Creates Firebase Auth account and Firestore profile.</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Creates Firebase Auth account, employee profile, login index, and sends a password setup email.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
       <div class="field-wrap" style="margin:0;"><label class="field-label">Full Name</label><input class="field-input" id="nu_name" placeholder="John Smith"></div>
       <div class="field-wrap" style="margin:0;"><label class="field-label">Employee ID (digits only)</label><input class="field-input" id="nu_id" placeholder="0007" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
       <div class="field-wrap" style="margin:0;"><label class="field-label">Email</label><input class="field-input" id="nu_email" type="email" placeholder="john@haulxify.com"></div>
-      <div class="field-wrap" style="margin:0;"><label class="field-label">Password</label><input class="field-input" id="nu_pass" type="password" placeholder="Min 6 characters"></div>
+      
       <div class="field-wrap" style="margin:0;"><label class="field-label">Designation</label><input class="field-input" id="nu_desig" placeholder="Freight Coordinator"></div>
       <div class="field-wrap" style="margin:0;"><label class="field-label">Department</label><input class="field-input" id="nu_dept" placeholder="Dispatch"></div>
       <div class="field-wrap" style="margin:0;"><label class="field-label">Joining Date</label><input class="field-input" id="nu_join" type="date"></div>
@@ -2547,7 +2547,7 @@ async function renderAdminUsers() {
         </select>
       </div>
     </div>
-    <button class="btn-orange" onclick="addNewUser()" style="width:auto;padding:12px 28px;">Add Employee →</button>
+    <button class="btn-orange" onclick="addNewUser()" style="width:auto;padding:12px 28px;">Add Employee & Send Setup Email →</button>
     <div id="addUserMsg" style="margin-top:12px;"></div>
   </div>
 
@@ -2587,42 +2587,79 @@ async function addNewUser() {
   const name  = document.getElementById('nu_name').value.trim();
   const idRaw = document.getElementById('nu_id').value.trim();
   const email = document.getElementById('nu_email').value.trim();
-  const pass  = document.getElementById('nu_pass').value.trim();
   const desig = document.getElementById('nu_desig').value.trim();
   const dept  = document.getElementById('nu_dept').value.trim();
   const join  = document.getElementById('nu_join').value.trim();
   const isAdmin = document.getElementById('nu_admin').value === 'true';
   const msg   = document.getElementById('addUserMsg');
 
-  if (!name || !idRaw || !email || !pass || !desig || !dept || !join) {
-    msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Please fill in all fields.</div>'; return;
+  if (!name || !idRaw || !email || !desig || !dept || !join) {
+    msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Please fill in all fields.</div>';
+    return;
   }
 
   const empId = 'HX-' + idRaw.padStart(4, '0');
   msg.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">Creating account...</div>';
 
-  try {
-    // Create Firebase Auth account
-    const { auth } = window.__fb;
-    const { createUserWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
-    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+  let appMod = null;
+  let authMod = null;
+  let secondaryApp = null;
+  let secondaryAuth = null;
 
-    // Save to Firestore
+  try {
+    appMod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+    authMod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+
+    secondaryApp = appMod.initializeApp(firebaseConfig, 'userCreator_' + Date.now());
+    secondaryAuth = authMod.getAuth(secondaryApp);
+
+    const tempPassword = Array.from(
+      crypto.getRandomValues(new Uint32Array(4)),
+      n => n.toString(36)
+    ).join('') + 'Aa1!';
+
+    const cred = await authMod.createUserWithEmailAndPassword(secondaryAuth, email, tempPassword);
+
     await fsSet('employees', cred.user.uid, {
-      uid: cred.user.uid, id: empId, name, email,
-      designation: desig, department: dept,
-      joiningDate: join, isAdmin,
-      hasEmailAccess: false, hasVoiceAccess: false,
+      uid: cred.user.uid,
+      id: empId,
+      name,
+      email,
+      designation: desig,
+      department: dept,
+      joiningDate: join,
+      isAdmin,
+      hasEmailAccess: false,
+      hasVoiceAccess: false,
       createdAt: new Date().toISOString()
     });
 
-    msg.innerHTML = '<div class="alert-success">✅ Employee added successfully.</div>';
-    ['nu_name','nu_id','nu_email','nu_pass','nu_desig','nu_dept','nu_join'].forEach(id => document.getElementById(id).value = '');
+    await fsSet('loginIndex', empId, {
+      email,
+      uid: cred.user.uid
+    });
+
+    await sendPasswordResetEmail(auth, email);
+
+    msg.innerHTML = '<div class="alert-success">Employee added. Password setup email sent.</div>';
+    ['nu_name','nu_id','nu_email','nu_desig','nu_dept','nu_join'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('nu_admin').value = 'false';
+
     setTimeout(() => renderAdminUsers(), 1500);
   } catch(e) {
-    msg.innerHTML = `<div style="color:var(--red);font-size:13px;">Error: ${e.message}</div>`;
+    msg.innerHTML = '';
+    const box = document.createElement('div');
+    box.style.cssText = 'color:var(--red);font-size:13px;';
+    box.textContent = 'Error: ' + (e.message || 'Could not add employee.');
+    msg.appendChild(box);
+  } finally {
+    try {
+      if (secondaryAuth) await authMod.signOut(secondaryAuth);
+      if (secondaryApp && appMod.deleteApp) await appMod.deleteApp(secondaryApp);
+    } catch(e) {}
   }
 }
+
 
 async function toggleAdminRole(uid, empId, makeAdmin) {
   if (!confirm(`${makeAdmin ? 'Grant admin rights to' : 'Remove admin rights from'} ${empId}?`)) return;
