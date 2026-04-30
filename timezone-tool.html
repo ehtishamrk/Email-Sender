@@ -799,19 +799,67 @@ back.</div></div>
   </div>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDBd2hw7Gq1-mwR5evKF-YPcAGRYDNl3fw",
+  authDomain: "haulxify-employee-portal.firebaseapp.com",
+  projectId: "haulxify-employee-portal",
+  storageBucket: "haulxify-employee-portal.firebasestorage.app",
+  messagingSenderId: "170605105002",
+  appId: "1:170605105002:web:d5da4718f77fd1182adf13"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+const db = getFirestore(firebaseApp);
+
+const portalProfile = await new Promise((resolve) => {
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      resolve(null);
+      return;
+    }
+
+    try {
+      const snap = await getDoc(doc(db, 'employees', user.uid));
+      resolve(snap.exists() ? { uid: user.uid, ...snap.data() } : null);
+    } catch (e) {
+      resolve(null);
+    }
+  });
+});
+
+if (!portalProfile || !portalProfile.id) {
+  alert('Please sign in from the employee portal before opening this tool.');
+  window.location.href = 'index.html';
+  throw new Error('Not signed in');
+}
+
+window.__PORTAL_PROFILE = portalProfile;
+
 (function() {
 'use strict';
+
 
 // ── CONFIG ──────────────────────────────────────
 var API = 'https://script.google.com/macros/s/AKfycbxkVYnxV3FmWq52UFipohgUXGV2RBC9S0EuZ_Wgj1xMn8pkY7WWfBZHtR9KeocPELC7/exec';
 
 // ── EMPLOYEE ID ──────────────────────────────────
 var params = new URLSearchParams(window.location.search);
-var EMP_ID = params.get('emp') || localStorage.getItem('hx_active_emp') || 'GUEST';
-var IS_ADMIN = (EMP_ID === 'HX-0001' || EMP_ID === 'HX-0002');
-if (EMP_ID !== 'GUEST') localStorage.setItem('hx_active_emp', EMP_ID);
+var portalProfile = window.__PORTAL_PROFILE || {};
+var EMP_ID = portalProfile.id || 'GUEST';
+var IS_ADMIN = portalProfile.isAdmin === true;
+
+if (EMP_ID !== 'GUEST') {
+  localStorage.setItem('hx_active_emp', EMP_ID);
+}
+
 document.getElementById('navEmp').textContent = EMP_ID;
+
 
 // ── ACTIVITY HEARTBEAT (idle detection) ──────────
 var lastActivity = Date.now();
