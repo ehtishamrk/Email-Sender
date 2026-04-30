@@ -1203,7 +1203,7 @@
 <div class="modal-backdrop" id="modalSignup">
   <div class="modal-box" style="max-width:520px;">
     <div class="modal-title">Request Portal Access ✨</div>
-    <div class="modal-sub">Fill in your details. You'll receive your credentials in your company email shortly.</div>
+    <div class="modal-sub">Fill in your details. An admin will create your account and you’ll receive a password setup email soon.</div>
     <div id="signupForm">
       <div class="row-2" style="margin-bottom:14px;">
         <div class="field-wrap" style="margin-bottom:0;">
@@ -1237,16 +1237,11 @@
         <label class="field-label">Phone Number</label>
         <input class="field-input" type="tel" id="su_phone" placeholder="+1 (555) 000-0000">
       </div>
-      <div class="row-2" style="margin-bottom:14px;">
-        <div class="field-wrap" style="margin-bottom:0;">
-          <label class="field-label">Joining Date</label>
-          <input class="field-input" type="date" id="su_join">
-        </div>
-        <div class="field-wrap" style="margin-bottom:0;">
-          <label class="field-label">Desired Password</label>
-          <input class="field-input" type="password" id="su_pass" placeholder="Min 8 characters">
-        </div>
-      </div>
+<div class="field-wrap">
+  <label class="field-label">Joining Date</label>
+  <input class="field-input" type="date" id="su_join">
+</div>
+
 <button class="modal-close" onclick="hideModal('modalSignup')">✕</button>
 <div style="margin-top:4px;">
   <button class="btn-orange" onclick="submitSignup()">Submit Request →</button>
@@ -1255,7 +1250,7 @@
     <div id="signupSuccess" style="display:none;">
       <div class="alert-success">
         ✅ <strong>Request submitted successfully!</strong><br>
-        You'll receive an email with your login credentials within 24 hours. Welcome to the Haulxify team!
+        An admin will review your request and send a password setup email if approved. Welcome to the Haulxify team!
       </div>
       <button class="btn-ghost" style="margin-top:14px;" onclick="hideModal('modalSignup')">Close</button>
     </div>
@@ -1992,9 +1987,7 @@ async function submitSignup() {
   const email   = document.getElementById('su_email').value.trim();
   const phone   = document.getElementById('su_phone').value.trim();
   const joining = document.getElementById('su_join').value.trim();
-  const pwd     = document.getElementById('su_pass').value.trim();
-
-  if (!first || !last || !desig || !email || !phone || !joining || !pwd) {
+  if (!first || !last || !desig || !email || !phone || !joining) {
     alert('Please fill in all fields.'); return;
   }
 
@@ -2010,7 +2003,6 @@ async function submitSignup() {
     'entry.734508737_year':  yr,
     'entry.734508737_month': mo,
     'entry.734508737_day':   dy,
-    'entry.734677989':       pwd,
   });
 
   try { await fetch(FORM_URL, { method: 'POST', mode: 'no-cors', body }); } catch(e) {}
