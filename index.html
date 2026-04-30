@@ -2120,7 +2120,19 @@ fsGet('toolAccess', currentUser.id).then(data => {
   refreshStats();
   refreshLeaveHistory();
   startHeartbeat();
+
+  const params = new URLSearchParams(window.location.search);
+  const requestedView = params.get('view');
+
+  if (requestedView && document.getElementById(requestedView)) {
+    if (requestedView === 'viewAdmin' && !currentUser.isAdmin) {
+      showView('viewDash');
+    } else {
+      showView(requestedView);
+    }
+  }
 }
+
 
 // ══════════════════════════════════════════════════════════════
 //  VIEW ROUTER
