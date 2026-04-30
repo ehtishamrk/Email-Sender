@@ -1180,7 +1180,7 @@
 <div class="modal-backdrop" id="modalForgot">
   <div class="modal-box">
     <div class="modal-title">Reset Password 🔑</div>
-<div class="modal-sub">Enter your Employee ID and we'll send your password to your assigned company email shortly.</div>
+<div class="modal-sub">Enter your Employee ID. If the account exists, we’ll send a password reset email to the assigned company email.</div>
     <div class="field-wrap">
       <label class="field-label">Employee ID</label>
       <div class="input-group">
@@ -1962,20 +1962,28 @@ document.querySelectorAll('.modal-backdrop').forEach(m => {
 async function submitForgot() {
   const raw = document.getElementById('forgotId').value.trim();
   const res = document.getElementById('forgotResult');
-  if (!raw) { res.innerHTML = '<div style="color:var(--red);font-size:13px;">Please enter your Employee ID.</div>'; return; }
 
-  res.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">Sending...</div>';
+  if (!raw) {
+    res.innerHTML = '<div style="color:var(--red);font-size:13px;">Please enter your Employee ID.</div>';
+    return;
+  }
+
+  res.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">Checking...</div>';
 
   try {
-const { db, doc, getDoc, auth, sendPasswordResetEmail } = window.__fb;
-    const indexDoc = await getDoc(doc(db, 'loginIndex', 'HX-' + raw.padStart(4,'0')));
-    if (!indexDoc.exists()) throw new Error('not-found');
-    await sendPasswordResetEmail(auth, indexDoc.data().email);
-    res.innerHTML = '<div class="alert-success">✅ Password reset email sent.</div>';
+    const empId = 'HX-' + raw.padStart(4, '0');
+    const indexDoc = await getDoc(doc(db, 'loginIndex', empId));
+
+    if (indexDoc.exists() && indexDoc.data().email) {
+      await sendPasswordResetEmail(auth, indexDoc.data().email);
+    }
   } catch(e) {
-    res.innerHTML = '<div style="color:var(--red);font-size:13px;">Employee ID not found.</div>';
+    // Keep the same message either way so employee IDs cannot be guessed.
   }
+
+  res.innerHTML = '<div class="alert-success">If that Employee ID exists, a password reset email has been sent.</div>';
 }
+
 
 // ══════════════════════════════════════════════════════════════
 //  SIGNUP
