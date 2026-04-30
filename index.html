@@ -2435,14 +2435,22 @@ async function refreshLeaveHistory() {
   }
 
   const statusBadge = s => `<span class="tag tag-${s}">${s.charAt(0).toUpperCase()+s.slice(1)}</span>`;
-  const rows = requests.map(r => `
+  const rows = requests.map(r => {
+    const safeType = escapeHtml(r.type.charAt(0).toUpperCase() + r.type.slice(1));
+    const safeFrom = escapeHtml(r.from);
+    const safeTo = escapeHtml(r.to);
+    const safeReason = r.reason ? escapeHtml(r.reason) : '—';
+
+    return `
     <tr>
       <td>${new Date(r.submittedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
-      <td>${r.type.charAt(0).toUpperCase()+r.type.slice(1)}</td>
-      <td>${r.from} → ${r.to}</td>
-      <td>${r.reason || '—'}</td>
+      <td>${safeType}</td>
+      <td>${safeFrom} → ${safeTo}</td>
+      <td>${safeReason}</td>
       <td>${statusBadge(r.status)}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
+
 
   el.innerHTML = `<table class="att-log-table">
     <thead><tr><th>Submitted</th><th>Type</th><th>Dates</th><th>Reason</th><th>Status</th></tr></thead>
@@ -2992,17 +3000,28 @@ async function renderAdminLeaves() {
   const resolved = requests.filter(r => r.status !== 'pending');
 
   const renderCard = (r, showActions) => {
-    const badge = `<span class="tag tag-${r.status}">${r.status.charAt(0).toUpperCase()+r.status.slice(1)}</span>`;
+    const safeId = escapeHtml(r.id);
+    const safeEmpName = escapeHtml(r.empName);
+    const safeEmpId = escapeHtml(r.empId);
+    const safeType = escapeHtml(r.type.charAt(0).toUpperCase() + r.type.slice(1));
+    const safeFrom = escapeHtml(r.from);
+    const safeTo = escapeHtml(r.to);
+    const safeReason = r.reason ? escapeHtml(r.reason) : '';
+    const safeStatus = escapeHtml(r.status.charAt(0).toUpperCase() + r.status.slice(1));
+
+    const badge = `<span class="tag tag-${escapeHtml(r.status)}">${safeStatus}</span>`;
     const actions = showActions ? `
+
       <div class="leave-card-actions">
-        <button class="btn-approve" onclick="adminLeaveAction('${r.id}','approved')">✓ Approve</button>
-        <button class="btn-reject"  onclick="adminLeaveAction('${r.id}','rejected')">✗ Reject</button>
+<button class="btn-approve" onclick="adminLeaveAction('${safeId}','approved')">✓ Approve</button>
+<button class="btn-reject"  onclick="adminLeaveAction('${safeId}','rejected')">✗ Reject</button>
+
       </div>` : badge;
     return `<div class="leave-card">
       <div class="leave-card-info">
-        <div class="leave-card-name">${r.empName} <span style="color:var(--text-muted);font-size:12px;">(${r.empId})</span></div>
-        <div class="leave-card-meta">${r.type.charAt(0).toUpperCase()+r.type.slice(1)} · ${r.from} → ${r.to} · Submitted ${new Date(r.submittedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
-        ${r.reason ? '<div class="leave-card-reason">'+r.reason+'</div>' : ''}
+<div class="leave-card-name">${safeEmpName} <span style="color:var(--text-muted);font-size:12px;">(${safeEmpId})</span></div>
+<div class="leave-card-meta">${safeType} · ${safeFrom} → ${safeTo} · Submitted ${new Date(r.submittedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+${safeReason ? '<div class="leave-card-reason">'+safeReason+'</div>' : ''}
       </div>
       ${actions}
     </div>`;
