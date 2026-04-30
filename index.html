@@ -1799,6 +1799,19 @@ const EMAIL_SENDER_URL = 'email-sender.html';
 // ══════════════════════════════════════════════════════════════
 function store(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){} }
 function load(key, def)  { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch(e){ return def; } }
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, function(ch) {
+    return {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[ch];
+  });
+}
+
+  
   // Heartbeat — updates every 30 seconds while tab is open
 // If last heartbeat is older than 60 seconds on next load = tab was closed
 let heartbeatInterval = null;
@@ -2564,22 +2577,29 @@ async function renderAdminUsers() {
 
   emps.forEach(emp => {
     const isLocked = emp.id === 'HX-0001';
+    const safeName = escapeHtml(emp.name);
+    const safeId = escapeHtml(emp.id);
+    const safeDesignation = escapeHtml(emp.designation || '');
+    const safeEmail = escapeHtml(emp.email || '');
+    const safeRole = emp.isAdmin ? 'Admin' : 'Employee';
+
     html += `
+
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px;">
       <div>
-        <div style="font-size:14px;font-weight:600;color:var(--text);">${emp.name} ${isLocked ? '<span style="font-size:10px;color:var(--orange);background:var(--orange-a10);padding:2px 8px;border-radius:20px;margin-left:6px;">LOCKED</span>' : ''}</div>
-        <div style="font-size:11px;color:var(--text-muted);">${emp.id} · ${emp.designation || ''} · ${emp.email}</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">${safeName} ${isLocked ? '<span style="font-size:10px;color:var(--orange);background:var(--orange-a10);padding:2px 8px;border-radius:20px;margin-left:6px;">LOCKED</span>' : ''}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${safeId} · ${safeDesignation} · ${safeEmail}</div>
         <div style="margin-top:4px;">
-          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${emp.isAdmin ? 'var(--orange-a10)' : 'var(--bg2)'};color:${emp.isAdmin ? '#8B5200' : 'var(--text-muted)'};">${emp.isAdmin ? 'Admin' : 'Employee'}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${emp.isAdmin ? 'var(--orange-a10)' : 'var(--bg2)'};color:${emp.isAdmin ? '#8B5200' : 'var(--text-muted)'};">${safeRole}</span>
         </div>
       </div>
       <div style="display:flex;gap:8px;">
         ${!isLocked ? `
-        <button onclick="toggleAdminRole('${emp.uid}','${emp.id}',${!emp.isAdmin})"
+        <button onclick="toggleAdminRole('${emp.uid}','${safeId}',${!emp.isAdmin})"
           style="padding:8px 14px;border-radius:10px;background:var(--bg2);border:1.5px solid var(--border2);color:var(--text-mid);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
           ${emp.isAdmin ? 'Remove Admin' : 'Make Admin'}
         </button>
-        <button onclick="removeUser('${emp.uid}','${emp.name}')"
+        <button onclick="removeUser('${emp.uid}','${safeName}')"
           style="padding:8px 14px;border-radius:10px;background:#FFF0F0;border:1.5px solid #FFCACA;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
           Remove
         </button>` : ''}
