@@ -511,18 +511,50 @@ function updatePreview() {
 // ══════════════════════════════════════════════════════════════
 //  VALIDATION
 // ══════════════════════════════════════════════════════════════
-function n(name, fallback) { return (name && name.length > 0) ? name : (fallback || 'there'); }
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, function(ch) {
+    return {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[ch];
+  });
+}
+
+function n(name, fallback) {
+  return (name && name.length > 0) ? name : (fallback || 'there');
+}
 
 function getValues(silent) {
-  const name    = document.getElementById('fName').value.trim();
-  const email   = document.getElementById('fEmail').value.trim();
-  const company = document.getElementById('fCompany').value.trim();
-  const state   = document.getElementById('fState').value.trim().toUpperCase();
-  const truck   = document.getElementById('fTruck').value;
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { if (!silent) alert('Please enter a valid email.'); return null; }
-  if (!company) { if (!silent) alert('Please enter the company name.'); return null; }
-  return { name, email, company, state: state || 'your state', truck };
+  const rawName    = document.getElementById('fName').value.trim();
+  const rawEmail   = document.getElementById('fEmail').value.trim();
+  const rawCompany = document.getElementById('fCompany').value.trim();
+  const rawState   = document.getElementById('fState').value.trim().toUpperCase();
+  const rawTruck   = document.getElementById('fTruck').value;
+
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail);
+
+  if (!rawEmail || !emailOk) {
+    if (!silent) alert('Please enter a valid email.');
+    return null;
+  }
+
+  if (!rawCompany) {
+    if (!silent) alert('Please enter the company name.');
+    return null;
+  }
+
+  return {
+    name: escapeHtml(rawName),
+    email: rawEmail,
+    company: escapeHtml(rawCompany),
+    state: rawState ? escapeHtml(rawState) : 'your state',
+    truck: escapeHtml(rawTruck)
+  };
 }
+
 
 // ══════════════════════════════════════════════════════════════
 //  EMAIL ROUTER
