@@ -2877,50 +2877,6 @@ async function toggleToolAccess(empId, type, granted) {
   }
 }
 
-
-async function renderAdminPins() {
-  const el = document.getElementById('adminPinContent');
-  if (!el) return;
-  el.innerHTML = '<div class="card-box"><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center;">Loading employees...</div></div>';
-  const allEmps = await fsGetAll('employees');
-  const EMPLOYEES = Object.values(allEmps).filter(u => !u.isAdmin).sort((a,b) => a.id.localeCompare(b.id));
-  let html = '<div class="card-box">';
-  html += '<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Email Log PIN Management</div>';
-  html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;">Set a unique PIN for each BDO. They use this PIN to access their personal email outreach log.</div>';
-  EMPLOYEES.forEach(function(emp) {
-    html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
-      <div>
-        <div style="font-size:13px;font-weight:700;color:var(--text);">${emp.name}</div>
-        <div style="font-size:11px;color:var(--text-muted);">${emp.id} · ${emp.designation||''}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <input type="password" id="pin_${emp.id}" placeholder="Set PIN" maxlength="8"
-          style="width:100px;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;font-family:\'DM Sans\',sans-serif;text-align:center;letter-spacing:3px;">
-        <button onclick="saveEmpPin('${emp.id}')"
-          style="padding:8px 14px;border-radius:var(--r-full);background:var(--orange);color:#fff;;font-weight:700;border:none;cursor:pointer;font-size:12px;font-family:\'Syne\',sans-serif;">Save</button>
-        <span id="pinStatus_${emp.id}" style="font-size:11px;color:var(--green);min-width:40px;"></span>
-      </div>
-    </div>`;
-  });
-  html += '</div>';
-  el.innerHTML = html;
-}
-
-async function saveEmpPin(empId) {
-  const pin = document.getElementById('pin_'+empId).value.trim();
-  if(!pin || pin.length < 3) { alert('PIN must be at least 3 characters.'); return; }
-  const status = document.getElementById('pinStatus_'+empId);
-  status.textContent = 'Saving...'; status.style.color = 'var(--text-muted)';
-  try {
-    await fsSet('emailPins', empId, { empId, pin });
-    status.textContent = '✓ Saved'; status.style.color = 'var(--green)';
-    document.getElementById('pin_'+empId).value = '';
-    setTimeout(function(){ status.textContent = ''; }, 3000);
-  } catch(e) {
-    status.textContent = 'Error'; status.style.color = 'var(--red)';
-  }
-}
-
 function toggleEmailAccess(empId, granted) {
   store('emailAccess_' + empId, granted);
   const track = document.getElementById('eat_' + empId);
