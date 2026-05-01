@@ -494,10 +494,10 @@ select.field-input{cursor:pointer}
               <button class="btn-gold" id="bookFromDialerBtn">&#128197; Book Appt</button>
               <button class="btn-outline" id="updateDataBtn">&#9999; Update</button>
             </div>
-            <div style="margin-top:8px;display:flex;gap:6px;">
-              <button id="coldEmailBtn" style="flex:2;padding:10px;border-radius:10px;background:linear-gradient(135deg,#1e3a5f,#2563EB);color:#fff;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:0.3px;">&#9993; Copy First Cold Email</button>
-              <button id="viewEmailLogBtn" style="flex:1;padding:10px;border-radius:10px;background:var(--surf);color:var(--muted);border:1.5px solid var(--border2);font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">&#128203; My Log</button>
-            </div>
+<div style="margin-top:8px;display:flex;gap:6px;">
+  <button id="coldEmailBtn" style="flex:1;padding:10px;border-radius:10px;background:linear-gradient(135deg,#1e3a5f,#2563EB);color:#fff;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:0.3px;">&#9993; Copy First Cold Email</button>
+</div>
+
 
             <!-- Update data panel -->
             <div class="update-panel" id="updatePanel">
@@ -587,50 +587,6 @@ select.field-input{cursor:pointer}
 <div class="tab-panel" id="tabEmail">
   <div style="max-width:900px;margin:0 auto;padding:0 16px;">
     <iframe id="emailSenderFrame" src="" style="width:100%;height:calc(100vh - 110px);border:none;border-radius:16px;background:#F4F1EC;" allowtransparency="true"></iframe>
-  </div>
-</div>
-
-<!-- EMAIL LOG MODAL -->
-<div class="modal-bg" id="emailLogModal">
-  <div class="modal" style="max-width:700px;width:95vw;">
-    <div class="modal-hdr">
-      <div><div class="modal-title">&#128203; My Email Log</div><div class="modal-sub">Your personal outreach tracking sheet</div></div>
-      <button class="modal-x" id="emailLogClose">&#10005;</button>
-    </div>
-
-    <!-- PIN gate -->
-    <div id="emailLogPinGate">
-      <div style="text-align:center;padding:20px 0 10px;">
-        <div style="font-size:36px;margin-bottom:12px;">&#128274;</div>
-        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;">PIN Required</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:20px;">Enter your personal PIN to view your email log. Contact your admin if you don't have one.</div>
-        <input type="password" id="emailLogPin" maxlength="8" placeholder="Enter PIN" style="width:160px;text-align:center;font-size:20px;font-weight:700;letter-spacing:6px;padding:12px;border-radius:10px;border:1.5px solid var(--border2);background:var(--bg2);color:var(--text);font-family:'DM Sans',sans-serif;">
-        <div class="err" id="emailLogPinErr" style="margin-top:8px;font-size:12px;"></div>
-        <button id="emailLogPinSubmit" style="margin-top:14px;width:160px;padding:12px;border-radius:10px;background:var(--gold);color:#1A1714;font-weight:800;border:none;cursor:pointer;font-size:14px;font-family:'Syne',sans-serif;">Unlock</button>
-      </div>
-    </div>
-
-    <!-- Log content (shown after PIN) -->
-    <div id="emailLogContent" style="display:none;">
-      <div style="overflow-x:auto;margin-top:8px;">
-        <table style="width:100%;border-collapse:collapse;font-size:12px;" id="emailLogTable">
-          <thead>
-            <tr style="background:var(--bg2);">
-              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:700;white-space:nowrap;">Company</th>
-              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:700;">Phone</th>
-              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:700;">Sent</th>
-              <th style="padding:8px 6px;text-align:center;color:#3B82F6;font-weight:700;">E1</th>
-              <th style="padding:8px 6px;text-align:center;color:#3B82F6;font-weight:700;">E2</th>
-              <th style="padding:8px 6px;text-align:center;color:#3B82F6;font-weight:700;">E3</th>
-              <th style="padding:8px 6px;text-align:center;color:#3B82F6;font-weight:700;">E4</th>
-              <th style="padding:8px 6px;text-align:center;color:#3B82F6;font-weight:700;">E5</th>
-            </tr>
-          </thead>
-          <tbody id="emailLogBody"></tbody>
-        </table>
-      </div>
-      <div style="margin-top:12px;font-size:11px;color:var(--muted);text-align:center;">Click E2–E5 checkboxes to mark follow-up emails as sent. Changes save automatically.</div>
-    </div>
   </div>
 </div>
 
@@ -2067,130 +2023,7 @@ document.getElementById('coldEmailBtn').addEventListener('click', function(){
     document.body.removeChild(ta);
     copyDone();
   }
-
-  // Log to email tracking sheet
-  fetch(API, {
-    method: 'POST',
-    headers: {'Content-Type': 'text/plain'},
-    body: JSON.stringify({
-      action: 'logEmailSent',
-      empId: EMP_ID,
-      mc: lead.mc || '',
-      company: lead.company || lead.entity || '',
-      phone: lead.phone || '',
-      email: lead.email || '',
-      state: lead.address || '',
-      truckType: lead.truckType || '',
-      sentAt: new Date().toISOString(),
-      emailNum: 1
-    })
-  }).catch(function(){});
 });
-
-// ── EMAIL LOG ───────────────────────────────────────────────
-var _emailLogUnlocked = false;
-var _emailLogData = [];
-
-document.getElementById('viewEmailLogBtn').addEventListener('click', function(){
-  document.getElementById('emailLogModal').classList.add('show');
-  document.getElementById('emailLogPin').value = '';
-  document.getElementById('emailLogPinErr').textContent = '';
-  if(_emailLogUnlocked){
-    showEmailLogContent();
-  } else {
-    document.getElementById('emailLogPinGate').style.display = 'block';
-    document.getElementById('emailLogContent').style.display = 'none';
-    setTimeout(function(){ document.getElementById('emailLogPin').focus(); }, 200);
-  }
-});
-
-document.getElementById('emailLogClose').addEventListener('click', function(){
-  document.getElementById('emailLogModal').classList.remove('show');
-});
-
-document.getElementById('emailLogPinSubmit').addEventListener('click', function(){
-  var pin = document.getElementById('emailLogPin').value.trim();
-  if(!pin){ document.getElementById('emailLogPinErr').textContent = 'Please enter your PIN.'; return; }
-  var btn = document.getElementById('emailLogPinSubmit');
-  btn.textContent = 'Checking...'; btn.disabled = true;
-fetch(API, {
-  method: 'POST',
-  headers: {'Content-Type': 'text/plain'},
-  body: JSON.stringify({
-    action: 'verifyEmailPin',
-    empId: EMP_ID,
-    pin: pin
-  })
-})
-  .then(function(r){return r.json();})
-  .then(function(res){
-    btn.textContent = 'Unlock'; btn.disabled = false;
-    if(res.valid){
-      _emailLogUnlocked = true;
-      showEmailLogContent();
-    } else {
-      document.getElementById('emailLogPinErr').textContent = res.reason || 'Incorrect PIN.';
-    }
-  }).catch(function(){
-    btn.textContent = 'Unlock'; btn.disabled = false;
-    document.getElementById('emailLogPinErr').textContent = 'Could not verify. Check connection.';
-  });
-});
-
-document.getElementById('emailLogPin').addEventListener('keydown', function(e){
-  if(e.key==='Enter') document.getElementById('emailLogPinSubmit').click();
-});
-
-function showEmailLogContent(){
-  document.getElementById('emailLogPinGate').style.display = 'none';
-  document.getElementById('emailLogContent').style.display = 'block';
-  var tbody = document.getElementById('emailLogBody');
-  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted);">Loading...</td></tr>';
-  fetch(API+'?action=getEmailLog&empId='+encodeURIComponent(EMP_ID))
-    .then(function(r){return r.json();})
-    .then(function(rows){
-      _emailLogData = Array.isArray(rows) ? rows : [];
-      if(!_emailLogData.length){
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted);">No emails logged yet. Click "Copy First Cold Email" on a lead to start tracking.</td></tr>';
-        return;
-      }
-      tbody.innerHTML = _emailLogData.map(function(row, i){
-        var dateStr = '';
-        try { dateStr = new Date(row.sentAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}); } catch(e){}
-        var checks = [row.email1, row.email2, row.email3, row.email4, row.email5];
-        var checkCells = checks.map(function(checked, ci){
-          var emailNum = ci+1;
-          var disabled = emailNum === 1 ? 'disabled' : '';
-          var checkedAttr = checked ? 'checked' : '';
-          return '<td style="text-align:center;padding:6px;">' +
-            '<input type="checkbox" '+checkedAttr+' '+disabled+' onchange="updateEmailCheck('+i+','+emailNum+',this.checked)" style="width:16px;height:16px;cursor:'+(emailNum===1?'default':'pointer')+';">' +
-            '</td>';
-        }).join('');
-        return '<tr style="border-bottom:1px solid var(--border2);">' +
-          '<td style="padding:8px 10px;font-weight:600;color:var(--text);">'+(row.company||'—')+'</td>' +
-          '<td style="padding:8px 10px;color:var(--muted);">'+(row.phone||'—')+'</td>' +
-          '<td style="padding:8px 10px;color:var(--muted);white-space:nowrap;">'+dateStr+'</td>' +
-          checkCells +
-          '</tr>';
-      }).join('');
-    }).catch(function(){
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#E84545;">Could not load. Try again.</td></tr>';
-    });
-}
-
-window.updateEmailCheck = function(rowIndex, emailNum, checked){
-  var row = _emailLogData[rowIndex];
-  if(!row) return;
-  fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},
-    body:JSON.stringify({
-      action:'updateEmailCheck',
-      empId:EMP_ID,
-      rowIndex:row.rowIndex,
-      emailNum:emailNum,
-      checked:checked
-    })
-  }).catch(function(){});
-};
 
 function syncLeadMeta(idx){
   var lead = leads[idx]||{};
@@ -2340,7 +2173,7 @@ document.getElementById('deleteFromViewBtn').addEventListener('click',deleteFrom
 document.getElementById('apptSearch').addEventListener('input',function(){renderApptList(loadA());});
 document.getElementById('apptFilter').addEventListener('change',function(){renderApptList(loadA());});
 
-['apptModal','viewModal','statusModal','cbDetailModal','emailLogModal'].forEach(function(id){
+['apptModal','viewModal','statusModal','cbDetailModal'].forEach(function(id){
   document.getElementById(id).addEventListener('click',function(e){
     if(e.target===document.getElementById(id)){
       if(id!=='statusModal') document.getElementById(id).classList.remove('show');
