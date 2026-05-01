@@ -1449,7 +1449,6 @@
           <button class="tab-item active" onclick="switchAdminTab('tabAttendance', this)">Attendance Reports</button>
           <button class="tab-item" onclick="switchAdminTab('tabLeaves', this)">Leave Management</button>
 <button class="tab-item" onclick="switchAdminTab('tabAccess', this)">Tool Access</button>
-          <button class="tab-item" onclick="switchAdminTab('tabPins', this); renderAdminPins();">Email PINs</button>
           <button class="tab-item" onclick="switchAdminTab('tabLive', this)">Live Status</button>
 <button class="tab-item" onclick="switchAdminTab('tabUsers', this)">Manage Users</button>
          <button class="tab-item" onclick="switchAdminTab('tabDataUpload', this)">Load Call Data</button>
@@ -1468,11 +1467,6 @@
         <!-- Tool Access Tab -->
         <div id="tabAccess" style="display:none;">
           <div id="adminAccessContent"></div>
-        </div>
-
-        <!-- PIN Management Tab -->
-        <div id="tabPins" style="display:none;">
-          <div id="adminPinContent"></div>
         </div>
 
 <!-- Manage Users Tab -->
@@ -1763,8 +1757,6 @@ window.toggleDarkMode = toggleDarkMode;
 window.requestPasswordChange = requestPasswordChange;
 window.adminLeaveAction = adminLeaveAction;
 window.toggleToolAccess = toggleToolAccess;
-window.renderAdminPins = renderAdminPins;
-window.saveEmpPin = saveEmpPin;
 window.portalLoadCsv = portalLoadCsv;
 window.portalClearBdo = portalClearBdo;
   window.addNewUser = addNewUser;
@@ -2187,7 +2179,7 @@ const cb = document.getElementById('darkModeToggle');
 }
 
 function switchAdminTab(tabId, btn) {
-document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive,#tabDataUpload,#tabPins,#tabUsers').forEach(t => t.style.display = 'none');
+document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive,#tabDataUpload,#tabUsers').forEach(t => t.style.display = 'none');
   document.getElementById(tabId).style.display = '';
   document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
