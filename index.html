@@ -1368,6 +1368,11 @@
   <div class="nav-card-title">US Time Tool</div>
   <div class="nav-card-desc">Check driver time zones and convert to Pakistan time instantly.</div>
 </div>
+          <div class="nav-card" onclick="downloadMaturedLeads()">
+  <div class="nav-card-icon icon-green">📥</div>
+  <div class="nav-card-title">Download Matured Leads</div>
+  <div class="nav-card-desc">Download today's cold call list — leads that have received all 3 emails.</div>
+</div>
         </div>
 
       </div>
@@ -3210,6 +3215,60 @@ window.addEventListener('popstate', function(e) {
   const el = document.getElementById(view);
   if (el) el.classList.add('active');
 });
+  async function downloadMaturedLeads() {
+  if (!clockedIn) {
+    alert('Please clock in before downloading leads.');
+    return;
+  }
+  
+const SUPABASE_URL = 'https://hbsabagsykrrihoourqb.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhic2FiYWdzeWtycmlob291cnFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MjM1MzYsImV4cCI6MjA5MTk5OTUzNn0.R6b1lMFGUqQKl85jTotlBe-0kG5L4746x_6MXRYXelU';
+  
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/contacts?status=eq.matured&select=company_name,phone_number,email,state,mc_number,seq1_opened,seq2_opened,seq3_opened`,
+      {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      }
+    );
+    
+    const data = await res.json();
+    
+    if (!data.length) {
+      alert('No matured leads available for download today.');
+      return;
+    }
+    
+    const headers = ['Company Name','Phone','Email','State','MC Number','Opened E1','Opened E2','Opened E3'];
+    const rows = data.map(r => [
+      r.company_name || '',
+      r.phone_number || '',
+      r.email || '',
+      r.state || '',
+      r.mc_number || '',
+      r.seq1_opened ? 'Yes' : 'No',
+      r.seq2_opened ? 'Yes' : 'No',
+      r.seq3_opened ? 'Yes' : 'No',
+    ]);
+    
+    const csv = [headers, ...rows].map(r => r.map(f => `"${f}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `matured_leads_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    alert(`Downloaded ${data.length} matured leads successfully.`);
+    
+  } catch(e) {
+    alert('Error downloading leads. Check your connection.');
+  }
+}
 </script>
 </body>
 </html>
