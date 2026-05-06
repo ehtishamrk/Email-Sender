@@ -1457,6 +1457,7 @@
           <button class="tab-item" onclick="switchAdminTab('tabLive', this)">Live Status</button>
 <button class="tab-item" onclick="switchAdminTab('tabUsers', this)">Manage Users</button>
          <button class="tab-item" onclick="switchAdminTab('tabDataUpload', this)">Load Call Data</button>
+         <button class="tab-item" onclick="switchAdminTab('tabCampaign', this)">Email Campaign Stats</button>
        </div>
 
         <!-- Attendance Reports Tab -->
@@ -1484,6 +1485,11 @@
           <div id="adminLiveContent"></div>
         </div>
 
+<!-- Campaign Stats Tab -->
+        <div id="tabCampaign" style="display:none;">
+          <div id="campaignStatsContent"></div>
+        </div>
+        
         <!-- Load Call Data Tab -->
         <div id="tabDataUpload" style="display:none;">
           <div class="card-box" style="margin-bottom:16px;">
@@ -2226,11 +2232,12 @@ async function loadCampaignSettings() {
   } catch(e) {}
 }
 function switchAdminTab(tabId, btn) {
-document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive,#tabDataUpload,#tabUsers').forEach(t => t.style.display = 'none');
+document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive,#tabDataUpload,#tabUsers,#tabCampaign').forEach(t => t.style.display = 'none');
   document.getElementById(tabId).style.display = '';
   document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderAdmin();
+  if (tabId === 'tabCampaign') renderCampaignStats();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -3380,6 +3387,56 @@ async function setCampaignStatus(active) {
     alert('Error saving. Check connection.');
   }
 } 
+async function renderCampaignStats() {
+  const el = document.getElementById('campaignStatsContent');
+  if (!el) return;
+  el.innerHTML = '<div class="card-box"><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center;">Loading campaign stats...</div></div>';
+
+  const SUPABASE_URL = 'https://hbsabagsykrrihoourqb.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhic2FiYWdzeWtycmlob291cnFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MjM1MzYsImV4cCI6MjA5MTk5OTUzNn0.R6b1lMFGUqQKl85jTotlBe-0kG5L4746x_6MXRYXelU';
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/contacts?select=status,seq1_opened,seq2_opened,replied`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+    const data = await res.json();
+
+    const total        = data.length;
+    const pending      = data.filter(r => r.status === 'pending_seq1').length;
+    const seq1sent     = data.filter(r => r.status === 'seq1_sent').length;
+    const seq2sent     = data.filter(r => r.status === 'seq2_sent').length;
+    const matured      = data.filter(r => r.status === 'matured').length;
+    const calledP      = data.filter(r => r.status === 'called_pending').length;
+    const replied      = data.filter(r => r.replied === true).length;
+    const unsub        = data.filter(r => r.status === 'unsubscribed').length;
+    const opened1      = data.filter(r => r.seq1_opened === true).length;
+    const opened2      = data.filter(r => r.seq2_opened === true).length;
+    const emailed      = data.filter(r => r.status !== 'pending_seq1').length;
+    const openRate     = emailed > 0 ? ((opened1 / emailed) * 100).toFixed(1) : 0;
+    const replyRate    = emailed > 0 ? ((replied / emailed) * 100).toFixed(1) : 0;
+
+    el.innerHTML = `
+      <div class="card-box" style="margin-bottom:16px;">
+        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:18px;margin-bottom:20px;">📧 Campaign Overview</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;">
+          <div class="stat-chip"><div class="stat-chip-val">${total.toLocaleString()}</div><div class="stat-chip-label">Total Leads</div></div>
+          <div class="stat-chip"><div class="stat-chip-val">${pending.toLocaleString()}</div><div class="stat-chip-label">Pending (not sent)</div></div>
+          <div class="stat-chip"><div class="stat-chip-val">${emailed.toLocaleString()}</div><div class="stat-chip-label">Total Emailed</div></div>
+          <div class="stat-chip"><div class="stat-chip-val">${seq1sent.toLocaleString()}</div><div class="stat-chip-label">Awaiting Follow-Up</div></div>
+          <div class="stat-chip"><div class="stat-chip-val">${seq2sent.toLocaleString()}</div><div class="stat-chip-label">Awaiting Final Email</div></div>
+          <div class="stat-chip"><div class="stat-chip-val" style="color:var(--gold);">${openRate}%</div><div class="stat-chip-label">Open Rate (E1)</div></div>
+          <div class="stat-chip"><div class="stat-chip-val" style="color:var(--green);">${replyRate}%</div><div class="stat-chip-label">Reply Rate</div></div>
+          <div class="stat-chip"><div class="stat-chip-val" style="color:var(--green);">${replied.toLocaleString()}</div><div class="stat-chip-label">Replies Received</div></div>
+          <div class="stat-chip"><div class="stat-chip-val" style="color:var(--gold);">${matured.toLocaleString()}</div><div class="stat-chip-label">Matured Leads</div></div>
+          <div class="stat-chip"><div class="stat-chip-val">${calledP.toLocaleString()}</div><div class="stat-chip-label">Downloaded for Calling</div></div>
+          <div class="stat-chip"><div class="stat-chip-val" style="color:var(--red);">${unsub.toLocaleString()}</div><div class="stat-chip-label">Unsubscribed</div></div>
+          <div class="stat-chip"><div class="stat-chip-val">${opened2.toLocaleString()}</div><div class="stat-chip-label">Opened Follow-Up</div></div>
+        </div>
+      </div>`;
+  } catch(e) {
+    el.innerHTML = '<div class="card-box"><div class="empty-state"><div class="empty-text">Error loading stats. Check connection.</div></div></div>';
+  }
+}
 </script>
 </body>
 </html>
