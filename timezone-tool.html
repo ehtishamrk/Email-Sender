@@ -815,6 +815,17 @@ if (EMP_ID !== 'GUEST') {
 }
 
 document.getElementById('navEmp').textContent = EMP_ID;
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, function(char) {
+    return {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[char];
+  });
+}
 
 
 // ── ACTIVITY HEARTBEAT (idle detection) ──────────
@@ -1544,13 +1555,19 @@ function renderLeadSearch(){
   res.innerHTML = filtered.slice(0,20).map(function(r){
     var badgeColor = r.m.status==='SM'?'#16A34A':r.m.status==='AB'?'#C87D0A':r.m.status==='CB'?'#1D4ED8':'#6B7280';
     var badgeBg = r.m.status==='SM'?'#F0FFF5':r.m.status==='AB'?'#FFF3DC':r.m.status==='CB'?'#EFF6FF':'#F3F4F6';
+    var title = escapeHtml(r.lead.driver || r.lead.company || 'Unknown');
+    var phone = escapeHtml(r.lead.phone || '');
+    var contact = r.m.contactName ? ' \u00b7 ' + escapeHtml(r.m.contactName) : '';
+    var status = escapeHtml(r.m.status || 'New');
+
     return '<div style="padding:8px 10px;background:var(--bg2);border-radius:8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:8px;" data-idx="'+r.idx+'">' +
       '<div style="flex:1;min-width:0;">' +
-        '<div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(r.lead.driver||r.lead.company||'Unknown')+'</div>' +
-        '<div style="font-size:10px;color:var(--muted);">'+(r.lead.phone||'')+(r.m.contactName?' \u00b7 '+r.m.contactName:'')+'</div>' +
+        '<div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+title+'</div>' +
+        '<div style="font-size:10px;color:var(--muted);">'+phone+contact+'</div>' +
       '</div>' +
-      '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:'+badgeBg+';color:'+badgeColor+';">'+(r.m.status||'New')+'</span>' +
+      '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:'+badgeBg+';color:'+badgeColor+';">'+status+'</span>' +
       '</div>';
+
   }).join('');
   res.querySelectorAll('[data-idx]').forEach(function(el){
     el.addEventListener('click',function(){
