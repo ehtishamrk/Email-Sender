@@ -2394,7 +2394,7 @@ function renderApptList(all){
   else if(fil==='today')list=list.filter(function(a){return a.date===tod;});
   list=list.sort(function(a,b){return (a.date||'').localeCompare(b.date||'')=== 0?(a.time||'').localeCompare(b.time||''):-(a.date||'').localeCompare(b.date||'');});
   var el=document.getElementById('apptList');
-  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">&#128203;</div><div class="empty-txt">'+(q?'No results for "'+q+'"':'No appointments yet.')+'</div></div>';return;}
+  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">&#128203;</div><div class="empty-txt">'+(q?'No results for "'+escapeHtml(q)+'"':'No appointments yet.')+'</div></div>';return;}
   el.innerHTML='';
   list.forEach(function(a){
     var d=a.date?new Date(a.date+'T12:00:00'):null;
@@ -2402,21 +2402,32 @@ function renderApptList(all){
     var isT=a.date===tod;
     var info=a.locationTz?(TZI[a.locationTz]||{}):{};
     var ts=a.time?f12.apply(null,a.time.split(':').map(Number)):'--';
+        var safePerson = escapeHtml(a.person || '--');
+    var safeCompany = escapeHtml(a.company || '--');
+    var safeMc = escapeHtml(a.mc || '--');
+    var safePhone = escapeHtml(a.phone || '--');
+    var safeTruck = a.truck ? ' \u00b7 ' + escapeHtml(a.truck) : '';
+    var safeLocation = escapeHtml(a.location || '');
+    var safeLocationShort = escapeHtml(info.s || '');
+    var safeComments = escapeHtml(a.comments || '');
+    var safePkt = escapeHtml(a.pktEquiv || '');
+
     var div=document.createElement('div');
     div.className='appt-card'+(isT?' today-hl':'');
     div.innerHTML=
       '<div class="adb"><div class="adb-mo">'+mo+'</div><div class="adb-dy">'+dy+'</div></div>'+
       '<div class="appt-info">'+
-        '<div class="ai-name">'+(a.person||'--')+' <span style="font-weight:400;color:var(--muted);">\u2014 '+(a.company||'--')+'</span></div>'+
-        '<div class="ai-meta">MC: '+(a.mc||'--')+' \u00b7 '+(a.phone||'--')+(a.truck?' \u00b7 '+a.truck:'')+'</div>'+
-        (a.location?'<div class="ai-meta">&#128205; '+a.location+' ('+(info.s||'')+')</div>':'')+
-        (a.comments?'<div class="ai-comment">'+a.comments+'</div>':'')+
+        '<div class="ai-name">'+safePerson+' <span style="font-weight:400;color:var(--muted);">\u2014 '+safeCompany+'</span></div>'+
+        '<div class="ai-meta">MC: '+safeMc+' \u00b7 '+safePhone+safeTruck+'</div>'+
+        (safeLocation?'<div class="ai-meta">&#128205; '+safeLocation+' ('+safeLocationShort+')</div>':'')+
+        (safeComments?'<div class="ai-comment">'+safeComments+'</div>':'')+
       '</div>'+
       '<div class="appt-right">'+
         '<div class="appt-time">'+ts+'</div>'+
-        (a.locationTz?'<div class="appt-tz">'+(info.s||'')+'</div>':'')+
-        (a.pktEquiv?'<div class="appt-pkt">&#127477;&#127472; '+a.pktEquiv+'</div>':'')+
+        (a.locationTz?'<div class="appt-tz">'+safeLocationShort+'</div>':'')+
+        (safePkt?'<div class="appt-pkt">&#127477;&#127472; '+safePkt+'</div>':'')+
       '</div>';
+
     div.addEventListener('click',function(){openViewModal(a);});
     el.appendChild(div);
   });
