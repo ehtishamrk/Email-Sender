@@ -2340,11 +2340,20 @@ function _doRenderAppts(all){
     ta.forEach(function(a){
       var div=document.createElement('div');div.className='today-card';
       var ts=a.time?f12.apply(null,a.time.split(':').map(Number)):'--';
+            var safePerson = escapeHtml(a.person || '--');
+      var safeCompany = escapeHtml(a.company || '--');
+      var safeMc = escapeHtml(a.mc || '--');
+      var safePhone = escapeHtml(a.phone || '--');
+      var safeTruck = a.truck ? ' \u00b7 ' + escapeHtml(a.truck) : '';
+      var safePkt = escapeHtml(a.pktEquiv || '');
+      var safeLocation = escapeHtml(a.location || '');
+
       div.innerHTML='<div class="tc-time">'+ts+'</div>'+
-        '<div class="tc-info"><div class="tc-name">'+(a.person||'--')+' \u2014 '+(a.company||'--')+'</div>'+
-        '<div class="tc-meta">MC: '+(a.mc||'--')+' \u00b7 '+(a.phone||'--')+(a.truck?' \u00b7 '+a.truck:'')+'</div>'+
-        (a.pktEquiv?'<div class="tc-meta" style="color:rgba(245,166,35,0.6);">&#127477;&#127472; '+a.pktEquiv+'</div>':'')+
-        '</div>'+(a.location?'<div class="tc-badge">'+a.location+'</div>':'');
+        '<div class="tc-info"><div class="tc-name">'+safePerson+' \u2014 '+safeCompany+'</div>'+
+        '<div class="tc-meta">MC: '+safeMc+' \u00b7 '+safePhone+safeTruck+'</div>'+
+        (safePkt?'<div class="tc-meta" style="color:rgba(245,166,35,0.6);">&#127477;&#127472; '+safePkt+'</div>':'')+
+        '</div>'+(safeLocation?'<div class="tc-badge">'+safeLocation+'</div>':'');
+
       div.addEventListener('click',function(){openViewModal(a);});
       tl.appendChild(div);
     });
