@@ -2282,22 +2282,27 @@ function openViewModal(appt){
   var d=new Date(appt.date+'T12:00:00');
   var ts=appt.time?f12.apply(null,appt.time.split(':').map(Number)):'--';
   var info=appt.locationTz?(TZI[appt.locationTz]||{}):{};
-  var ls=appt.location?(appt.location+' ('+(info.s||'')+')'):'\u2014';
-  var ph=appt.pktEquiv?'<div class="vm-pkt"><div class="vm-pkt-lbl">&#127477;&#127472; Pakistan Time</div><div class="vm-pkt-val">'+appt.pktEquiv+'</div></div>':'';
-  var nh=appt.comments?'<div class="vm-field" style="margin-bottom:0;"><div class="vm-field-lbl">Notes</div><div class="vm-field-val" style="font-weight:400;font-style:italic;color:var(--mid);">'+appt.comments+'</div></div>':'';
+  var ls=appt.location?(escapeHtml(appt.location)+' ('+escapeHtml(info.s||'')+')'):'\u2014';
+  var safePkt = escapeHtml(appt.pktEquiv || '');
+  var safeComments = escapeHtml(appt.comments || '');
+  var ph=safePkt?'<div class="vm-pkt"><div class="vm-pkt-lbl">&#127477;&#127472; Pakistan Time</div><div class="vm-pkt-val">'+safePkt+'</div></div>':'';
+  var nh=safeComments?'<div class="vm-field" style="margin-bottom:0;"><div class="vm-field-lbl">Notes</div><div class="vm-field-val" style="font-weight:400;font-style:italic;color:var(--mid);">'+safeComments+'</div></div>':'';
+
   document.getElementById('viewContent').innerHTML=
     '<div class="vm-hdr">'+
       '<div class="vm-time">'+ts+'</div>'+
       '<div class="vm-date">'+(appt.date?DA[d.getDay()]+', '+MO[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear():'No date set')+'</div>'+
-      '<div class="vm-name">'+(appt.person||'--')+'</div>'+
-      '<div class="vm-company">'+(appt.company||'--')+'</div>'+
+      '<div class="vm-name">'+escapeHtml(appt.person||'--')+'</div>'+
+      '<div class="vm-company">'+escapeHtml(appt.company||'--')+'</div>'+
+
     '</div>'+
     '<div class="vm-row">'+
-      '<div class="vm-field"><div class="vm-field-lbl">MC Number</div><div class="vm-field-val">'+(appt.mc||'\u2014')+'</div></div>'+
-      '<div class="vm-field"><div class="vm-field-lbl">Phone</div><div class="vm-field-val">'+(appt.phone||'\u2014')+'</div></div>'+
+      '<div class="vm-field"><div class="vm-field-lbl">MC Number</div><div class="vm-field-val">'+escapeHtml(appt.mc||'\u2014')+'</div></div>'+
+      '<div class="vm-field"><div class="vm-field-lbl">Phone</div><div class="vm-field-val">'+escapeHtml(appt.phone||'\u2014')+'</div></div>'+
+
     '</div>'+
     '<div class="vm-row">'+
-      '<div class="vm-field"><div class="vm-field-lbl">Truck Type</div><div class="vm-field-val">'+(appt.truck||'\u2014')+'</div></div>'+
+      '<div class="vm-field"><div class="vm-field-lbl">Truck Type</div><div class="vm-field-val">'+escapeHtml(appt.truck||'\u2014')+'</div></div>'+
       '<div class="vm-field"><div class="vm-field-lbl">Location</div><div class="vm-field-val">'+ls+'</div></div>'+
     '</div>'+ph+nh;
   document.getElementById('viewModal').classList.add('show');
