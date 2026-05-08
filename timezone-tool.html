@@ -1623,15 +1623,22 @@ function renderCallbacks() {
         var badge = isOverdue24 ? '⚠️ 24h+ Overdue' : (isPast ? 'Overdue' : 'Upcoming');
         var badgeBg = isOverdue24 ? '#FFF8EC' : (isPast ? '#FFF0F0' : '#EFF6FF');
         var badgeColor = isOverdue24 ? '#D97706' : (isPast ? '#E84545' : '#1D4ED8');
+                var safeTitle = escapeHtml(cb.company || cb.mc || 'Unknown');
+        var safeDate = escapeHtml(cbDate || '--');
+        var safeTime = escapeHtml(cbTime || '--');
+        var safePhone = escapeHtml(cb.phone || '—');
+        var safeNotes = escapeHtml(cb.notes || '');
+
         return '<div onclick="openCbDetail('+i+')" style="cursor:pointer;padding:10px 12px;border-radius:10px;background:var(--bg2);margin-bottom:8px;border-left:3px solid '+borderColor+';">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-            '<div style="font-size:13px;font-weight:700;color:var(--text);">'+(cb.company||cb.mc||'Unknown')+'</div>' +
+            '<div style="font-size:13px;font-weight:700;color:var(--text);">'+safeTitle+'</div>' +
             '<div style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:'+badgeBg+';color:'+badgeColor+';">'+badge+'</div>' +
           '</div>' +
-          '<div style="font-size:11px;color:var(--muted);margin-top:3px;">📅 '+cbDate+' at '+cbTime+'</div>' +
-          '<div style="font-size:11px;color:var(--muted);">📞 '+(cb.phone||'—')+'</div>' +
-          (cb.notes?'<div style="font-size:11px;color:var(--text-mid);margin-top:4px;font-style:italic;">'+cb.notes+'</div>':'') +
+          '<div style="font-size:11px;color:var(--muted);margin-top:3px;">📅 '+safeDate+' at '+safeTime+'</div>' +
+          '<div style="font-size:11px;color:var(--muted);">📞 '+safePhone+'</div>' +
+          (safeNotes ? '<div style="font-size:11px;color:var(--text-mid);margin-top:4px;font-style:italic;">'+safeNotes+'</div>' : '') +
         '</div>';
+
       }).join('');
       checkOverdueCallbacks(_cbData);
     })
