@@ -1113,8 +1113,16 @@ function setupAc(inpId,ddId,onPick){
     var m=matchLocs(q);dd._m=m;
     if(!m.length){dd.innerHTML='<div class="ac-none">No results</div>';dd.classList.add('open');return;}
     dd.innerHTML=m.map(function(loc,i){
-      var info=TZI[loc.tz]||{},ab=loc.ab.length?'<span style="color:var(--gold);font-weight:700;">'+loc.ab[0]+'</span> &middot; ':'';
-      return '<div class="ac-item" data-idx="'+i+'"><div style="flex:1"><div class="ac-name">'+loc.n+'</div><div class="ac-meta">'+ab+loc.t+' &middot; '+(info.f||loc.tz)+'</div></div><span class="ac-badge '+loc.z+'">'+(info.s||'')+'</span></div>';
+            var info=TZI[loc.tz]||{};
+      var safeAb = loc.ab.length ? escapeHtml(loc.ab[0]) : '';
+      var safeName = escapeHtml(loc.n || '');
+      var safeType = escapeHtml(loc.t || '');
+      var safeFullTz = escapeHtml(info.f || loc.tz || '');
+      var safeZone = escapeHtml(loc.z || '');
+      var safeShortTz = escapeHtml(info.s || '');
+      var ab=safeAb?'<span style="color:var(--gold);font-weight:700;">'+safeAb+'</span> &middot; ':'';
+
+      return '<div class="ac-item" data-idx="'+i+'"><div style="flex:1"><div class="ac-name">'+safeName+'</div><div class="ac-meta">'+ab+safeType+' &middot; '+safeFullTz+'</div></div><span class="ac-badge '+safeZone+'">'+safeShortTz+'</span></div>';
     }).join('');
     dd.querySelectorAll('.ac-item').forEach(function(item){
       item.addEventListener('mousedown',function(e){e.preventDefault();pickAc(inpId,ddId,parseInt(item.getAttribute('data-idx')),onPick);});
