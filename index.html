@@ -1841,7 +1841,11 @@ function escapeHtml(value) {
   });
 }
 
-  
+  function safeDomId(value) {
+  return String(value ?? '').replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
+
   // Heartbeat — updates every 30 seconds while tab is open
 // If last heartbeat is older than 60 seconds on next load = tab was closed
 let heartbeatInterval = null;
@@ -2900,14 +2904,17 @@ async function renderAdminAccess() {
     const safeId = escapeHtml(emp.id || '');
     const safeDesignation = escapeHtml(emp.designation || '');
     const empIdArg = encodeURIComponent(emp.id || '');
+    const empDomId = safeDomId(emp.id || '');
+
 
 
     const toggle = (type, checked, empId) => {
       if (locked) return `<div style="text-align:center;font-size:18px;">${checked ? '✅' : '—'}</div>`;
       return `<label style="display:flex;justify-content:center;position:relative;width:48px;height:26px;cursor:pointer;margin:auto;">
         <input type="checkbox" onchange="toggleToolAccess(decodeURIComponent('${empIdArg}'),'${type}',this.checked)" ${checked ? 'checked' : ''} style="opacity:0;width:0;height:0;">
-        <span style="position:absolute;inset:0;background:${checked ? 'var(--orange)' : 'var(--border2)'};border-radius:26px;transition:0.3s;" id="tgt_${type}_${empId}"></span>
-        <span style="position:absolute;left:${checked ? '25px' : '3px'};top:3px;width:20px;height:20px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.2);" id="tgthumb_${type}_${empId}"></span>
+<span style="position:absolute;inset:0;background:${checked ? 'var(--orange)' : 'var(--border2)'};border-radius:26px;transition:0.3s;" id="tgt_${type}_${empDomId}"></span>
+<span style="position:absolute;left:${checked ? '25px' : '3px'};top:3px;width:20px;height:20px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.2);" id="tgthumb_${type}_${empDomId}"></span>
+
       </label>`;
     };
 
@@ -2933,8 +2940,10 @@ async function toggleToolAccess(empId, type, granted) {
   const voiceVal = type === 'voice' ? granted : (current.voiceAccess !== undefined ? current.voiceAccess : false);
   await fsSet('toolAccess', empId, { empId, emailAccess: emailVal, voiceAccess: voiceVal });
 
-  const track = document.getElementById('tgt_' + type + '_' + empId);
-  const thumb = document.getElementById('tgthumb_' + type + '_' + empId);
+const empDomId = safeDomId(empId);
+const track = document.getElementById('tgt_' + type + '_' + empDomId);
+const thumb = document.getElementById('tgthumb_' + type + '_' + empDomId);
+
   if (track) track.style.background = granted ? 'var(--orange)' : 'var(--border2)';
   if (thumb) thumb.style.left = granted ? '25px' : '3px';
 
