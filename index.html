@@ -3093,12 +3093,11 @@ function getIdleMinutes(empId) {
   return Math.floor((Date.now() - last) / 60000);
 }
 function getCallProgress(empId) {
-  try {
-    const leads = JSON.parse(localStorage.getItem('leads_' + empId) || '[]');
-    const meta  = JSON.parse(localStorage.getItem('leadMeta_' + empId) || '{}');
-    return { total: leads.length, called: Object.keys(meta).length };
-  } catch(e) { return { total: 0, called: 0 }; }
+  const leads = load('leads_' + empId, []);
+  const meta  = load('leadMeta_' + empId, {});
+  return { total: Array.isArray(leads) ? leads.length : 0, called: meta && typeof meta === 'object' ? Object.keys(meta).length : 0 };
 }
+
 
 function showIdlePopup(name, empId, minutes) {
     const safeName = escapeHtml(name || empId || 'Employee');
