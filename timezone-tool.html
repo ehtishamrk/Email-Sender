@@ -1779,6 +1779,15 @@ function emailFoot() {
 // ══════════════════════════════════════════════════════════════
 
 function buildEmail1(v) {
+    v = v || {};
+  v = {
+    name: escapeHtml(v.name || ''),
+    email: escapeHtml(v.email || ''),
+    company: escapeHtml(v.company || ''),
+    state: escapeHtml(v.state || 'your state'),
+    truck: TRUCK_DATA[v.truck] ? v.truck : 'unknown'
+  };
+
   const isUnknown = v.truck === 'unknown';
   const td = TRUCK_DATA[v.truck] || TRUCK_DATA['unknown'];
   const operatorsLabel = isUnknown ? `Operators in ${v.state}` : `${v.truck}s in ${v.state}`;
