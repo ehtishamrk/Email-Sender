@@ -3035,7 +3035,7 @@ async function renderAdminLeaves() {
   const resolved = requests.filter(r => r.status !== 'pending');
 
   const renderCard = (r, showActions) => {
-    const safeId = escapeHtml(r.id);
+    const idArg = encodeURIComponent(r.id || '');
     const safeEmpName = escapeHtml(r.empName);
     const safeEmpId = escapeHtml(r.empId);
     const safeType = escapeHtml(r.type.charAt(0).toUpperCase() + r.type.slice(1));
@@ -3048,8 +3048,8 @@ async function renderAdminLeaves() {
     const actions = showActions ? `
 
       <div class="leave-card-actions">
-<button class="btn-approve" onclick="adminLeaveAction('${safeId}','approved')">✓ Approve</button>
-<button class="btn-reject"  onclick="adminLeaveAction('${safeId}','rejected')">✗ Reject</button>
+<button class="btn-approve" onclick="adminLeaveAction(decodeURIComponent('${idArg}'),'approved')">✓ Approve</button>
+<button class="btn-reject"  onclick="adminLeaveAction(decodeURIComponent('${idArg}'),'rejected')">✗ Reject</button>
 
       </div>` : badge;
     return `<div class="leave-card">
