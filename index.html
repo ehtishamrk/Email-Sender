@@ -2595,7 +2595,9 @@ async function requestPasswordChange() {
   try {
     const { auth, sendPasswordResetEmail } = window.__fb;
     await sendPasswordResetEmail(auth, currentUser.email);
-    msg.innerHTML = '<div class="alert-success">✅ Password reset email sent to <strong>' + currentUser.email + '</strong>. Check your inbox.</div>';
+        const safeEmail = escapeHtml(currentUser.email || '');
+    msg.innerHTML = '<div class="alert-success">✅ Password reset email sent to <strong>' + safeEmail + '</strong>. Check your inbox.</div>';
+
   } catch(e) {
     msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Failed to send reset email. Try again.</div>';
   }
