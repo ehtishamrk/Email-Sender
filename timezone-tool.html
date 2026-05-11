@@ -784,6 +784,16 @@ function escapeHtml(value) {
   });
 }
 
+  function readJson(key, fallback) {
+  try {
+    var raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    localStorage.removeItem(key);
+    return fallback;
+  }
+}
+
 
 // ── ACTIVITY HEARTBEAT (idle detection) ──────────
 var lastActivity = Date.now();
@@ -1233,9 +1243,9 @@ var meta = {}; // {rowIndex: {status, contactName, truckType, dnc, updatedAt}}
 var dncSet = false;
 var statusPendingResolve = null;
 
-function loadLeads(){leads=JSON.parse(localStorage.getItem(LEAD_KEY)||'[]');}
+function loadLeads(){leads=readJson(LEAD_KEY, []);}
 function saveLeads(){localStorage.setItem(LEAD_KEY,JSON.stringify(leads));}
-function loadMeta(){meta=JSON.parse(localStorage.getItem(META_KEY)||'{}');}
+function loadMeta(){meta=readJson(META_KEY, {});}
 function saveMeta(){localStorage.setItem(META_KEY,JSON.stringify(meta));}
 function getCallCount(){return Object.keys(meta).length;}
 
@@ -2026,7 +2036,7 @@ function syncLeadMeta(idx){
 //  APPOINTMENTS
 // ================================================================
 var AKEY='appts_'+EMP_ID;
-function loadA(){try{return JSON.parse(localStorage.getItem(AKEY)||'[]');}catch(e){return[];}}
+function loadA(){return readJson(AKEY, []);}
 function saveA(a){localStorage.setItem(AKEY,JSON.stringify(a));}
 var viewId=null;
 
