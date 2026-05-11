@@ -2953,18 +2953,6 @@ const thumb = document.getElementById('tgthumb_' + type + '_' + empDomId);
   }
 }
 
-function toggleEmailAccess(empId, granted) {
-  store('emailAccess_' + empId, granted);
-  const track = document.getElementById('eat_' + empId);
-  const thumb = document.getElementById('eathumb_' + empId);
-  if (track) track.style.background = granted ? 'var(--orange)' : 'var(--border2)';
-  if (thumb) thumb.style.left = granted ? '25px' : '3px';
-  // If toggling for currently logged-in user, update their card live
-  if (empId === currentUser.id) {
-    document.getElementById('emailCard').style.display = granted ? '' : 'none';
-  }
-}
-
 async function renderAdminAttendance() {
   const el = document.getElementById('adminAttContent');
   if (!el) return;
