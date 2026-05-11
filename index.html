@@ -2653,6 +2653,10 @@ async function renderAdminUsers() {
     const safeDesignation = escapeHtml(emp.designation || '');
     const safeEmail = escapeHtml(emp.email || '');
     const safeRole = emp.isAdmin ? 'Admin' : 'Employee';
+        const uidArg = encodeURIComponent(emp.uid || '');
+    const idArg = encodeURIComponent(emp.id || '');
+    const nameArg = encodeURIComponent(emp.name || '');
+
 
     html += `
 
@@ -2666,11 +2670,11 @@ async function renderAdminUsers() {
       </div>
       <div style="display:flex;gap:8px;">
         ${!isLocked ? `
-        <button onclick="toggleAdminRole('${emp.uid}','${safeId}',${!emp.isAdmin})"
+        <button onclick="toggleAdminRole(decodeURIComponent('${uidArg}'), decodeURIComponent('${idArg}'), ${!emp.isAdmin})"
           style="padding:8px 14px;border-radius:10px;background:var(--bg2);border:1.5px solid var(--border2);color:var(--text-mid);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
           ${emp.isAdmin ? 'Remove Admin' : 'Make Admin'}
         </button>
-        <button onclick="removeUser('${emp.uid}','${safeName}')"
+        <button onclick="removeUser(decodeURIComponent('${uidArg}'), decodeURIComponent('${nameArg}'))"
           style="padding:8px 14px;border-radius:10px;background:#FFF0F0;border:1.5px solid #FFCACA;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
           Remove
         </button>` : ''}
