@@ -739,7 +739,20 @@ const portalProfile = await new Promise((resolve) => {
 
     try {
       const snap = await getDoc(doc(db, 'employees', user.uid));
-      resolve(snap.exists() ? { uid: user.uid, ...snap.data() } : null);
+      if (!snap.exists()) {
+        resolve(null);
+        return;
+      }
+
+      const profile = { uid: user.uid, ...snap.data() };
+      const accessSnap = await getDoc(doc(db, 'toolAccess', profile.id));
+      const access = accessSnap.exists() ? accessSnap.data() : {};
+
+      resolve({
+        ...profile,
+        timeToolAccess: access.timeToolAccess !== undefined ? access.timeToolAccess : true
+      });
+
     } catch (e) {
       resolve(null);
     }
@@ -752,6 +765,13 @@ if (!portalProfile || !portalProfile.id) {
   throw new Error('Not signed in');
 }
 
+if (portalProfile.timeToolAccess !== true) {
+  alert('You do not have access to the US Time Tool.');
+  window.location.href = 'index.html';
+  throw new Error('Time Tool access denied');
+}
+
+  
 window.__PORTAL_PROFILE = portalProfile;
 
 (function() {
