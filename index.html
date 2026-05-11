@@ -2890,6 +2890,11 @@ async function renderAdminAccess() {
     const hasEmail = access.emailAccess !== undefined ? access.emailAccess : emp.hasEmailAccess;
     const hasVoice = access.voiceAccess !== undefined ? access.voiceAccess : emp.hasVoiceAccess;
 
+    const safeName = escapeHtml(emp.name || '');
+    const safeId = escapeHtml(emp.id || '');
+    const safeDesignation = escapeHtml(emp.designation || '');
+
+
     const toggle = (type, checked, empId) => {
       if (locked) return `<div style="text-align:center;font-size:18px;">${checked ? '✅' : '—'}</div>`;
       return `<label style="display:flex;justify-content:center;position:relative;width:48px;height:26px;cursor:pointer;margin:auto;">
@@ -2901,8 +2906,9 @@ async function renderAdminAccess() {
 
     html += `<div style="display:grid;grid-template-columns:1fr 80px 80px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
       <div>
-        <div style="font-size:14px;font-weight:600;color:var(--text);">${emp.name} ${locked ? '<span style="font-size:10px;color:var(--orange);background:var(--orange-a10);padding:2px 8px;border-radius:20px;margin-left:6px;">LOCKED</span>' : ''}</div>
-        <div style="font-size:11px;color:var(--text-muted);">${emp.id} · ${emp.designation || ''}</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">${safeName} ${locked ? '<span style="font-size:10px;color:var(--orange);background:var(--orange-a10);padding:2px 8px;border-radius:20px;margin-left:6px;">LOCKED</span>' : ''}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${safeId} · ${safeDesignation}</div>
+
       </div>
       ${toggle('email', hasEmail, emp.id)}
       ${toggle('voice', hasVoice, emp.id)}
