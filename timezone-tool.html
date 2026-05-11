@@ -816,7 +816,7 @@ setInterval(function() {
   var idleMs = Date.now() - lastActivity;
   if (idleMs > IDLE_THRESHOLD) {
     // Record idle period in localStorage for attendance report
-    var idleLog = JSON.parse(localStorage.getItem('idleLog_'+EMP_ID)||'[]');
+    var idleLog = readJson('idleLog_' + EMP_ID, []);
     var last = idleLog[idleLog.length-1];
     var nowStr = new Date().toISOString();
     var todayStr = nowStr.split('T')[0];
@@ -827,7 +827,7 @@ setInterval(function() {
     }
   } else {
     // Close any open idle period when activity resumes
-    var idleLog = JSON.parse(localStorage.getItem('idleLog_'+EMP_ID)||'[]');
+    var idleLog = readJson('idleLog_' + EMP_ID, []);
     var last = idleLog[idleLog.length-1];
     if (last && !last.end) {
       last.end = new Date().toISOString();
@@ -996,7 +996,7 @@ fetch(API, {method:"POST", headers:{"Content-Type":"text/plain"},
  }).catch(function(){
    renderCallbacks();
  });
- var cbs = JSON.parse(localStorage.getItem("callbacks_"+EMP_ID)||"[]");
+ var cbs = readJson("callbacks_" + EMP_ID, []);
  cbs.unshift(cbRec);
  localStorage.setItem("callbacks_"+EMP_ID, JSON.stringify(cbs));
  document.getElementById("callbackModal").classList.remove("show");
