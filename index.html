@@ -2199,6 +2199,22 @@ fsGet('toolAccess', currentUser.id).then(data => {
 //  VIEW ROUTER
 // ══════════════════════════════════════════════════════════════
 function showView(id) {
+    if (id === 'viewEmail') {
+    const emailAllowed = document.getElementById('emailCard').style.display !== 'none';
+    if (!emailAllowed) {
+      alert('You do not have access to the Email Sender.');
+      id = 'viewDash';
+    }
+  }
+
+  if (id === 'viewVoice') {
+    const voiceAllowed = document.getElementById('voiceCard').style.display !== 'none';
+    if (!voiceAllowed) {
+      alert('You do not have access to Google Voice.');
+      id = 'viewDash';
+    }
+  }
+
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   history.pushState({ view: id }, '', '?view=' + id);
