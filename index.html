@@ -1363,11 +1363,12 @@
             <div class="nav-card-title">Admin Panel</div>
             <div class="nav-card-desc">View team attendance reports and manage leave requests.</div>
           </div>
-<div class="nav-card" onclick="openTimeTool()">
+<div class="nav-card" id="timeCard" onclick="openTimeTool()">
   <div class="nav-card-icon icon-blue">🕐</div>
   <div class="nav-card-title">US Time Tool</div>
   <div class="nav-card-desc">Check driver time zones and convert to Pakistan time instantly.</div>
 </div>
+
           <div class="nav-card" onclick="downloadMaturedLeads()">
   <div class="nav-card-icon icon-green">📥</div>
   <div class="nav-card-title">Download Matured Leads</div>
@@ -2162,15 +2163,24 @@ function enterPortal() {
 // Show cards based on local cache first (instant), then sync from sheet
   const emailAccessLocal = load('emailAccess_' + currentUser.id, currentUser.hasEmailAccess);
   const voiceAccessLocal = load('voiceAccess_' + currentUser.id, currentUser.hasVoiceAccess);
+  const timeAccessLocal = load('timeAccess_' + currentUser.id, true);
   document.getElementById('emailCard').style.display = emailAccessLocal ? '' : 'none';
   document.getElementById('voiceCard').style.display = voiceAccessLocal ? '' : 'none';
+  document.getElementById('timeCard').style.display = timeAccessLocal ? '' : 'none';
+
 
   // Then fetch latest from sheet and update
 fsGet('toolAccess', currentUser.id).then(data => {
-    const emailOk = data ? data.emailAccess : currentUser.hasEmailAccess;
-    const voiceOk = data ? data.voiceAccess : currentUser.hasVoiceAccess;
-    document.getElementById('emailCard').style.display = emailOk ? '' : 'none';
-    document.getElementById('voiceCard').style.display = voiceOk ? '' : 'none';
+const emailOk = data ? data.emailAccess : currentUser.hasEmailAccess;
+const voiceOk = data ? data.voiceAccess : currentUser.hasVoiceAccess;
+const timeOk = data && data.timeToolAccess !== undefined ? data.timeToolAccess : true;
+
+store('timeAccess_' + currentUser.id, timeOk);
+
+document.getElementById('emailCard').style.display = emailOk ? '' : 'none';
+document.getElementById('voiceCard').style.display = voiceOk ? '' : 'none';
+document.getElementById('timeCard').style.display = timeOk ? '' : 'none';
+
   });
   // Restore this user's dark mode preference
   const isDark = load('darkMode_' + currentUser.id, false);
