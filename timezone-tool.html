@@ -1209,7 +1209,10 @@ function doLookup(){
 function showCvTag(loc){
   var info=TZI[loc.tz]||{},w=document.getElementById('cvTag');
   w.style.display='block';
-  w.innerHTML='<div class="sel-tag" style="margin-bottom:8px;">&#128205; '+loc.n+' <span style="opacity:0.5;">('+( info.s||'')+')</span> <span class="sel-x" id="cvClear">&times;</span></div>';
+    var safeName = escapeHtml(loc.n || '');
+  var safeShortTz = escapeHtml(info.s || '');
+  w.innerHTML='<div class="sel-tag" style="margin-bottom:8px;">&#128205; '+safeName+' <span style="opacity:0.5;">('+safeShortTz+')</span> <span class="sel-x" id="cvClear">&times;</span></div>';
+
   document.getElementById('cvClear').addEventListener('click',function(){SEL['cvDd']=null;w.style.display='none';document.getElementById('cvInp').value='';document.getElementById('cvResult').classList.remove('show');});
 }
 document.getElementById('cvBtn').addEventListener('click',doConvert);
