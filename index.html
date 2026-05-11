@@ -2901,10 +2901,12 @@ async function renderAdminAccess() {
   html += '<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Tool Access Control</div>';
   html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">HX-0001 settings are locked and cannot be changed.</div>';
   html += '<div style="font-size:12px;background:var(--orange-a10);color:var(--orange-dk);padding:10px 14px;border-radius:10px;margin-bottom:20px;">⚠️ Changes apply immediately.</div>';
-  html += `<div style="display:grid;grid-template-columns:1fr 80px 80px;gap:0;">
+  html += `<div style="display:grid;grid-template-columns:1fr 80px 80px 80px;gap:0;">
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;">Employee</div>
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Email</div>
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Voice</div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Time</div>
+
   </div>`;
 
   // Sort employees by id
@@ -2915,6 +2917,9 @@ async function renderAdminAccess() {
     const access   = allAccess[emp.id] || {};
     const hasEmail = access.emailAccess !== undefined ? access.emailAccess : emp.hasEmailAccess;
     const hasVoice = access.voiceAccess !== undefined ? access.voiceAccess : emp.hasVoiceAccess;
+    const hasTime = access.timeToolAccess !== undefined ? access.timeToolAccess : true;
+
+    
 
     const safeName = escapeHtml(emp.name || '');
     const safeId = escapeHtml(emp.id || '');
@@ -2934,7 +2939,7 @@ async function renderAdminAccess() {
       </label>`;
     };
 
-    html += `<div style="display:grid;grid-template-columns:1fr 80px 80px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
+    html += `<div style="display:grid;grid-template-columns:1fr 80px 80px 80px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
       <div>
         <div style="font-size:14px;font-weight:600;color:var(--text);">${safeName} ${locked ? '<span style="font-size:10px;color:var(--orange);background:var(--orange-a10);padding:2px 8px;border-radius:20px;margin-left:6px;">LOCKED</span>' : ''}</div>
         <div style="font-size:11px;color:var(--text-muted);">${safeId} · ${safeDesignation}</div>
@@ -2942,6 +2947,8 @@ async function renderAdminAccess() {
       </div>
       ${toggle('email', hasEmail, emp.id)}
       ${toggle('voice', hasVoice, emp.id)}
+            ${toggle('time', hasTime, emp.id)}
+
     </div>`;
   });
 
@@ -2954,7 +2961,8 @@ async function toggleToolAccess(empId, type, granted) {
   const current = await fsGet('toolAccess', empId) || {};
   const emailVal = type === 'email' ? granted : (current.emailAccess !== undefined ? current.emailAccess : false);
   const voiceVal = type === 'voice' ? granted : (current.voiceAccess !== undefined ? current.voiceAccess : false);
-  await fsSet('toolAccess', empId, { empId, emailAccess: emailVal, voiceAccess: voiceVal });
+  const timeVal = type === 'time' ? granted : (current.timeToolAccess !== undefined ? current.timeToolAccess : true);
+  await fsSet('toolAccess', empId, { empId, emailAccess: emailVal, voiceAccess: voiceVal, timeToolAccess: timeVal });
 
 const empDomId = safeDomId(empId);
 const track = document.getElementById('tgt_' + type + '_' + empDomId);
