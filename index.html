@@ -3101,6 +3101,9 @@ function getCallProgress(empId) {
 }
 
 function showIdlePopup(name, empId, minutes) {
+    const safeName = escapeHtml(name || empId || 'Employee');
+  const safeMinutes = escapeHtml(minutes || 0);
+
   const old = document.getElementById('idlePopup');
   if (old) old.remove();
   const popup = document.createElement('div');
@@ -3111,7 +3114,7 @@ function showIdlePopup(name, empId, minutes) {
       <div style="font-size:24px;flex-shrink:0;">⚠️</div>
       <div style="flex:1;">
         <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:14px;color:#E84545;margin-bottom:4px;">Employee Idle Alert</div>
-        <div style="font-size:13px;color:#374151;line-height:1.5;"><strong>${name}</strong> has been idle for <strong>${minutes} minutes</strong>.</div>
+        <div style="font-size:13px;color:#374151;line-height:1.5;"><strong>${safeName}</strong> has been idle for <strong>${safeMinutes} minutes</strong>.</div>
         <div style="margin-top:10px;display:flex;gap:8px;">
           <button onclick="document.getElementById('idlePopup').remove()" style="flex:1;background:#E84545;color:#FFF;border:none;border-radius:8px;padding:7px;font-size:12px;font-weight:700;cursor:pointer;">Dismiss</button>
           <button onclick="showView('viewAdmin')" style="flex:1;background:var(--bg2);color:var(--text);border:1.5px solid var(--border2);border-radius:8px;padding:7px;font-size:12px;font-weight:600;cursor:pointer;">View Status</button>
