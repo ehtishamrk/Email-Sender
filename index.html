@@ -2703,7 +2703,7 @@ async function renderAdminUsers() {
           style="padding:8px 14px;border-radius:10px;background:var(--bg2);border:1.5px solid var(--border2);color:var(--text-mid);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
           ${emp.isAdmin ? 'Remove Admin' : 'Make Admin'}
         </button>
-        <button onclick="removeUser(decodeURIComponent('${uidArg}'), decodeURIComponent('${nameArg}'))"
+        <button onclick="removeUser(decodeURIComponent('${uidArg}'), decodeURIComponent('${nameArg}'), '${emp.id}')"
           style="padding:8px 14px;border-radius:10px;background:#FFF0F0;border:1.5px solid #FFCACA;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
           Remove
         </button>` : ''}
@@ -2799,10 +2799,11 @@ async function toggleAdminRole(uid, empId, makeAdmin) {
   renderAdminUsers();
 }
 
-async function removeUser(uid, name) {
+async function removeUser(uid, name, empId) {
   if (!confirm(`Remove ${name} from the portal? This cannot be undone.`)) return;
   const { db, doc, deleteDoc } = window.__fb;
   await deleteDoc(doc(db, 'employees', uid));
+  if (empId) await deleteDoc(doc(db, 'loginIndex', empId));
   renderAdminUsers();
 }
   
