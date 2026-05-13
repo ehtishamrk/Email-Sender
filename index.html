@@ -2086,8 +2086,7 @@ async function submitSignup() {
 // ══════════════════════════════════════════════════════════════
 async function doLogin() {
   const raw  = document.getElementById('empId').value.trim();
-  const pass = document.getElementById('empPass').value;
-    const password = pass;
+const pass = document.getElementById('empPass').value;
   const err  = document.getElementById('loginError');
   const btn  = document.querySelector('.btn-signin');
 
@@ -2107,7 +2106,7 @@ const { db, doc, getDoc, auth } = window.__fb;
 
     // Now sign in with Firebase Auth
     const { signInWithEmailAndPassword } = window.__fb;
-    const cred = await signInWithEmailAndPassword(auth, email, password);
+    const cred = await signInWithEmailAndPassword(auth, email, pass);
 
     // Fetch full profile from Firestore (requires auth)
     const empSnap = await getDoc(doc(db, 'employees', uid));
