@@ -2182,8 +2182,16 @@ document.getElementById('timeCard').style.display = timeOk ? '' : 'none';
 
   });
   // Restore this user's dark mode preference
-  const isDark = load('darkMode_' + currentUser.id, false);
-  applyDarkMode(isDark);
+const isDarkLocal = load('darkMode_' + currentUser.id, false);
+  applyDarkMode(isDarkLocal);
+  fsGet('employees', currentUser.uid).then(data => {
+    if (data && data.darkMode !== undefined) {
+      store('darkMode_' + currentUser.id, data.darkMode);
+      applyDarkMode(data.darkMode);
+      const cb = document.getElementById('darkModeToggle');
+      if (cb) cb.checked = data.darkMode;
+    }
+  });
   updateDashHeader();
   startClock();
   resumeClockState();
@@ -2607,8 +2615,11 @@ async function saveProfile() {
 // ══════════════════════════════════════════════════════════════
 //  SETTINGS
 // ══════════════════════════════════════════════════════════════
-function toggleDarkMode(on) {
-  if (currentUser) store('darkMode_' + currentUser.id, on);
+async function toggleDarkMode(on) {
+  if (currentUser) {
+    store('darkMode_' + currentUser.id, on);
+    await fsSet('employees', currentUser.uid, { darkMode: on });
+  }
   applyDarkMode(on);
   const cb = document.getElementById('darkModeToggle');
   if (cb) cb.checked = on;
