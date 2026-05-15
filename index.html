@@ -1669,6 +1669,7 @@
             <div><div class="field-label">Department</div><div id="pf_dept" style="font-size:14px;color:var(--text);padding:10px 0;border-bottom:1px solid var(--border);">—</div></div>
             <div><div class="field-label">Company Email</div><div id="pf_email" style="font-size:14px;color:var(--text);padding:10px 0;border-bottom:1px solid var(--border);">—</div></div>
             <div><div class="field-label">Joining Date</div><div id="pf_joining" style="font-size:14px;color:var(--text);padding:10px 0;border-bottom:1px solid var(--border);">—</div></div>
+            <div><div class="field-label">Reports To</div><div id="pf_reportsTo" style="font-size:14px;color:var(--text);padding:10px 0;border-bottom:1px solid var(--border);">—</div></div>
             <div><div class="field-label">Blood Group</div><div id="pf_blood" style="font-size:14px;color:var(--text);padding:10px 0;border-bottom:1px solid var(--border);">—</div></div>
           </div>
         </div>
@@ -1821,6 +1822,8 @@ window.toggleAdminRole = toggleAdminRole;
 
 window.removeUser = removeUser;
 window.renderAdminUsers = renderAdminUsers;
+window.approveAccessRequest = approveAccessRequest;
+window.rejectAccessRequest = rejectAccessRequest;
   window.downloadMaturedLeads = downloadMaturedLeads;
 window.uploadCampaignLeads = uploadCampaignLeads;
 window.saveDailyLimit = saveDailyLimit;
@@ -1865,6 +1868,14 @@ function escapeHtml(value) {
       "'": '&#39;'
     }[ch];
   });
+}
+
+function cleanText(value, maxLength = 160) {
+  return String(value || '').trim().replace(/\s+/g, ' ').substring(0, maxLength);
+}
+
+function normalizeEmail(value) {
+  return cleanText(value, 180).toLowerCase();
 }
 
   function safeDomId(value) {
@@ -2134,31 +2145,39 @@ async function submitForgot() {
 //  SIGNUP
 // ══════════════════════════════════════════════════════════════
 async function submitSignup() {
-  const first   = document.getElementById('su_first').value.trim();
-  const last    = document.getElementById('su_last').value.trim();
-  const desig   = document.getElementById('su_desig').value.trim();
-  const email   = document.getElementById('su_email').value.trim();
-  const phone   = document.getElementById('su_phone').value.trim();
+  const first   = cleanText(document.getElementById('su_first').value, 60);
+  const last    = cleanText(document.getElementById('su_last').value, 60);
+  const desig   = cleanText(document.getElementById('su_desig').value, 80);
+  const email   = normalizeEmail(document.getElementById('su_email').value);
+  const phone   = cleanText(document.getElementById('su_phone').value, 40);
   const joining = document.getElementById('su_join').value.trim();
   if (!first || !last || !desig || !email || !phone || !joining) {
     alert('Please fill in all fields.'); return;
   }
 
-  const [yr, mo, dy] = joining.split('-');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    alert('Please enter a valid email address.'); return;
+  }
 
-  const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSex5VOJHxAjIp1gmf43UmtmRzefcMGEkxFghnU0uggnzt3iwA/formResponse';
-  const body = new URLSearchParams({
-    'entry.761221268':       first,
-    'entry.2041241804':      last,
-    'entry.1919737191':      desig,
-    'entry.960589017':       email,
-    'entry.2110842126':      phone,
-    'entry.734508737_year':  yr,
-    'entry.734508737_month': mo,
-    'entry.734508737_day':   dy,
+  const requestId = 'REQ_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  const saved = await fsSet('accessRequests', requestId, {
+    id: requestId,
+    firstName: first,
+    lastName: last,
+    name: `${first} ${last}`.trim(),
+    designation: desig,
+    email,
+    emailLower: email,
+    phone,
+    joiningDate: joining,
+    status: 'pending',
+    submittedAt: new Date().toISOString()
   });
 
-  try { await fetch(FORM_URL, { method: 'POST', mode: 'no-cors', body }); } catch(e) {}
+  if (!saved) {
+    alert('Request could not be submitted. Please contact admin.');
+    return;
+  }
 
   document.getElementById('signupForm').style.display = 'none';
   document.getElementById('signupSuccess').style.display = 'block';
@@ -2713,6 +2732,9 @@ async function loadProfile() {
 
   // Load editable fields from Firestore
   const data = await fsGet('employees', currentUser.uid);
+  const reportsToName = data?.reportsToName || currentUser.reportsToName || '';
+  const reportsToId = data?.reportsToId || currentUser.reportsToId || '—';
+  document.getElementById('pf_reportsTo').textContent = reportsToName ? `${reportsToName} (${reportsToId})` : '—';
   document.getElementById('pf_phone').value     = data?.phone     || currentUser.phone     || '';
   document.getElementById('pf_emergency').value = data?.emergency || currentUser.emergency || '';
   document.getElementById('pf_address').value   = data?.address   || currentUser.address   || '';
@@ -2803,8 +2825,89 @@ const frozenCount = emps.filter(emp => {
   return isBlockedEmployee(emp) && !['left', 'resigned', 'terminated'].includes(status);
 }).length;
 
+  const allRequests = await fsGetAll('accessRequests');
+  const pendingRequests = Object.values(allRequests)
+    .filter(req => String(req.status || 'pending').toLowerCase() === 'pending')
+    .sort((a, b) => new Date(a.submittedAt || 0) - new Date(b.submittedAt || 0));
+
+  const managerOptions = emps
+    .filter(emp => emp.uid && !isBlockedEmployee(emp))
+    .map(emp => `<option value="${escapeHtml(emp.uid)}">${escapeHtml(emp.id || '')} - ${escapeHtml(emp.name || '')}</option>`)
+    .join('');
 
   let html = `
+  <div class="card-box" style="margin-bottom:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px;">
+      <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">Pending Access Requests</div>
+      <span style="font-size:11px;padding:4px 10px;border-radius:20px;background:var(--orange-a10);color:var(--orange);font-weight:700;">${pendingRequests.length} pending</span>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;">Review portal access applications submitted from the login screen.</div>
+`;
+
+  if (!pendingRequests.length) {
+    html += '<div class="empty-state" style="padding:24px 12px;"><div class="empty-text">No pending access requests.</div></div>';
+  } else {
+    pendingRequests.forEach(req => {
+      const requestId = req.id || '';
+      const reqDomId = safeDomId(requestId);
+      const reqArg = encodeURIComponent(requestId);
+      const safeName = escapeHtml(req.name || `${req.firstName || ''} ${req.lastName || ''}`.trim() || 'Applicant');
+      const safeEmail = escapeHtml(req.email || '');
+      const safePhone = escapeHtml(req.phone || '');
+      const safeDesignation = escapeHtml(req.designation || '');
+      const safeJoin = escapeHtml(req.joiningDate || '');
+      const submitted = req.submittedAt
+        ? escapeHtml(new Date(req.submittedAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }))
+        : 'Unknown date';
+
+      html += `
+      <div style="border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;background:var(--surface2);">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px;">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--text);">${safeName}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${safeDesignation} · ${safeEmail} · ${safePhone}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Joining: ${safeJoin || '—'} · Submitted: ${submitted}</div>
+          </div>
+          <button onclick="rejectAccessRequest(decodeURIComponent('${reqArg}'))"
+            style="padding:8px 14px;border-radius:10px;background:var(--red-bg);border:1.5px solid var(--red-border);color:var(--red);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">
+            Reject
+          </button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end;">
+          <div class="field-wrap" style="margin:0;">
+            <label class="field-label">Employee ID</label>
+            <input class="field-input" id="ar_emp_${reqDomId}" placeholder="0007" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+          </div>
+          <div class="field-wrap" style="margin:0;">
+            <label class="field-label">Department</label>
+            <input class="field-input" id="ar_dept_${reqDomId}" placeholder="Dispatch">
+          </div>
+          <div class="field-wrap" style="margin:0;">
+            <label class="field-label">Reports To</label>
+            <select class="field-input" id="ar_reports_${reqDomId}">
+              <option value="">No manager / top level</option>
+              ${managerOptions}
+            </select>
+          </div>
+          <div class="field-wrap" style="margin:0;">
+            <label class="field-label">Role</label>
+            <select class="field-input" id="ar_admin_${reqDomId}">
+              <option value="false">Employee</option>
+              <option value="true">Admin</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+          <button class="btn-orange" onclick="approveAccessRequest(decodeURIComponent('${reqArg}'))" style="width:auto;padding:10px 22px;">Approve & Send Setup Email →</button>
+        </div>
+        <div id="ar_msg_${reqDomId}" style="margin-top:10px;"></div>
+      </div>`;
+    });
+  }
+
+  html += `</div>
+
   <div class="card-box" style="margin-bottom:20px;">
     <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Add New Employee</div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Creates Firebase Auth account, employee profile, login index, and sends a password setup email.</div>
@@ -2815,6 +2918,13 @@ const frozenCount = emps.filter(emp => {
       
       <div class="field-wrap" style="margin:0;"><label class="field-label">Designation</label><input class="field-input" id="nu_desig" placeholder="Freight Coordinator"></div>
       <div class="field-wrap" style="margin:0;"><label class="field-label">Department</label><input class="field-input" id="nu_dept" placeholder="Dispatch"></div>
+      <div class="field-wrap" style="margin:0;">
+        <label class="field-label">Reports To / Manager</label>
+        <select class="field-input" id="nu_reportsTo">
+          <option value="">No manager / top level</option>
+          ${managerOptions}
+        </select>
+      </div>
       <div class="field-wrap" style="margin:0;"><label class="field-label">Joining Date</label><input class="field-input" id="nu_join" type="date"></div>
       <div class="field-wrap" style="margin:0;">
         <label class="field-label">Role</label>
@@ -2854,6 +2964,7 @@ const statusColor = isBlocked ? 'var(--red)' : 'var(--green)';
     const safeId = escapeHtml(emp.id);
     const safeDesignation = escapeHtml(emp.designation || '');
     const safeEmail = escapeHtml(emp.email || '');
+    const safeManager = emp.reportsToName ? `Reports to ${escapeHtml(emp.reportsToName)}` : '';
     const safeRole = emp.isAdmin ? 'Admin' : 'Employee';
         const uidArg = encodeURIComponent(emp.uid || '');
     const idArg = encodeURIComponent(emp.id || '');
@@ -2873,6 +2984,7 @@ const freezeNext = isBlocked && !isFormerEmployee ? false : true;
       <div>
         <div style="font-size:14px;font-weight:600;color:var(--text);">${safeName} ${isLocked ? '<span style="font-size:10px;color:var(--orange);background:var(--orange-a10);padding:2px 8px;border-radius:20px;margin-left:6px;">' + (isSelf ? 'SELF' : 'LOCKED') + '</span>' : ''}</div>
         <div style="font-size:11px;color:var(--text-muted);">${safeId} · ${safeDesignation} · ${safeEmail}</div>
+        ${safeManager ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${safeManager}</div>` : ''}
        ${isFormerEmployee && emp.leftAt ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Left on ${escapeHtml(new Date(emp.leftAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }))}${emp.leftMarkedByName ? ' by ' + escapeHtml(emp.leftMarkedByName) : ''}</div>` : ''}
 
         ${!isFormerEmployee && emp.statusUpdatedAt ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Status updated ${escapeHtml(new Date(emp.statusUpdatedAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }))}${emp.statusUpdatedByName ? ' by ' + escapeHtml(emp.statusUpdatedByName) : ''}</div>` : ''}
@@ -2915,12 +3027,179 @@ ${!isFormerEmployee ? `
   el.innerHTML = html;
 }
 
+async function approveAccessRequest(requestId) {
+  if (!currentUser || !currentUser.isAdmin) {
+    alert('Only admins can approve access requests.');
+    return;
+  }
+
+  const reqDomId = safeDomId(requestId);
+  const msg = document.getElementById('ar_msg_' + reqDomId);
+  const request = await fsGet('accessRequests', requestId);
+
+  if (!request || String(request.status || 'pending').toLowerCase() !== 'pending') {
+    if (msg) msg.innerHTML = '<div style="color:var(--red);font-size:13px;">This request is no longer pending.</div>';
+    return;
+  }
+
+  const idRaw = document.getElementById('ar_emp_' + reqDomId).value.trim();
+  const dept = cleanText(document.getElementById('ar_dept_' + reqDomId).value, 80);
+  const reportsToUid = document.getElementById('ar_reports_' + reqDomId).value.trim();
+  const isAdmin = document.getElementById('ar_admin_' + reqDomId).value === 'true';
+  const email = normalizeEmail(request.email);
+  const name = cleanText(request.name || `${request.firstName || ''} ${request.lastName || ''}`.trim(), 120);
+  const designation = cleanText(request.designation, 80);
+  const phone = cleanText(request.phone, 40);
+  const joiningDate = String(request.joiningDate || '').trim();
+
+  if (!idRaw || !dept) {
+    if (msg) msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Employee ID and Department are required before approval.</div>';
+    return;
+  }
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (msg) msg.innerHTML = '<div style="color:var(--red);font-size:13px;">This request has an invalid email address.</div>';
+    return;
+  }
+
+  const empId = 'HX-' + idRaw.padStart(4, '0');
+  const existingId = await fsGet('loginIndex', empId);
+  if (existingId) {
+    if (msg) msg.innerHTML = '<div style="color:var(--red);font-size:13px;">That Employee ID already exists.</div>';
+    return;
+  }
+
+  let manager = null;
+  if (reportsToUid) {
+    const allEmps = await fsGetAll('employees');
+    manager = Object.values(allEmps).find(emp => emp.uid === reportsToUid) || null;
+
+    if (!manager || isBlockedEmployee(manager)) {
+      if (msg) msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Please choose an active manager.</div>';
+      return;
+    }
+  }
+
+  if (msg) msg.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">Approving request and creating account...</div>';
+
+  let appMod = null;
+  let authMod = null;
+  let secondaryApp = null;
+  let secondaryAuth = null;
+
+  try {
+    appMod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+    authMod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+
+    secondaryApp = appMod.initializeApp(firebaseConfig, 'requestApprover_' + Date.now());
+    secondaryAuth = authMod.getAuth(secondaryApp);
+
+    const tempPassword = Array.from(
+      crypto.getRandomValues(new Uint32Array(4)),
+      n => n.toString(36)
+    ).join('') + 'Aa1!';
+
+    const cred = await authMod.createUserWithEmailAndPassword(secondaryAuth, email, tempPassword);
+
+    const profileSaved = await fsSet('employees', cred.user.uid, {
+      uid: cred.user.uid,
+      id: empId,
+      name,
+      email,
+      phone,
+      designation,
+      department: dept,
+      reportsToUid: manager ? manager.uid : '',
+      reportsToId: manager ? manager.id : '',
+      reportsToName: manager ? manager.name : '',
+      joiningDate,
+      isAdmin,
+      hasEmailAccess: false,
+      hasVoiceAccess: false,
+      accountStatus: 'active',
+      isFrozen: false,
+      createdAt: new Date().toISOString(),
+      createdFromRequest: requestId
+    });
+
+    const indexSaved = await fsSet('loginIndex', empId, {
+      email,
+      uid: cred.user.uid
+    });
+
+    if (!profileSaved || !indexSaved) {
+      throw new Error('Firebase rules blocked employee creation. Update Firestore rules and try again.');
+    }
+
+    let setupEmailSent = true;
+    let setupEmailError = '';
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (e) {
+      setupEmailSent = false;
+      setupEmailError = e.message || 'Password setup email failed.';
+    }
+
+    await fsSet('accessRequests', requestId, {
+      status: 'approved',
+      reviewedAt: new Date().toISOString(),
+      reviewedBy: currentUser.id,
+      reviewedByName: currentUser.name || currentUser.id,
+      approvedUid: cred.user.uid,
+      approvedEmpId: empId,
+      setupEmailSent,
+      setupEmailError
+    });
+
+    if (setupEmailSent) {
+      if (msg) msg.innerHTML = '<div class="alert-success">Approved. Firebase password setup email sent.</div>';
+    } else {
+      if (msg) msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Approved, but setup email failed: ' + escapeHtml(setupEmailError) + '</div>';
+    }
+
+    setTimeout(() => renderAdminUsers(), 1500);
+  } catch(e) {
+    if (msg) msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Error: ' + escapeHtml(e.message || 'Could not approve request.') + '</div>';
+  } finally {
+    try {
+      if (secondaryAuth) await authMod.signOut(secondaryAuth);
+      if (secondaryApp && appMod.deleteApp) await appMod.deleteApp(secondaryApp);
+    } catch(e) {}
+  }
+}
+
+async function rejectAccessRequest(requestId) {
+  if (!currentUser || !currentUser.isAdmin) {
+    alert('Only admins can reject access requests.');
+    return;
+  }
+
+  const request = await fsGet('accessRequests', requestId);
+  if (!request || String(request.status || 'pending').toLowerCase() !== 'pending') {
+    alert('This request is no longer pending.');
+    return;
+  }
+
+  const applicant = request.name || request.email || 'this applicant';
+  if (!confirm(`Reject access request for ${applicant}?`)) return;
+
+  await fsSet('accessRequests', requestId, {
+    status: 'rejected',
+    reviewedAt: new Date().toISOString(),
+    reviewedBy: currentUser.id,
+    reviewedByName: currentUser.name || currentUser.id
+  });
+
+  renderAdminUsers();
+}
+
 async function addNewUser() {
-  const name  = document.getElementById('nu_name').value.trim();
+  const name  = cleanText(document.getElementById('nu_name').value, 120);
   const idRaw = document.getElementById('nu_id').value.trim();
-  const email = document.getElementById('nu_email').value.trim();
-  const desig = document.getElementById('nu_desig').value.trim();
-  const dept  = document.getElementById('nu_dept').value.trim();
+  const email = normalizeEmail(document.getElementById('nu_email').value);
+  const desig = cleanText(document.getElementById('nu_desig').value, 80);
+  const dept  = cleanText(document.getElementById('nu_dept').value, 80);
+  const reportsToUid = document.getElementById('nu_reportsTo').value.trim();
   const join  = document.getElementById('nu_join').value.trim();
   const isAdmin = document.getElementById('nu_admin').value === 'true';
   const msg   = document.getElementById('addUserMsg');
@@ -2931,6 +3210,23 @@ async function addNewUser() {
   }
 
   const empId = 'HX-' + idRaw.padStart(4, '0');
+  const existingId = await fsGet('loginIndex', empId);
+  if (existingId) {
+    msg.innerHTML = '<div style="color:var(--red);font-size:13px;">That Employee ID already exists.</div>';
+    return;
+  }
+
+  let manager = null;
+  if (reportsToUid) {
+    const allEmps = await fsGetAll('employees');
+    manager = Object.values(allEmps).find(emp => emp.uid === reportsToUid) || null;
+
+    if (!manager || isBlockedEmployee(manager)) {
+      msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Please choose an active manager.</div>';
+      return;
+    }
+  }
+
   msg.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">Creating account...</div>';
 
   let appMod = null;
@@ -2959,6 +3255,9 @@ async function addNewUser() {
       email,
       designation: desig,
       department: dept,
+      reportsToUid: manager ? manager.uid : '',
+      reportsToId: manager ? manager.id : '',
+      reportsToName: manager ? manager.name : '',
       joiningDate: join,
       isAdmin,
       hasEmailAccess: false,
@@ -2978,6 +3277,7 @@ createdAt: new Date().toISOString()
 
     msg.innerHTML = '<div class="alert-success">Employee added. Password setup email sent.</div>';
     ['nu_name','nu_id','nu_email','nu_desig','nu_dept','nu_join'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('nu_reportsTo').value = '';
     document.getElementById('nu_admin').value = 'false';
 
     setTimeout(() => renderAdminUsers(), 1500);
