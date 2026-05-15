@@ -3056,7 +3056,18 @@ statusUpdatedByName: currentUser.name || currentUser.id
   
 
 async function toggleAdminRole(uid, empId, makeAdmin) {
+  if (empId === 'HX-0001') {
+    alert('HX-0001 admin rights are locked.');
+    return;
+  }
+
+  if (uid === currentUser.uid || empId === currentUser.id) {
+    alert('You cannot change your own admin rights.');
+    return;
+  }
+
   if (!confirm(`${makeAdmin ? 'Grant admin rights to' : 'Remove admin rights from'} ${empId}?`)) return;
+
   await fsSet('employees', uid, { isAdmin: makeAdmin });
   renderAdminUsers();
 }
