@@ -2791,6 +2791,9 @@ const statusColor = isBlocked ? 'var(--red)' : 'var(--green)';
         const uidArg = encodeURIComponent(emp.uid || '');
     const idArg = encodeURIComponent(emp.id || '');
     const nameArg = encodeURIComponent(emp.name || '');
+    const freezeAction = isBlocked ? 'Unfreeze' : 'Freeze';
+const freezeNext = isBlocked ? false : true;
+
 
 
     html += `
@@ -2811,10 +2814,20 @@ const statusColor = isBlocked ? 'var(--red)' : 'var(--green)';
           style="padding:8px 14px;border-radius:10px;background:var(--bg2);border:1.5px solid var(--border2);color:var(--text-mid);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
           ${emp.isAdmin ? 'Remove Admin' : 'Make Admin'}
         </button>
+
+        <button onclick="toggleEmployeeFreeze(decodeURIComponent('${uidArg}'), decodeURIComponent('${idArg}'), ${freezeNext})"
+          style="padding:8px 14px;border-radius:10px;background:${freezeNext ? 'var(--red-bg)' : 'var(--green-bg)'};border:1.5px solid ${freezeNext ? 'var(--red-border)' : 'var(--green-border)'};color:${freezeNext ? 'var(--red)' : 'var(--green)'};font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          ${freezeAction}
+        </button>
+
+        
         <button onclick="removeUser(decodeURIComponent('${uidArg}'), decodeURIComponent('${nameArg}'), '${emp.id}')"
           style="padding:8px 14px;border-radius:10px;background:#FFF0F0;border:1.5px solid #FFCACA;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
           Remove
         </button>` : ''}
+
+
+        
       </div>
     </div>`;
   });
