@@ -1933,6 +1933,30 @@ let currentUser = null;
 let clockInterval = null;
 let clockedIn = false;
 let clockInTimestamp = null;
+
+  function isBlockedEmployee(profile) {
+  if (!profile) return true;
+
+  const status = String(profile.accountStatus || profile.employmentStatus || '')
+    .trim()
+    .toLowerCase();
+
+  return profile.isFrozen === true
+    || ['frozen', 'inactive', 'resigned', 'left', 'terminated'].includes(status);
+}
+
+function showBlockedAccountMessage() {
+  const err = document.getElementById('loginError');
+
+  if (err) {
+    err.textContent = 'This account is inactive or frozen. Please contact admin.';
+    err.classList.add('show');
+  } else {
+    alert('This account is inactive or frozen. Please contact admin.');
+  }
+}
+
+  
 // ── AUTO-RESTORE SESSION ON REFRESH ──
 (async function restoreSession() {
   const authUser = await new Promise(resolve => {
