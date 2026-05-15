@@ -2985,7 +2985,7 @@ async function removeUser(uid, name, empId) {
     return;
   }
 
-  if (!confirm(`Mark ${name} as left/resigned? Their account will be blocked, but their record will stay saved.`)) return;
+  if (!confirm(`Mark ${name} (${empId}) as left/resigned? Their portal access will be blocked, but their employee record and history will stay saved.`)) return;
 
   await fsSet('employees', uid, {
     isFrozen: true,
