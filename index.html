@@ -2776,6 +2776,11 @@ async function renderAdminUsers() {
 
   emps.forEach(emp => {
     const isLocked = emp.id === 'HX-0001';
+    const isBlocked = isBlockedEmployee(emp);
+const statusLabel = isBlocked ? 'Frozen / Inactive' : 'Active';
+const statusBg = isBlocked ? 'var(--red-bg)' : 'var(--green-bg)';
+const statusColor = isBlocked ? 'var(--red)' : 'var(--green)';
+
     const safeName = escapeHtml(emp.name);
     const safeId = escapeHtml(emp.id);
     const safeDesignation = escapeHtml(emp.designation || '');
@@ -2794,6 +2799,8 @@ async function renderAdminUsers() {
         <div style="font-size:11px;color:var(--text-muted);">${safeId} · ${safeDesignation} · ${safeEmail}</div>
         <div style="margin-top:4px;">
           <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${emp.isAdmin ? 'var(--orange-a10)' : 'var(--bg2)'};color:${emp.isAdmin ? '#8B5200' : 'var(--text-muted)'};">${safeRole}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${statusBg};color:${statusColor};margin-left:6px;">${statusLabel}</span>
+
         </div>
       </div>
       <div style="display:flex;gap:8px;">
