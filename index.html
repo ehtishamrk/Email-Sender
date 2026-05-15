@@ -2160,6 +2160,12 @@ const { db, doc, getDoc, auth } = window.__fb;
     if (!empSnap.exists()) throw new Error('no-profile');
     const profile = empSnap.data();
 
+    if (isBlockedEmployee(profile)) {
+  await window.__fb.signOut(window.__fb.auth);
+  throw new Error('account-blocked');
+}
+
+
     err.classList.remove('show');
     currentUser = { ...profile };
     store('session', { id: profile.id });
@@ -2167,7 +2173,14 @@ const { db, doc, getDoc, auth } = window.__fb;
 
 } catch(e) {
     console.error('Login error:', e.code, e.message);
-    err.classList.add('show');
+
+    if (e.message === 'account-blocked') {
+      showBlockedAccountMessage();
+    } else {
+      err.textContent = 'Incorrect Employee ID or password.';
+      err.classList.add('show');
+    }
+
     document.getElementById('empPass').value = '';
     document.getElementById('empPass').focus();
   } finally {
