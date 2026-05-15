@@ -2781,7 +2781,17 @@ async function renderAdminUsers() {
   if (!el) return;
 
   const allEmps = await fsGetAll('employees');
-  const emps = Object.values(allEmps).sort((a,b) => a.id.localeCompare(b.id));
+  const emps = Object.values(allEmps).sort((a, b) => {
+  const statusA = String(a.accountStatus || a.employmentStatus || '').trim().toLowerCase();
+  const statusB = String(b.accountStatus || b.employmentStatus || '').trim().toLowerCase();
+
+  const formerA = ['left', 'resigned', 'terminated'].includes(statusA);
+  const formerB = ['left', 'resigned', 'terminated'].includes(statusB);
+
+  if (formerA !== formerB) return formerA ? 1 : -1;
+  return String(a.id || '').localeCompare(String(b.id || ''));
+});
+
 
   const activeCount = emps.filter(emp => !isBlockedEmployee(emp)).length;
 const formerCount = emps.filter(emp => {
