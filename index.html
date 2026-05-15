@@ -2964,6 +2964,12 @@ async function toggleEmployeeFreeze(uid, empId, freeze) {
     return;
   }
 
+  if (uid === currentUser.uid || empId === currentUser.id) {
+    alert('You cannot freeze your own account.');
+    return;
+  }
+
+  
   const action = freeze ? 'freeze' : 'unfreeze';
 
   if (!confirm(`Are you sure you want to ${action} ${empId}?`)) return;
@@ -3024,6 +3030,12 @@ async function removeUser(uid, name, empId) {
     return;
   }
 
+  if (uid === currentUser.uid || empId === currentUser.id) {
+    alert('You cannot mark your own account as left.');
+    return;
+  }
+
+  
   if (!confirm(`Mark ${name} (${empId}) as left/resigned? Their portal access will be blocked, but their employee record and history will stay saved.`)) return;
 
   await fsSet('employees', uid, {
