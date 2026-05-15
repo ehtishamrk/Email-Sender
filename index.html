@@ -2862,7 +2862,10 @@ async function addNewUser() {
       isAdmin,
       hasEmailAccess: false,
       hasVoiceAccess: false,
-      createdAt: new Date().toISOString()
+      accountStatus: 'active',
+isFrozen: false,
+createdAt: new Date().toISOString()
+
     });
 
     await fsSet('loginIndex', empId, {
