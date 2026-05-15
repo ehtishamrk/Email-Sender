@@ -3033,7 +3033,36 @@ async function removeUser(uid, name, empId) {
     leftMarkedBy: currentUser.id
   });
 
-  if (empId) {
+    if (empId) {
+    const outTs = new Date().toISOString();
+
+    await fsSet('clockState', empId, {
+      clockedIn: false,
+      timestamp: null,
+      empId
+    });
+
+    try {
+      const { db, collection, getDocs, query, where } = window.__fb;
+      const openSessions = await getDocs(
+        query(collection(db, 'attendance/' + empId + '/sessions'), where('clockOut', '==', null))
+      );
+
+      openSessions.forEach(async d => {
+        const session = d.data();
+        const inTs = session.clockIn || outTs;
+        const duration = Math.max(0, Math.round((new Date(outTs) - new Date(inTs)) / 60000));
+
+        await fsSet('attendance/' + empId + '/sessions', d.id, {
+          clockOut: outTs,
+          duration,
+          autoOut: true,
+          closedByLeftStatus: true
+        });
+      });
+    } catch(e) {}
+  }
+
     await fsSet('clockState', empId, {
       clockedIn: false,
       timestamp: null,
