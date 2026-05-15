@@ -2200,12 +2200,18 @@ fsGet('toolAccess', currentUser.id).then(data => {
 const emailOk = data ? data.emailAccess : currentUser.hasEmailAccess;
 const voiceOk = data ? data.voiceAccess : currentUser.hasVoiceAccess;
 const timeOk = data && data.timeToolAccess !== undefined ? data.timeToolAccess : true;
+  const campaignOk = data && data.campaignAccess !== undefined ? data.campaignAccess : currentUser.isAdmin === true;
+
 
 store('timeAccess_' + currentUser.id, timeOk);
+  store('campaignAccess_' + currentUser.id, campaignOk);
+
 
 document.getElementById('emailCard').style.display = emailOk ? '' : 'none';
 document.getElementById('voiceCard').style.display = voiceOk ? '' : 'none';
 document.getElementById('timeCard').style.display = timeOk ? '' : 'none';
+  document.getElementById('campaignCard').style.display = campaignOk ? '' : 'none';
+
 
   });
   // Restore this user's dark mode preference
