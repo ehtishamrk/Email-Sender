@@ -3374,6 +3374,19 @@ window.addEventListener('popstate', function(e) {
   if (el) el.classList.add('active');
 });
   async function downloadMaturedLeads() {
+      if (!currentUser) {
+    alert('Please sign in before downloading leads.');
+    return;
+  }
+
+  const access = await fsGet('toolAccess', currentUser.id) || {};
+  const hasCampaign = access.campaignAccess !== undefined ? access.campaignAccess : currentUser.isAdmin === true;
+
+  if (!hasCampaign) {
+    alert('You do not have access to campaign leads.');
+    return;
+  }
+
   if (!clockedIn) {
     alert('Please clock in before downloading leads.');
     return;
