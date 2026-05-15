@@ -2285,7 +2285,7 @@ async function loadCampaignSettings() {
     }
   } catch(e) {}
 }
-function switchAdminTab(tabId, btn) {
+async function switchAdminTab(tabId, btn) {
 document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive,#tabDataUpload,#tabUsers,#tabCampaign').forEach(t => t.style.display = 'none');
   document.getElementById(tabId).style.display = '';
   document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
