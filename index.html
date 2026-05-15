@@ -2980,12 +2980,32 @@ async function toggleAdminRole(uid, empId, makeAdmin) {
 }
 
 async function removeUser(uid, name, empId) {
-  if (!confirm(`Remove ${name} from the portal? This cannot be undone.`)) return;
-  const { db, doc, deleteDoc } = window.__fb;
-  await deleteDoc(doc(db, 'employees', uid));
-  if (empId) await deleteDoc(doc(db, 'loginIndex', empId));
+  if (empId === 'HX-0001') {
+    alert('HX-0001 cannot be removed.');
+    return;
+  }
+
+  if (!confirm(`Mark ${name} as left/resigned? Their account will be blocked, but their record will stay saved.`)) return;
+
+  await fsSet('employees', uid, {
+    isFrozen: true,
+    accountStatus: 'left',
+    leftAt: new Date().toISOString(),
+    leftMarkedBy: currentUser.id
+  });
+
+  if (empId) {
+    await fsSet('clockState', empId, {
+      clockedIn: false,
+      timestamp: null,
+      empId
+    });
+  }
+
   renderAdminUsers();
+  renderAdminLiveStatus();
 }
+
   
 // ─── PASTE THIS INTO portal.html — replaces renderAdminLiveStatus() ───
 var _liveTimer = null;
