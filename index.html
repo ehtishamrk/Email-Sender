@@ -2873,6 +2873,8 @@ const freezeNext = isBlocked && !isFormerEmployee ? false : true;
       <div>
         <div style="font-size:14px;font-weight:600;color:var(--text);">${safeName} ${isLocked ? '<span style="font-size:10px;color:var(--orange);background:var(--orange-a10);padding:2px 8px;border-radius:20px;margin-left:6px;">' + (isSelf ? 'SELF' : 'LOCKED') + '</span>' : ''}</div>
         <div style="font-size:11px;color:var(--text-muted);">${safeId} · ${safeDesignation} · ${safeEmail}</div>
+       ${isFormerEmployee && emp.leftAt ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Left on ${escapeHtml(new Date(emp.leftAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }))}</div>` : ''}
+
         ${!isFormerEmployee && emp.statusUpdatedAt ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Status updated ${escapeHtml(new Date(emp.statusUpdatedAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }))}</div>` : ''}
 
         <div style="margin-top:4px;">
@@ -3011,7 +3013,9 @@ async function toggleEmployeeFreeze(uid, empId, freeze) {
     isFrozen: freeze,
     accountStatus: freeze ? 'frozen' : 'active',
     statusUpdatedAt: new Date().toISOString(),
-    statusUpdatedBy: currentUser.id
+    statusUpdatedBy: currentUser.id,
+statusUpdatedByName: currentUser.name || currentUser.id
+
   });
 
   if (freeze) {
@@ -3075,7 +3079,9 @@ async function removeUser(uid, name, empId) {
     isFrozen: true,
     accountStatus: 'left',
     leftAt: new Date().toISOString(),
-    leftMarkedBy: currentUser.id
+    leftMarkedBy: currentUser.id,
+leftMarkedByName: currentUser.name || currentUser.id
+
   });
 
     if (empId) {
