@@ -1936,6 +1936,9 @@ let clockInterval = null;
 let clockedIn = false;
 let clockInTimestamp = null;
 
+  let accountStatusInterval = null;
+
+
   function isBlockedEmployee(profile) {
   if (!profile) return true;
 
@@ -1956,6 +1959,24 @@ function showBlockedAccountMessage() {
   } else {
     alert('This account is inactive or frozen. Please contact admin.');
   }
+}
+async function enforceCurrentAccountStatus() {
+  if (!currentUser || !currentUser.uid) return;
+
+  const latestProfile = await fsGet('employees', currentUser.uid);
+
+  if (!latestProfile || isBlockedEmployee(latestProfile)) {
+    await doLogout();
+    showBlockedAccountMessage();
+    return;
+  }
+
+  currentUser = { ...currentUser, ...latestProfile };
+}
+
+function startAccountStatusWatcher() {
+  clearInterval(accountStatusInterval);
+  accountStatusInterval = setInterval(enforceCurrentAccountStatus, 60000);
 }
 
   
