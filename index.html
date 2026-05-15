@@ -2916,6 +2916,36 @@ createdAt: new Date().toISOString()
   }
 }
 
+async function toggleEmployeeFreeze(uid, empId, freeze) {
+  if (empId === 'HX-0001') {
+    alert('HX-0001 cannot be frozen.');
+    return;
+  }
+
+  const action = freeze ? 'freeze' : 'unfreeze';
+
+  if (!confirm(`Are you sure you want to ${action} ${empId}?`)) return;
+
+  await fsSet('employees', uid, {
+    isFrozen: freeze,
+    accountStatus: freeze ? 'frozen' : 'active',
+    statusUpdatedAt: new Date().toISOString(),
+    statusUpdatedBy: currentUser.id
+  });
+
+  if (freeze) {
+    await fsSet('clockState', empId, {
+      clockedIn: false,
+      timestamp: null,
+      empId
+    });
+  }
+
+  renderAdminUsers();
+  renderAdminLiveStatus();
+}
+
+  
 
 async function toggleAdminRole(uid, empId, makeAdmin) {
   if (!confirm(`${makeAdmin ? 'Grant admin rights to' : 'Remove admin rights from'} ${empId}?`)) return;
