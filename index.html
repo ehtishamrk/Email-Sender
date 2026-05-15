@@ -2859,6 +2859,8 @@ const statusColor = isBlocked ? 'var(--red)' : 'var(--green)';
     const idArg = encodeURIComponent(emp.id || '');
     const nameArg = encodeURIComponent(emp.name || '');
 const isFormerEmployee = ['left', 'resigned', 'terminated'].includes(empStatus);
+    const rowOpacity = isFormerEmployee ? '0.55' : '1';
+
 const freezeAction = isBlocked && !isFormerEmployee ? 'Unfreeze' : 'Freeze';
 const freezeNext = isBlocked && !isFormerEmployee ? false : true;
 
@@ -2867,7 +2869,7 @@ const freezeNext = isBlocked && !isFormerEmployee ? false : true;
 
     html += `
 
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px;opacity:${rowOpacity};">
       <div>
         <div style="font-size:14px;font-weight:600;color:var(--text);">${safeName} ${isLocked ? '<span style="font-size:10px;color:var(--orange);background:var(--orange-a10);padding:2px 8px;border-radius:20px;margin-left:6px;">' + (isSelf ? 'SELF' : 'LOCKED') + '</span>' : ''}</div>
         <div style="font-size:11px;color:var(--text-muted);">${safeId} · ${safeDesignation} · ${safeEmail}</div>
