@@ -2885,10 +2885,12 @@ const freezeNext = isBlocked && !isFormerEmployee ? false : true;
       </div>
       <div style="display:flex;gap:8px;">
         ${!isLocked ? `
+${!isFormerEmployee ? `
         <button onclick="toggleAdminRole(decodeURIComponent('${uidArg}'), decodeURIComponent('${idArg}'), ${!emp.isAdmin})"
           style="padding:8px 14px;border-radius:10px;background:var(--bg2);border:1.5px solid var(--border2);color:var(--text-mid);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
           ${emp.isAdmin ? 'Remove Admin' : 'Make Admin'}
-        </button>
+        </button>` : ''}
+
 
 ${!isFormerEmployee ? `
         <button onclick="toggleEmployeeFreeze(decodeURIComponent('${uidArg}'), decodeURIComponent('${idArg}'), ${freezeNext})"
