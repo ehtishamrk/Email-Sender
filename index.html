@@ -2783,6 +2783,17 @@ async function renderAdminUsers() {
   const allEmps = await fsGetAll('employees');
   const emps = Object.values(allEmps).sort((a,b) => a.id.localeCompare(b.id));
 
+  const activeCount = emps.filter(emp => !isBlockedEmployee(emp)).length;
+const formerCount = emps.filter(emp => {
+  const status = String(emp.accountStatus || emp.employmentStatus || '').trim().toLowerCase();
+  return ['left', 'resigned', 'terminated'].includes(status);
+}).length;
+const frozenCount = emps.filter(emp => {
+  const status = String(emp.accountStatus || emp.employmentStatus || '').trim().toLowerCase();
+  return isBlockedEmployee(emp) && !['left', 'resigned', 'terminated'].includes(status);
+}).length;
+
+
   let html = `
   <div class="card-box" style="margin-bottom:20px;">
     <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Add New Employee</div>
@@ -2808,7 +2819,13 @@ async function renderAdminUsers() {
   </div>
 
   <div class="card-box">
-    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;">Current Employees</div>`;
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:8px;">Employees</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+  <span style="font-size:11px;padding:4px 10px;border-radius:20px;background:var(--green-bg);color:var(--green);font-weight:700;">Active: ${activeCount}</span>
+  <span style="font-size:11px;padding:4px 10px;border-radius:20px;background:var(--red-bg);color:var(--red);font-weight:700;">Frozen: ${frozenCount}</span>
+  <span style="font-size:11px;padding:4px 10px;border-radius:20px;background:var(--bg2);color:var(--text-muted);font-weight:700;">Former: ${formerCount}</span>
+</div>`;
+
 
   emps.forEach(emp => {
     const isSelf = emp.uid === currentUser.uid || emp.id === currentUser.id;
