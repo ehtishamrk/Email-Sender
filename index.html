@@ -2186,9 +2186,13 @@ function enterPortal() {
   const emailAccessLocal = load('emailAccess_' + currentUser.id, currentUser.hasEmailAccess);
   const voiceAccessLocal = load('voiceAccess_' + currentUser.id, currentUser.hasVoiceAccess);
   const timeAccessLocal = load('timeAccess_' + currentUser.id, true);
+  const campaignAccessLocal = load('campaignAccess_' + currentUser.id, currentUser.isAdmin === true);
+
   document.getElementById('emailCard').style.display = emailAccessLocal ? '' : 'none';
   document.getElementById('voiceCard').style.display = voiceAccessLocal ? '' : 'none';
   document.getElementById('timeCard').style.display = timeAccessLocal ? '' : 'none';
+  document.getElementById('campaignCard').style.display = campaignAccessLocal ? '' : 'none';
+
 
 
   // Then fetch latest from sheet and update
