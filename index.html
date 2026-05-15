@@ -2224,7 +2224,8 @@ if (isBlockedEmployee(profile)) {
 
 async function doLogout() {
   stopHeartbeat();
-  if (clockedIn) performClockOut('auto');
+  if (clockedIn) await performClockOut('auto');
+
   await window.__fb.signOut(window.__fb.auth);
   currentUser = null; clockedIn = false; clockInTimestamp = null;
   store('session', null);
