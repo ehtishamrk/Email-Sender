@@ -2229,6 +2229,8 @@ async function doLogout() {
   currentUser = null; clockedIn = false; clockInTimestamp = null;
   store('session', null);
   clearInterval(clockInterval);
+  clearInterval(accountStatusInterval);
+
   showLoginScreen();
   document.getElementById('portalScreen').classList.remove('show');
   document.getElementById('empId').value = '';
@@ -2301,6 +2303,9 @@ const isDarkLocal = load('darkMode_' + currentUser.id, false);
   refreshStats();
   refreshLeaveHistory();
   startHeartbeat();
+
+  startAccountStatusWatcher();
+
 
   const params = new URLSearchParams(window.location.search);
   const requestedView = params.get('view');
