@@ -3039,8 +3039,16 @@ const thumb = document.getElementById('tgthumb_' + type + '_' + empDomId);
   if (empId === window.__currentUser.id) {
     if (type === 'email') document.getElementById('emailCard').style.display = granted ? '' : 'none';
     if (type === 'voice') document.getElementById('voiceCard').style.display = granted ? '' : 'none';
+    if (type === 'time') document.getElementById('timeCard').style.display = granted ? '' : 'none';
+    if (type === 'campaign') document.getElementById('campaignCard').style.display = granted ? '' : 'none';
+
+    store('emailAccess_' + empId, emailVal);
+    store('voiceAccess_' + empId, voiceVal);
+    store('timeAccess_' + empId, timeVal);
+    store('campaignAccess_' + empId, campaignVal);
   }
 }
+
 
 async function renderAdminAttendance() {
   const el = document.getElementById('adminAttContent');
