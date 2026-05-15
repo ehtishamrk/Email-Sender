@@ -2804,8 +2804,12 @@ async function renderAdminUsers() {
 
   emps.forEach(emp => {
     const isLocked = emp.id === 'HX-0001';
-    const isBlocked = isBlockedEmployee(emp);
-const statusLabel = isBlocked ? 'Frozen / Inactive' : 'Active';
+const empStatus = String(emp.accountStatus || emp.employmentStatus || '').trim().toLowerCase();
+const isBlocked = isBlockedEmployee(emp);
+const statusLabel = ['left', 'resigned', 'terminated'].includes(empStatus)
+  ? 'Left / Resigned'
+  : (isBlocked ? 'Frozen / Inactive' : 'Active');
+
 const statusBg = isBlocked ? 'var(--red-bg)' : 'var(--green-bg)';
 const statusColor = isBlocked ? 'var(--red)' : 'var(--green)';
 
