@@ -1965,11 +1965,13 @@ async function enforceCurrentAccountStatus() {
 
   const latestProfile = await fsGet('employees', currentUser.uid);
 
-  if (!latestProfile || isBlockedEmployee(latestProfile)) {
-    await doLogout();
-    showBlockedAccountMessage();
-    return;
-  }
+if (!latestProfile || isBlockedEmployee(latestProfile)) {
+  clearInterval(accountStatusInterval);
+  await doLogout();
+  showBlockedAccountMessage();
+  return;
+}
+
 
   currentUser = { ...currentUser, ...latestProfile };
 }
