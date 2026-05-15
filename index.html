@@ -2873,9 +2873,9 @@ const freezeNext = isBlocked && !isFormerEmployee ? false : true;
       <div>
         <div style="font-size:14px;font-weight:600;color:var(--text);">${safeName} ${isLocked ? '<span style="font-size:10px;color:var(--orange);background:var(--orange-a10);padding:2px 8px;border-radius:20px;margin-left:6px;">' + (isSelf ? 'SELF' : 'LOCKED') + '</span>' : ''}</div>
         <div style="font-size:11px;color:var(--text-muted);">${safeId} · ${safeDesignation} · ${safeEmail}</div>
-       ${isFormerEmployee && emp.leftAt ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Left on ${escapeHtml(new Date(emp.leftAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }))}</div>` : ''}
+       ${isFormerEmployee && emp.leftAt ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Left on ${escapeHtml(new Date(emp.leftAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }))}${emp.leftMarkedByName ? ' by ' + escapeHtml(emp.leftMarkedByName) : ''}</div>` : ''}
 
-        ${!isFormerEmployee && emp.statusUpdatedAt ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Status updated ${escapeHtml(new Date(emp.statusUpdatedAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }))}</div>` : ''}
+        ${!isFormerEmployee && emp.statusUpdatedAt ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Status updated ${escapeHtml(new Date(emp.statusUpdatedAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }))}${emp.statusUpdatedByName ? ' by ' + escapeHtml(emp.statusUpdatedByName) : ''}</div>` : ''}
 
         <div style="margin-top:4px;">
           <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${emp.isAdmin ? 'var(--orange-a10)' : 'var(--bg2)'};color:${emp.isAdmin ? '#8B5200' : 'var(--text-muted)'};">${safeRole}</span>
