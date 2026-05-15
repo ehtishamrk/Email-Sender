@@ -1487,9 +1487,26 @@
         </div>
 
 <!-- Campaign Stats Tab -->
-        <div id="tabCampaign" style="display:none;">
-          <div id="campaignStatsContent"></div>
-        </div>
+ <div id="tabCampaign" style="display:none;">
+  <div id="campaignStatsContent"></div>
+  <div class="card-box" style="margin-top:16px;">
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">📥 Upload New Leads</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Upload a CSV file of new leads. Required columns: email, company_name, mc_number, address, state, power_units, drivers, phone_number</div>
+    <div class="field">
+      <label class="field-label">Upload CSV File</label>
+      <input type="file" accept=".csv" id="campaignCsvFile" class="field-input">
+    </div>
+    <div style="text-align:center;color:var(--text-muted);font-size:11px;margin:8px 0;">— or paste CSV below —</div>
+    <div class="field">
+      <label class="field-label">Paste CSV Data</label>
+      <textarea class="field-input" id="campaignCsvPaste" placeholder="email,company_name,mc_number..." style="min-height:80px;font-size:11px;font-family:monospace;"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn-primary" style="flex:1;min-width:140px;" onclick="uploadCampaignLeads()">✅ Upload Leads</button>
+    </div>
+    <div id="campaignUploadMsg" style="display:none;margin-top:12px;padding:10px 14px;border-radius:10px;font-size:13px;"></div>
+  </div>
+</div>
         
         <!-- Load Call Data Tab -->
         <div id="tabDataUpload" style="display:none;">
