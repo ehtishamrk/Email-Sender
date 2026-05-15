@@ -2224,6 +2224,8 @@ if (isBlockedEmployee(profile)) {
 
 async function doLogout() {
   stopHeartbeat();
+  localStorage.removeItem('hb_ts');
+
   if (clockedIn) await performClockOut('auto');
 
   try {
