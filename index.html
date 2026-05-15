@@ -3125,13 +3125,6 @@ leftMarkedByName: currentUser.name || currentUser.id
     } catch(e) {}
   }
 
-    await fsSet('clockState', empId, {
-      clockedIn: false,
-      timestamp: null,
-      empId
-    });
-  }
-
   renderAdminUsers();
   renderAdminLiveStatus();
 }
