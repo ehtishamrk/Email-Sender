@@ -2821,8 +2821,10 @@ const statusColor = isBlocked ? 'var(--red)' : 'var(--green)';
         const uidArg = encodeURIComponent(emp.uid || '');
     const idArg = encodeURIComponent(emp.id || '');
     const nameArg = encodeURIComponent(emp.name || '');
-    const freezeAction = isBlocked ? 'Unfreeze' : 'Freeze';
-const freezeNext = isBlocked ? false : true;
+const isFormerEmployee = ['left', 'resigned', 'terminated'].includes(empStatus);
+const freezeAction = isBlocked && !isFormerEmployee ? 'Unfreeze' : 'Freeze';
+const freezeNext = isBlocked && !isFormerEmployee ? false : true;
+
 
 
 
@@ -2845,10 +2847,12 @@ const freezeNext = isBlocked ? false : true;
           ${emp.isAdmin ? 'Remove Admin' : 'Make Admin'}
         </button>
 
+${!isFormerEmployee ? `
         <button onclick="toggleEmployeeFreeze(decodeURIComponent('${uidArg}'), decodeURIComponent('${idArg}'), ${freezeNext})"
           style="padding:8px 14px;border-radius:10px;background:${freezeNext ? 'var(--red-bg)' : 'var(--green-bg)'};border:1.5px solid ${freezeNext ? 'var(--red-border)' : 'var(--green-border)'};color:${freezeNext ? 'var(--red)' : 'var(--green)'};font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
           ${freezeAction}
-        </button>
+        </button>` : ''}
+
 
         
         <button onclick="removeUser(decodeURIComponent('${uidArg}'), decodeURIComponent('${nameArg}'), '${emp.id}')"
