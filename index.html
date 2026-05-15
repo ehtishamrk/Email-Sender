@@ -2274,7 +2274,15 @@ document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive,#tabDat
   document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderAdmin();
-  if (tabId === 'tabCampaign') renderCampaignStats();
+  if (tabId === 'tabCampaign') {
+  const access = await fsGet('toolAccess', window.__currentUser.id) || {};
+  const hasCampaign = access.campaignAccess !== undefined ? access.campaignAccess : window.__currentUser.isAdmin;
+  if (!hasCampaign) {
+    document.getElementById('campaignStatsContent').innerHTML = '<div class="card-box"><div class="empty-state"><div class="empty-icon">🔒</div><div class="empty-text">You do not have access to Campaign Stats.</div></div></div>';
+    return;
+  }
+  renderCampaignStats();
+}
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2922,11 +2930,12 @@ async function renderAdminAccess() {
   html += '<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Tool Access Control</div>';
   html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">HX-0001 settings are locked and cannot be changed.</div>';
   html += '<div style="font-size:12px;background:var(--orange-a10);color:var(--orange-dk);padding:10px 14px;border-radius:10px;margin-bottom:20px;">⚠️ Changes apply immediately.</div>';
-  html += `<div style="display:grid;grid-template-columns:1fr 80px 80px 80px;gap:0;">
+  html += `<div style="display:grid;grid-template-columns:1fr 80px 80px 80px 80px;gap:0;">
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;">Employee</div>
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Email</div>
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Voice</div>
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Time</div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Campaign</div>
 
   </div>`;
 
@@ -2939,6 +2948,7 @@ async function renderAdminAccess() {
     const hasEmail = access.emailAccess !== undefined ? access.emailAccess : emp.hasEmailAccess;
     const hasVoice = access.voiceAccess !== undefined ? access.voiceAccess : emp.hasVoiceAccess;
     const hasTime = access.timeToolAccess !== undefined ? access.timeToolAccess : true;
+    const hasCampaign = access.campaignAccess !== undefined ? access.campaignAccess : (emp.isAdmin ? true : false);
 
     
 
@@ -2959,8 +2969,7 @@ async function renderAdminAccess() {
 
       </label>`;
     };
-
-    html += `<div style="display:grid;grid-template-columns:1fr 80px 80px 80px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
+    html += `<div style="display:grid;grid-template-columns:1fr 80px 80px 80px 80px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
       <div>
         <div style="font-size:14px;font-weight:600;color:var(--text);">${safeName} ${locked ? '<span style="font-size:10px;color:var(--orange);background:var(--orange-a10);padding:2px 8px;border-radius:20px;margin-left:6px;">LOCKED</span>' : ''}</div>
         <div style="font-size:11px;color:var(--text-muted);">${safeId} · ${safeDesignation}</div>
@@ -2969,6 +2978,7 @@ async function renderAdminAccess() {
       ${toggle('email', hasEmail, emp.id)}
       ${toggle('voice', hasVoice, emp.id)}
             ${toggle('time', hasTime, emp.id)}
+            ${toggle('campaign', hasCampaign, emp.id)}
 
     </div>`;
   });
@@ -2983,7 +2993,8 @@ async function toggleToolAccess(empId, type, granted) {
   const emailVal = type === 'email' ? granted : (current.emailAccess !== undefined ? current.emailAccess : false);
   const voiceVal = type === 'voice' ? granted : (current.voiceAccess !== undefined ? current.voiceAccess : false);
   const timeVal = type === 'time' ? granted : (current.timeToolAccess !== undefined ? current.timeToolAccess : true);
-  await fsSet('toolAccess', empId, { empId, emailAccess: emailVal, voiceAccess: voiceVal, timeToolAccess: timeVal });
+  const campaignVal = type === 'campaign' ? granted : (current.campaignAccess !== undefined ? current.campaignAccess : false);
+  await fsSet('toolAccess', empId, { empId, emailAccess: emailVal, voiceAccess: voiceVal, timeToolAccess: timeVal, campaignAccess: campaignVal });
 
 const empDomId = safeDomId(empId);
 const track = document.getElementById('tgt_' + type + '_' + empDomId);
