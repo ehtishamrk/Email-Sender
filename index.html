@@ -3425,7 +3425,13 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
       r.seq3_opened ? 'Yes' : 'No',
     ]);
     
-    const csv = [headers, ...rows].map(r => r.map(f => `"${f}"`).join(',')).join('\n');
+    const csvCell = value => {
+  const text = String(value ?? '').replace(/"/g, '""');
+  return /^[=+\-@]/.test(text.trim()) ? "'" + text : text;
+};
+
+const csv = [headers, ...rows].map(r => r.map(f => `"${csvCell(f)}"`).join(',')).join('\n');
+
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
