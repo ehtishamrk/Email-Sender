@@ -2811,7 +2811,9 @@ async function renderAdminUsers() {
     <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;">Current Employees</div>`;
 
   emps.forEach(emp => {
-    const isLocked = emp.id === 'HX-0001';
+    const isSelf = emp.uid === currentUser.uid || emp.id === currentUser.id;
+const isLocked = emp.id === 'HX-0001' || isSelf;
+
 const empStatus = String(emp.accountStatus || emp.employmentStatus || '').trim().toLowerCase();
 const isBlocked = isBlockedEmployee(emp);
 const statusLabel = ['left', 'resigned', 'terminated'].includes(empStatus)
