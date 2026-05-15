@@ -1983,6 +1983,17 @@ if (!empSnap.exists()) {
 }
 
   const profile = empSnap.data();
+
+  if (isBlockedEmployee(profile)) {
+  await signOut(auth);
+  store('pendingSession', null);
+  store('session', null);
+  currentUser = null;
+  showLoginScreen();
+  showBlockedAccountMessage();
+  return;
+}
+
   const pending = load('pendingSession', null);
   const saved = load('session', null);
   const lastHb = parseInt(localStorage.getItem('hb_ts') || '0');
@@ -2159,8 +2170,7 @@ const { db, doc, getDoc, auth } = window.__fb;
     const empSnap = await getDoc(doc(db, 'employees', uid));
     if (!empSnap.exists()) throw new Error('no-profile');
     const profile = empSnap.data();
-
-    if (isBlockedEmployee(profile)) {
+if (isBlockedEmployee(profile)) {
   await window.__fb.signOut(window.__fb.auth);
   throw new Error('account-blocked');
 }
