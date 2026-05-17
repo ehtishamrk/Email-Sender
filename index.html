@@ -1488,7 +1488,7 @@
         </div>
 
 <!-- Campaign Stats Tab -->
- <div id="tabCampaign" style="display:none;">
+<div id="tabCampaign" style="display:none;">
   <div id="campaignStatsContent"></div>
   <div class="card-box" style="margin-top:16px;">
     <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">📥 Upload New Leads</div>
@@ -1507,6 +1507,15 @@
     </div>
     <div id="campaignUploadMsg" style="display:none;margin-top:12px;padding:10px 14px;border-radius:10px;font-size:13px;"></div>
   </div>
+
+  <div class="card-box" style="margin-top:16px;">
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">📬 Reply Inbox</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Leads who replied to your emails. Click a row to open Gmail and respond.</div>
+    <div id="replyInboxContent">
+      <div class="empty-state"><div class="empty-icon">📬</div><div class="empty-text">Loading replies...</div></div>
+    </div>
+  </div>
+
 </div>
         
         <!-- Load Call Data Tab -->
@@ -3835,6 +3844,16 @@ document.addEventListener('DOMContentLoaded', () => {
       reader.readAsText(file);
     });
   }
+  const campaignFile = document.getElementById('campaignCsvFile');
+if (campaignFile) {
+  campaignFile.addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => { document.getElementById('campaignCsvPaste').value = e.target.result; };
+    reader.readAsText(file);
+  });
+}
 });
 
 function parsePortalCSV(text) {
@@ -4157,6 +4176,80 @@ async function renderCampaignStats() {
     el.innerHTML = '<div class="card-box"><div class="empty-state"><div class="empty-text">Error loading stats. Check connection.</div></div></div>';
   }
 }
+
+  async function uploadCampaignLeads() {
+  const SUPABASE_URL = 'https://hbsabagsykrrihoourqb.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhic2FiYWdzeWtycmlob291cnFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MjM1MzYsImV4cCI6MjA5MTk5OTUzNn0.R6b1lMFGUqQKl85jTotlBe-0kG5L4746x_6MXRYXelU';
+  const msgEl = document.getElementById('campaignUploadMsg');
+
+  let text = document.getElementById('campaignCsvPaste').value.trim();
+
+  if (!text) {
+    const file = document.getElementById('campaignCsvFile').files[0];
+    if (!file) { showCampaignMsg('Please upload a CSV file or paste data.', false); return; }
+    text = await file.text();
+  }
+
+  const lines = text.trim().split('\n');
+  let start = 0;
+  if (lines[0].toLowerCase().includes('email')) start = 1;
+
+  const leads = [];
+  for (let i = start; i < lines.length; i++) {
+    const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+    if (!cols[0] || !cols[0].includes('@')) continue;
+    leads.push({
+      email: cols[0] || '',
+      company_name: cols[1] || '',
+      mc_number: cols[2] || '',
+      address: cols[3] || '',
+      state: cols[4] || '',
+      power_units: parseInt(cols[5]) || null,
+      drivers: parseInt(cols[6]) || null,
+      phone_number: cols[7] || '',
+      status: 'pending_seq1'
+    });
+  }
+
+  if (!leads.length) { showCampaignMsg('No valid leads found in CSV.', false); return; }
+
+  showCampaignMsg('Uploading ' + leads.length + ' leads...', true);
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/contacts`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=ignore-duplicates'
+      },
+      body: JSON.stringify(leads)
+    });
+    if (res.ok) {
+      showCampaignMsg('✅ Successfully uploaded ' + leads.length + ' leads.', true);
+      document.getElementById('campaignCsvPaste').value = '';
+      document.getElementById('campaignCsvFile').value = '';
+    } else {
+      const err = await res.json();
+      showCampaignMsg('❌ Error: ' + (err.message || 'Upload failed'), false);
+    }
+  } catch(e) {
+    showCampaignMsg('❌ Connection error. Try again.', false);
+  }
+}
+
+function showCampaignMsg(msg, success) {
+  const el = document.getElementById('campaignUploadMsg');
+  if (!el) return;
+  el.style.display = 'block';
+  el.style.background = success ? '#F0FFF5' : '#FFF0F0';
+  el.style.color = success ? '#15803D' : '#E84545';
+  el.style.border = success ? '1.5px solid #BBF7D0' : '1.5px solid #FECACA';
+  el.textContent = msg;
+  setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+  
 </script>
 </body>
 </html>
