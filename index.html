@@ -1541,6 +1541,34 @@
   </div>
 </div>
 
+<!-- ── EDIT EMPLOYEE DETAILS MODAL (admin only) ── -->
+<div class="modal-backdrop" id="modalEditEmp">
+  <div class="modal-box">
+    <div class="modal-title">Edit Employee Details</div>
+    <div class="modal-sub" id="editEmpSubtitle">Update designation, department, or reporting line.</div>
+    <input type="hidden" id="editEmpUid">
+    <div class="field-wrap">
+      <label class="field-label">Designation</label>
+      <input class="field-input" id="editEmpDesig" placeholder="Freight Coordinator">
+    </div>
+    <div class="field-wrap">
+      <label class="field-label">Department</label>
+      <input class="field-input" id="editEmpDept" placeholder="Dispatch">
+    </div>
+    <div class="field-wrap">
+      <label class="field-label">Reports To</label>
+      <select class="field-input" id="editEmpReports">
+        <option value="">No manager / top level</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button class="btn-orange" onclick="saveEmpDetails()" style="width:auto;padding:12px 24px;">Save Changes →</button>
+      <button class="btn-sm-outline" onclick="hideModal('modalEditEmp')">Cancel</button>
+    </div>
+    <div id="editEmpMsg" style="margin-top:10px;font-size:13px;"></div>
+  </div>
+</div>
+  
 <div id="portalScreen" class="screen">
   <!-- Top Nav -->
   <div class="topnav">
@@ -1560,8 +1588,11 @@
       </div>
 <button class="nav-btn" onclick="showView('viewDash')">🏠 Home</button>
 <button class="nav-btn" onclick="showView('viewProfile')">👤 Profile</button>
-<button class="nav-btn" onclick="showView('viewSettings')">⚙️ Settings</button>
-<button class="nav-btn nav-btn-danger" onclick="doLogout()">Sign Out</button>
+<button class="nav-btn" onclick="showView('viewNotifications')" style="position:relative;">
+  🔔 Notifications
+  <span id="notifBadge" style="display:none;position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:var(--red);border:2px solid var(--nav-bg);"></span>
+</button>
+<button class="nav-btn" onclick="showView('viewSettings')">⚙️ Settings</button><button class="nav-btn nav-btn-danger" onclick="doLogout()">Sign Out</button>
   </div>
 </div>
   <!-- Main -->
@@ -1637,6 +1668,11 @@
             <div class="nav-card-desc">Launch your team line, access voicemail, messages and call history.</div>
           </div>
           <!-- Admin only card (shown conditionally) -->
+          <div class="nav-card" id="teamCard" style="display:none;" onclick="showView('viewTeam')">
+            <div class="nav-card-icon icon-teal">👥</div>
+            <div class="nav-card-title">Your Team</div>
+            <div class="nav-card-desc">View profiles and details of employees reporting to you.</div>
+          </div>
           <div class="nav-card" id="adminCard" style="display:none;" onclick="showView('viewAdmin')">
             <div class="nav-card-icon icon-purple">🛡️</div>
             <div class="nav-card-title">Admin Panel</div>
@@ -1977,9 +2013,19 @@
             <label class="field-label">Current Address</label>
             <textarea class="field-input" id="pf_address" placeholder="Your current residential address" style="min-height:80px;"></textarea>
           </div>
-          <button class="btn-orange" onclick="saveProfile()" style="width:auto;padding:12px 28px;">Save Changes →</button>
+<button class="btn-orange" onclick="saveProfile()" style="width:auto;padding:12px 28px;">Save Changes →</button>
           <div id="pfSaveMsg" style="margin-top:12px;"></div>
         </div>
+
+        <!-- Onboarding personal details card -->
+        <div class="card-box" id="ob_profileCard" style="display:none;">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:20px;color:var(--text);">
+            Personal Details
+            <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--bg2);padding:3px 10px;border-radius:20px;margin-left:8px;">From onboarding</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="ob_profileFields"></div>
+        </div>
+
       </div>
     </div>
 
@@ -2054,6 +2100,33 @@
 </div>
       </div>
     </div>
+    <!-- ── NOTIFICATIONS VIEW ── -->
+    <div id="viewNotifications" class="view">
+      <div class="view-shell">
+        <div class="view-header">
+          <div class="view-title">Notifications 🔔</div>
+          <div class="view-sub">Updates about your profile and account changes.</div>
+        </div>
+        <div class="card-box">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">Recent</div>
+            <button class="btn-sm-outline" onclick="markAllNotifsRead()" style="font-size:12px;">Mark all read</button>
+          </div>
+          <div id="notifList"><div class="empty-state"><div class="empty-text">Loading...</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── YOUR TEAM VIEW ── -->
+    <div id="viewTeam" class="view">
+      <div class="view-shell">
+        <div class="view-header">
+          <div class="view-title">Your Team 👥</div>
+          <div class="view-sub">Employees currently reporting to you.</div>
+        </div>
+        <div id="teamViewContent"><div class="empty-state"><div class="empty-text">Loading...</div></div></div>
+      </div>
+    </div>
     <!-- ── EMAIL SENDER (full screen, no view shell) ── -->
     <div id="viewEmail" class="view">
       <div class="email-topbar">
@@ -2110,6 +2183,9 @@ window.toggleAdminRole = toggleAdminRole;
 
 window.removeUser = removeUser;
 window.renderAdminUsers = renderAdminUsers;
+  window.openEmpEditModal = openEmpEditModal;
+window.saveEmpDetails = saveEmpDetails;
+window.markAllNotifsRead = markAllNotifsRead;
 window.approveAccessRequest = approveAccessRequest;
 window.rejectAccessRequest = rejectAccessRequest;
   window.toggleDisabilityDetails = toggleDisabilityDetails;
@@ -2900,7 +2976,8 @@ startHeartbeat();
 
   startAccountStatusWatcher();
   checkOnboardingStatus();
-
+checkTeamCard();
+  loadNotificationBadge();
 
   const params = new URLSearchParams(window.location.search);
   const requestedView = params.get('view');
@@ -2946,6 +3023,8 @@ function showView(id) {
   if (id === 'viewLeave') { refreshLeaveHistory(); }
   if (id === 'viewAdmin') renderAdmin();
 if (id === 'viewProfile') { loadProfile(); }
+  if (id === 'viewNotifications') loadNotifications();
+  if (id === 'viewTeam') loadTeamView();
   if (id === 'viewSettings') {
     const isDark = load('darkMode_' + currentUser.id, false);
     document.getElementById('darkModeToggle').checked = isDark;
@@ -3305,8 +3384,40 @@ async function loadProfile() {
   document.getElementById('pf_reportsTo').textContent = reportsToName ? `${reportsToName} (${reportsToId})` : '—';
   document.getElementById('pf_phone').value     = data?.phone     || currentUser.phone     || '';
   document.getElementById('pf_emergency').value = data?.emergency || currentUser.emergency || '';
-  document.getElementById('pf_address').value   = data?.address   || currentUser.address   || '';
-}
+document.getElementById('pf_address').value   = data?.address   || currentUser.address   || '';
+
+  // Load onboarding data for display
+  const ob = await fsGet('employeeOnboarding', currentUser.uid);
+  const obCard = document.getElementById('ob_profileCard');
+  const obFields = document.getElementById('ob_profileFields');
+  if (ob && obCard && obFields) {
+    obCard.style.display = '';
+    const fields = [
+      ['Father Name',       ob.fatherName       || '—'],
+      ['Mother Name',       ob.motherName       || '—'],
+      ['Date of Birth',     ob.dob              || '—'],
+      ['Place of Birth',    ob.placeOfBirth     || '—'],
+      ['CNIC',              ob.cnic             || '—'],
+      ['Gender',            ob.gender           || '—'],
+      ['Nationality',       ob.nationality      || '—'],
+      ['Religion',          ob.religion         || '—'],
+      ['Marital Status',    ob.maritalStatus    || '—'],
+      ['Languages',         Array.isArray(ob.languages) ? ob.languages.join(', ') : (ob.languages || '—')],
+      ['Primary Contact',   ob.primaryContact   || '—'],
+      ['Secondary Contact', ob.secondaryContact || '—'],
+      ['Father Occupation', ob.fatherOccupation || '—'],
+      ['Mother Occupation', ob.motherOccupation || '—'],
+      ['No. of Siblings',   ob.siblingCount != null ? String(ob.siblingCount) : '—'],
+      ['Address',           ob.address          || '—'],
+    ];
+    obFields.innerHTML = fields.map(([label, val]) => `
+      <div>
+        <div class="field-label">${escapeHtml(label)}</div>
+        <div style="font-size:14px;color:var(--text);padding:8px 0;border-bottom:1px solid var(--border);">${escapeHtml(String(val))}</div>
+      </div>
+    `).join('');
+  }
+}}
 async function saveProfile() {
   const phone     = document.getElementById('pf_phone').value.trim();
   const emergency = document.getElementById('pf_emergency').value.trim();
@@ -3371,6 +3482,7 @@ async function renderAdminUsers() {
   if (!el) return;
 
   const allEmps = await fsGetAll('employees');
+  window.__allEmpsCache = allEmps;
   const emps = Object.values(allEmps).sort((a, b) => {
   const statusA = String(a.accountStatus || a.employmentStatus || '').trim().toLowerCase();
   const statusB = String(b.accountStatus || b.employmentStatus || '').trim().toLowerCase();
@@ -3582,10 +3694,14 @@ ${!isFormerEmployee ? `
         
         <button onclick="removeUser(decodeURIComponent('${uidArg}'), decodeURIComponent('${nameArg}'), '${emp.id}')"
           style="padding:8px 14px;border-radius:10px;background:#FFF0F0;border:1.5px solid #FFCACA;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
-          Mark Left
+Mark Left
         </button>` : ''}
 
-
+        ${!isFormerEmployee ? `
+        <button onclick="openEmpEditModal('${escapeHtml(emp.uid || '')}')"
+          style="padding:8px 14px;border-radius:10px;background:var(--bg2);border:1.5px solid var(--border2);color:var(--text-mid);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          ✏️ Edit Details
+        </button>` : ''}
         
       </div>
     </div>`;
@@ -4780,6 +4896,222 @@ async function renderCampaignStats() {
   }
 }
 
+// ══════════════════════════════════════════════════════════════
+//  NOTIFICATIONS
+// ══════════════════════════════════════════════════════════════
+async function writeNotification(empUid, title, body) {
+  try {
+    const notifId = Date.now().toString() + Math.random().toString(36).slice(2, 6);
+    await fsSet('notifications/' + empUid + '/items', notifId, {
+      id: notifId,
+      type: 'profile_update',
+      title,
+      body,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      createdByName: currentUser?.name || 'Admin',
+    });
+  } catch(e) {}
+}
+
+async function loadNotificationBadge() {
+  if (!currentUser) return;
+  const items = await fsGetSubcollection('notifications/' + currentUser.uid + '/items');
+  const hasUnread = items.some(n => !n.isRead);
+  const badge = document.getElementById('notifBadge');
+  if (badge) badge.style.display = hasUnread ? '' : 'none';
+}
+
+async function loadNotifications() {
+  const el = document.getElementById('notifList');
+  if (!el || !currentUser) return;
+  el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;">Loading...</div>';
+
+  const items = await fsGetSubcollection('notifications/' + currentUser.uid + '/items');
+  items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  if (!items.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🔔</div><div class="empty-text">No notifications yet.</div></div>';
+    return;
+  }
+
+  el.innerHTML = items.map(n => `
+    <div style="padding:14px;border-radius:12px;margin-bottom:10px;
+      background:${n.isRead ? 'var(--surface2)' : 'var(--orange-a10)'};
+      border:1.5px solid ${n.isRead ? 'var(--border)' : 'var(--border-o)'};">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:${n.isRead ? '500' : '700'};color:var(--text);">${escapeHtml(n.title || '')}</div>
+          <div style="font-size:13px;color:var(--text-mid);margin-top:4px;line-height:1.5;">${escapeHtml(n.body || '')}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">
+            ${n.createdAt ? new Date(n.createdAt).toLocaleString('en-US', {month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}) : '—'}
+          </div>
+        </div>
+        ${!n.isRead ? `<span style="width:8px;height:8px;border-radius:50%;background:var(--orange);flex-shrink:0;margin-top:4px;display:block;"></span>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  // Mark all unread as read
+  const unread = items.filter(n => !n.isRead);
+  for (const n of unread) {
+    await fsSet('notifications/' + currentUser.uid + '/items', n.id, { isRead: true });
+  }
+  if (unread.length) {
+    const badge = document.getElementById('notifBadge');
+    if (badge) badge.style.display = 'none';
+  }
+}
+
+async function markAllNotifsRead() {
+  await loadNotifications();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  YOUR TEAM VIEW (supervisor)
+// ══════════════════════════════════════════════════════════════
+async function checkTeamCard() {
+  if (!currentUser) return;
+  const allEmps = await fsGetAll('employees');
+  const hasTeam = Object.values(allEmps).some(e => e.reportsToUid === currentUser.uid && !isBlockedEmployee(e));
+  const card = document.getElementById('teamCard');
+  if (card) card.style.display = hasTeam ? '' : 'none';
+}
+
+async function loadTeamView() {
+  const el = document.getElementById('teamViewContent');
+  if (!el || !currentUser) return;
+  el.innerHTML = '<div class="empty-state"><div class="empty-text">Loading...</div></div>';
+
+  const allEmps = await fsGetAll('employees');
+  const team = Object.values(allEmps)
+    .filter(e => e.reportsToUid === currentUser.uid && !isBlockedEmployee(e))
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)));
+
+  if (!team.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No employees currently report to you.</div></div>';
+    return;
+  }
+
+  let html = '';
+  for (const emp of team) {
+    const ob = await fsGet('employeeOnboarding', emp.uid);
+    const initial = escapeHtml(String(emp.name || '?').charAt(0).toUpperCase());
+    const rows = [
+      ['Email',             emp.email              || '—'],
+      ['Phone',             emp.phone || ob?.primaryContact || '—'],
+      ['Joining Date',      emp.joiningDate        || '—'],
+      ['Blood Group',       ob?.bloodGroup || emp.bloodGroup || '—'],
+      ['Emergency Contact', emp.emergency || ob?.emergencyNumber || '—'],
+      ['CNIC',              ob?.cnic               || '—'],
+      ['Gender',            ob?.gender             || '—'],
+      ['Marital Status',    ob?.maritalStatus      || '—'],
+      ['Father Name',       ob?.fatherName         || '—'],
+      ['Mother Name',       ob?.motherName         || '—'],
+    ];
+    html += `
+      <div class="card-box" style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+          <div style="width:50px;height:50px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:22px;font-weight:800;flex-shrink:0;">${initial}</div>
+          <div>
+            <div style="font-size:16px;font-weight:800;color:var(--text);font-family:'Syne',sans-serif;">${escapeHtml(emp.name || '—')}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:3px;">${escapeHtml(emp.id || '')} · ${escapeHtml(emp.designation || '—')} · ${escapeHtml(emp.department || '—')}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          ${rows.map(([label, val]) => `
+            <div>
+              <div class="field-label">${escapeHtml(label)}</div>
+              <div style="font-size:13px;color:var(--text);padding:7px 0;border-bottom:1px solid var(--border);">${escapeHtml(String(val))}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+  }
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ADMIN — EDIT EMPLOYEE DETAILS + NOTIFY
+// ══════════════════════════════════════════════════════════════
+async function openEmpEditModal(uid) {
+  if (!currentUser || !currentUser.isAdmin) return;
+  const emp = (window.__allEmpsCache || {})[uid] || await fsGet('employees', uid);
+  if (!emp) return;
+
+  document.getElementById('editEmpUid').value = uid;
+  document.getElementById('editEmpSubtitle').textContent = `Editing: ${emp.name || ''} (${emp.id || ''})`;
+  document.getElementById('editEmpDesig').value = emp.designation || '';
+  document.getElementById('editEmpDept').value  = emp.department  || '';
+  document.getElementById('editEmpMsg').innerHTML = '';
+
+  const allEmps = window.__allEmpsCache || await fsGetAll('employees');
+  const select = document.getElementById('editEmpReports');
+  select.innerHTML = '<option value="">No manager / top level</option>';
+  Object.values(allEmps)
+    .filter(e => e.uid && !isBlockedEmployee(e) && e.uid !== uid)
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+    .forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.uid;
+      opt.textContent = `${e.id || ''} — ${e.name || ''}`;
+      if (e.uid === emp.reportsToUid) opt.selected = true;
+      select.appendChild(opt);
+    });
+
+  showModal('modalEditEmp');
+}
+
+async function saveEmpDetails() {
+  if (!currentUser || !currentUser.isAdmin) return;
+  const uid   = document.getElementById('editEmpUid').value;
+  const desig = cleanText(document.getElementById('editEmpDesig').value, 80);
+  const dept  = cleanText(document.getElementById('editEmpDept').value, 80);
+  const reportsToUid = document.getElementById('editEmpReports').value;
+  const msg   = document.getElementById('editEmpMsg');
+
+  if (!desig || !dept) {
+    msg.innerHTML = '<div style="color:var(--red);">Designation and Department are required.</div>';
+    return;
+  }
+  msg.innerHTML = '<div style="color:var(--text-muted);">Saving...</div>';
+
+  const allEmps = window.__allEmpsCache || await fsGetAll('employees');
+  const manager = reportsToUid ? (Object.values(allEmps).find(e => e.uid === reportsToUid) || null) : null;
+  const prev    = await fsGet('employees', uid);
+
+  const ok = await fsSet('employees', uid, {
+    designation:  desig,
+    department:   dept,
+    reportsToUid:  manager ? manager.uid  : '',
+    reportsToId:   manager ? manager.id   : '',
+    reportsToName: manager ? manager.name : '',
+  });
+
+  if (!ok) {
+    msg.innerHTML = '<div style="color:var(--red);">Save failed. Try again.</div>';
+    return;
+  }
+
+  // Build notification listing what changed
+  const changes = [];
+  if (prev?.designation !== desig) changes.push(`Designation → ${desig}`);
+  if (prev?.department  !== dept)  changes.push(`Department → ${dept}`);
+  const prevMgr = prev?.reportsToName || 'None';
+  const newMgr  = manager ? manager.name : 'None';
+  if (prevMgr !== newMgr) changes.push(`Reports To → ${newMgr}`);
+
+  if (changes.length > 0) {
+    await writeNotification(uid,
+      'Your profile was updated',
+      `${currentUser.name} updated your profile: ${changes.join(', ')}.`
+    );
+  }
+
+  msg.innerHTML = '<div style="color:var(--green);">✅ Saved successfully.</div>';
+  setTimeout(() => { hideModal('modalEditEmp'); renderAdminUsers(); }, 1200);
+}
+  
 function showCampaignMsg(msg, success) {
   const el = document.getElementById('campaignUploadMsg');
   if (!el) return;
