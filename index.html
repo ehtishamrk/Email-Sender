@@ -4660,24 +4660,6 @@ async function setCampaignStatus(active) {
     alert('Error saving. Check connection.');
   }
 } 
-
-  async function uploadCampaignLeads() {
-  const msg = document.getElementById('campaignUploadMsg');
-
-  if (!currentUser || !currentUser.isAdmin) {
-    alert('Only admins can upload campaign leads.');
-    return;
-  }
-
-  if (msg) {
-    msg.style.display = 'block';
-    msg.style.background = '#FFFBEB';
-    msg.style.color = '#92400E';
-    msg.style.border = '1.5px solid #FDE68A';
-    msg.textContent = 'Campaign upload is paused here until we wire it through the secure n8n/Supabase backend path.';
-  }
-}
-
   
 async function renderCampaignStats() {
   const el = document.getElementById('campaignStatsContent');
