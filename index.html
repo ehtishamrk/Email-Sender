@@ -1015,9 +1015,93 @@
   ══════════════════════════════════════ */
   .empty-state { text-align:center; padding:48px 24px; color:var(--text-muted); }
   .empty-icon { font-size:36px; margin-bottom:12px; opacity:0.3; }
-  .empty-text { font-size:13px; }
+ .empty-text { font-size:13px; }
   .divider { height:1px; background:var(--border); margin:20px 0; }
   .section-title { font-family:var(--font-d); font-size:16px; font-weight:700; color:var(--text); margin-bottom:16px; letter-spacing:-0.3px; }
+
+  .onboard-modal {
+    max-width: 980px;
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 34px;
+  }
+
+  .onboard-section {
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 20px;
+    margin-bottom: 16px;
+    background: var(--surface);
+  }
+
+  .onboard-section-title {
+    font-family: var(--font-d);
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 14px;
+  }
+
+  .onboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .onboard-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .check-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
+  }
+
+  .check-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    font-size: 13px;
+    color: var(--text-mid);
+    cursor: pointer;
+  }
+
+  .check-option input { accent-color: var(--orange); }
+
+  .dynamic-box {
+    display: none;
+    margin-top: 12px;
+    padding: 14px;
+    border-radius: var(--r-md);
+    background: var(--surface2);
+    border: 1px dashed var(--border2);
+  }
+
+  .dynamic-box.show { display: block; }
+
+  .mini-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .declaration-box {
+    background: var(--orange-a10);
+    border: 1px solid var(--border-o);
+    border-radius: var(--r-md);
+    padding: 16px;
+    color: var(--text-mid);
+    font-size: 13px;
+    line-height: 1.65;
+  }
 
   /* ══════════════════════════════════════
      RESPONSIVE
@@ -1061,6 +1145,10 @@
   /* Forms */
   .row-2 { grid-template-columns:1fr; }
   .modal-box { padding:28px 20px; }
+  .onboard-modal { padding:24px 18px; }
+  .onboard-grid, .onboard-grid-3, .mini-row { grid-template-columns:1fr; }
+    .ob-sibling-row { grid-template-columns:1fr !important; }
+
 
   /* Tabs */
   .tab-strip { overflow-x:auto; width:100%; }
@@ -1261,8 +1349,208 @@
 <!-- ════════════════════════════════════
      PORTAL SCREEN
 ════════════════════════════════════ -->
-<div id="portalScreen" class="screen">
+<!-- FIRST LOGIN ONBOARDING MODAL -->
+<div class="modal-backdrop" id="modalOnboarding">
+  <div class="modal-box onboard-modal">
+    <div class="modal-title">Complete Employee Information</div>
+    <div class="modal-sub">Please complete this form once. Your portal will keep showing this form until it is submitted.</div>
 
+    <div class="onboard-section">
+      <div class="onboard-section-title">Personal Information</div>
+      <div class="onboard-grid">
+        <div class="field-wrap"><label class="field-label">Father Name</label><input class="field-input" id="ob_fatherName"></div>
+        <div class="field-wrap"><label class="field-label">Mother Name</label><input class="field-input" id="ob_motherName"></div>
+        <div class="field-wrap"><label class="field-label">Date of Birth</label><input class="field-input" type="date" id="ob_dob"></div>
+        <div class="field-wrap"><label class="field-label">Place of Birth</label><input class="field-input" id="ob_placeOfBirth"></div>
+        <div class="field-wrap"><label class="field-label">Nationality</label><input class="field-input" id="ob_nationality"></div>
+        <div class="field-wrap"><label class="field-label">CNIC Number</label><input class="field-input" id="ob_cnic" placeholder="00000-0000000-0"></div>
+        <div class="field-wrap">
+          <label class="field-label">Gender</label>
+          <select class="field-input" id="ob_gender">
+            <option value="">Select...</option>
+            <option>Male</option>
+            <option>Female</option>
+            <option>Other</option>
+            <option>Prefer not to say</option>
+          </select>
+        </div>
+        <div class="field-wrap"><label class="field-label">Religion</label><input class="field-input" id="ob_religion"></div>
+        <div class="field-wrap">
+          <label class="field-label">Marital Status</label>
+          <select class="field-input" id="ob_maritalStatus">
+            <option value="">Select...</option>
+            <option>Single</option>
+            <option>Married</option>
+            <option>Divorced</option>
+            <option>Widowed</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Blood Group</label>
+          <select class="field-input" id="ob_bloodGroup">
+            <option value="">Select...</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+            <option>Unknown</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-wrap">
+        <label class="field-label">Languages You Can Speak</label>
+        <div class="check-grid">
+          <label class="check-option"><input type="checkbox" name="ob_languages" value="Urdu"> Urdu</label>
+          <label class="check-option"><input type="checkbox" name="ob_languages" value="English"> English</label>
+          <label class="check-option"><input type="checkbox" name="ob_languages" value="Pushto"> Pushto</label>
+          <label class="check-option"><input type="checkbox" name="ob_languages" value="Punjabi"> Punjabi</label>
+          <label class="check-option"><input type="checkbox" name="ob_languages" value="Sindhi"> Sindhi</label>
+          <label class="check-option"><input type="checkbox" name="ob_languages" value="Balochi"> Balochi</label>
+        </div>
+      </div>
+
+      <div class="field-wrap">
+        <label class="field-label">Any Disability</label>
+        <select class="field-input" id="ob_hasDisability" onchange="toggleDisabilityDetails(this.value)">
+          <option value="">Select...</option>
+          <option value="no">No</option>
+          <option value="yes">Yes</option>
+        </select>
+        <div class="dynamic-box" id="ob_disabilityBox">
+          <label class="field-label">Kindly write about your condition</label>
+          <textarea class="field-input" id="ob_disabilityDetails"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="onboard-section">
+      <div class="onboard-section-title">Contact & Family</div>
+      <div class="onboard-grid">
+        <div class="field-wrap"><label class="field-label">Primary Contact Number</label><input class="field-input" id="ob_primaryContact"></div>
+        <div class="field-wrap"><label class="field-label">Secondary Contact Number</label><input class="field-input" id="ob_secondaryContact"></div>
+        <div class="field-wrap"><label class="field-label">Emergency Number</label><input class="field-input" id="ob_emergencyNumber"></div>
+        <div class="field-wrap"><label class="field-label">Father's Occupation</label><input class="field-input" id="ob_fatherOccupation"></div>
+        <div class="field-wrap"><label class="field-label">Mother's Occupation</label><input class="field-input" id="ob_motherOccupation"></div>
+        <div class="field-wrap"><label class="field-label">Number of Siblings (excluding you)</label><input class="field-input" type="number" min="0" id="ob_siblingCount"></div>
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Address</label>
+        <textarea class="field-input" id="ob_address"></textarea>
+      </div>
+    </div>
+
+    <div class="onboard-section">
+      <div class="onboard-section-title">Qualification</div>
+      <div class="check-grid">
+        <label class="check-option"><input type="checkbox" id="q_matric_chk" onchange="toggleQualificationDetails('q_matric', this.checked)"> Matric / O Level</label>
+        <label class="check-option"><input type="checkbox" id="q_inter_chk" onchange="toggleQualificationDetails('q_inter', this.checked)"> Inter / A Level</label>
+        <label class="check-option"><input type="checkbox" id="q_bachelors_chk" onchange="toggleQualificationDetails('q_bachelors', this.checked)"> BS / BA / BSc / ADP</label>
+        <label class="check-option"><input type="checkbox" id="q_masters_chk" onchange="toggleQualificationDetails('q_masters', this.checked)"> MS / MA / CA / ACCA</label>
+        <label class="check-option"><input type="checkbox" id="q_other_chk" onchange="toggleQualificationDetails('q_other', this.checked)"> Other</label>
+      </div>
+
+      <div class="dynamic-box" id="q_matric_box" data-q-label="Matric / O Level">
+        <div class="mini-row">
+          <input class="field-input" id="q_matric_institution" placeholder="Institution name">
+          <input class="field-input" id="q_matric_field" placeholder="Field of study">
+          <input class="field-input" id="q_matric_marks" placeholder="Obtained marks / grades">
+          <input class="field-input" id="q_matric_year" placeholder="Year of passing">
+        </div>
+      </div>
+      <div class="dynamic-box" id="q_inter_box" data-q-label="Inter / A Level">
+        <div class="mini-row">
+          <input class="field-input" id="q_inter_institution" placeholder="Institution name">
+          <input class="field-input" id="q_inter_field" placeholder="Field of study">
+          <input class="field-input" id="q_inter_marks" placeholder="Obtained marks / grades">
+          <input class="field-input" id="q_inter_year" placeholder="Year of passing">
+        </div>
+      </div>
+      <div class="dynamic-box" id="q_bachelors_box" data-q-label="BS / BA / BSc / ADP">
+        <div class="mini-row">
+          <input class="field-input" id="q_bachelors_institution" placeholder="Institution name">
+          <input class="field-input" id="q_bachelors_field" placeholder="Field of study">
+          <input class="field-input" id="q_bachelors_marks" placeholder="Obtained marks / grades">
+          <input class="field-input" id="q_bachelors_year" placeholder="Year of passing">
+        </div>
+      </div>
+      <div class="dynamic-box" id="q_masters_box" data-q-label="MS / MA / CA / ACCA">
+        <div class="mini-row">
+          <input class="field-input" id="q_masters_institution" placeholder="Institution name">
+          <input class="field-input" id="q_masters_field" placeholder="Field of study">
+          <input class="field-input" id="q_masters_marks" placeholder="Obtained marks / grades">
+          <input class="field-input" id="q_masters_year" placeholder="Year of passing">
+        </div>
+      </div>
+      <div class="dynamic-box" id="q_other_box" data-q-label="Other">
+        <div class="mini-row">
+          <input class="field-input" id="q_other_institution" placeholder="Institution name">
+          <input class="field-input" id="q_other_field" placeholder="Field of study">
+          <input class="field-input" id="q_other_marks" placeholder="Obtained marks / grades">
+          <input class="field-input" id="q_other_year" placeholder="Year of passing">
+        </div>
+      </div>
+    </div>
+
+    <div class="onboard-section">
+      <div class="onboard-section-title">Employment Experience</div>
+      <div id="ob_experienceRows">
+        <div class="mini-row ob-experience-row">
+          <input class="field-input ob-exp-designation" placeholder="Designation">
+          <input class="field-input ob-exp-company" placeholder="Company name">
+          <input class="field-input ob-exp-join" placeholder="Year of joining">
+          <input class="field-input ob-exp-leave" placeholder="Year of leaving">
+        </div>
+      </div>
+      <button class="btn-sm-outline" type="button" onclick="addExperienceRow()">+ Add Experience</button>
+    </div>
+
+    <div class="onboard-section">
+      <div class="onboard-section-title">Sibling Information</div>
+      <div id="ob_siblingRows">
+        <div class="mini-row ob-sibling-row" style="grid-template-columns:repeat(5,minmax(0,1fr));">
+          <input class="field-input ob-sib-name" placeholder="Sibling name">
+          <input class="field-input ob-sib-relationship" placeholder="Relationship">
+          <input class="field-input ob-sib-qualification" placeholder="Qualification">
+          <input class="field-input ob-sib-field" placeholder="Field of study">
+          <input class="field-input ob-sib-occupation" placeholder="Occupation">
+        </div>
+      </div>
+      <button class="btn-sm-outline" type="button" onclick="addSiblingRow()">+ Add Sibling</button>
+    </div>
+
+    <div class="onboard-section">
+      <div class="onboard-section-title">Friends or Family in Organization</div>
+      <div class="field-wrap">
+        <label class="field-label">Do you have any friend or family member working in our organization?</label>
+        <select class="field-input" id="ob_hasOrgRelation" onchange="toggleOrgRelationDetails(this.value)">
+          <option value="">Select...</option>
+          <option value="no">No</option>
+          <option value="yes">Yes</option>
+        </select>
+      </div>
+      <div class="dynamic-box" id="ob_orgRelationBox">
+        <div class="onboard-grid-3">
+          <input class="field-input" id="ob_orgRelationName" placeholder="Name">
+          <input class="field-input" id="ob_orgRelationRelation" placeholder="Relationship">
+          <input class="field-input" id="ob_orgRelationDesignation" placeholder="Designation / Department">
+        </div>
+      </div>
+    </div>
+
+    <div class="onboard-section">
+      <div class="onboard-section-title">Declaration</div>
+      <div class="declaration-box">
+        I hereby declare that the information provided by me in this form is true and correct to the best of my knowledge and belief. I understand that if any discrepancy, misrepresentation, or falsification of information is discovered during employment, I can be immediately dismissed from employment.
+      </div>
+      <label class="check-option" style="margin-top:12px;">
+        <input type="checkbox" id="ob_declaration"> I agree and submit this declaration
+      </label>
+      <div id="onboardingMsg" style="margin-top:12px;"></div>
+      <button class="btn-orange" id="onboardingSubmitBtn" type="button" onclick="submitOnboardingForm()" style="width:auto;padding:12px 28px;margin-top:12px;">Submit Information</button>
+    </div>
+  </div>
+</div>
+
+<div id="portalScreen" class="screen">
   <!-- Top Nav -->
   <div class="topnav">
 <div class="nav-left" onclick="showView('viewDash')" style="cursor:pointer;">
@@ -1833,6 +2121,12 @@ window.removeUser = removeUser;
 window.renderAdminUsers = renderAdminUsers;
 window.approveAccessRequest = approveAccessRequest;
 window.rejectAccessRequest = rejectAccessRequest;
+  window.toggleDisabilityDetails = toggleDisabilityDetails;
+window.toggleQualificationDetails = toggleQualificationDetails;
+window.toggleOrgRelationDetails = toggleOrgRelationDetails;
+window.addExperienceRow = addExperienceRow;
+window.addSiblingRow = addSiblingRow;
+window.submitOnboardingForm = submitOnboardingForm;
   window.downloadMaturedLeads = downloadMaturedLeads;
 window.uploadCampaignLeads = uploadCampaignLeads;
 window.saveDailyLimit = saveDailyLimit;
@@ -2048,7 +2342,8 @@ if (!empSnap.exists()) {
   if (pending && pending.id === profile.id && !tabWasClosed) {
     store('pendingSession', null);
     store('session', { id: profile.id });
-    currentUser = { ...profile };
+        currentUser = { uid: authUser.uid, ...profile };
+
     enterPortal();
     return;
   }
@@ -2094,7 +2389,7 @@ if (!empSnap.exists()) {
   }
 
   store('session', { id: profile.id });
-  currentUser = { ...profile };
+  currentUser = { uid: authUser.uid, ...profile };
   enterPortal();
 })();
 
@@ -2117,8 +2412,264 @@ function hideLoginScreen() {
   function showModal(id) { document.getElementById(id).classList.add('show'); }
 function hideModal(id) { document.getElementById(id).classList.remove('show'); }
 
+// FIRST LOGIN ONBOARDING
+function toggleDisabilityDetails(value) {
+  document.getElementById('ob_disabilityBox').classList.toggle('show', value === 'yes');
+}
+
+function toggleQualificationDetails(prefix, checked) {
+  document.getElementById(prefix + '_box').classList.toggle('show', checked);
+}
+
+function toggleOrgRelationDetails(value) {
+  document.getElementById('ob_orgRelationBox').classList.toggle('show', value === 'yes');
+}
+
+function addExperienceRow() {
+  const wrap = document.getElementById('ob_experienceRows');
+  const row = document.createElement('div');
+  row.className = 'mini-row ob-experience-row';
+  row.innerHTML = `
+    <input class="field-input ob-exp-designation" placeholder="Designation">
+    <input class="field-input ob-exp-company" placeholder="Company name">
+    <input class="field-input ob-exp-join" placeholder="Year of joining">
+    <input class="field-input ob-exp-leave" placeholder="Year of leaving">
+  `;
+  wrap.appendChild(row);
+}
+
+function addSiblingRow() {
+  const wrap = document.getElementById('ob_siblingRows');
+  const row = document.createElement('div');
+  row.className = 'mini-row ob-sibling-row';
+  row.style.gridTemplateColumns = 'repeat(5,minmax(0,1fr))';
+  row.innerHTML = `
+    <input class="field-input ob-sib-name" placeholder="Sibling name">
+    <input class="field-input ob-sib-relationship" placeholder="Relationship">
+    <input class="field-input ob-sib-qualification" placeholder="Qualification">
+    <input class="field-input ob-sib-field" placeholder="Field of study">
+    <input class="field-input ob-sib-occupation" placeholder="Occupation">
+  `;
+  wrap.appendChild(row);
+}
+
+function obVal(id, maxLength = 160) {
+  return cleanText(document.getElementById(id)?.value || '', maxLength);
+}
+
+function checkedValues(name) {
+  return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(el => el.value);
+}
+
+function onboardingError(message) {
+  const msg = document.getElementById('onboardingMsg');
+  msg.innerHTML = '<div style="color:var(--red);font-size:13px;">' + escapeHtml(message) + '</div>';
+}
+
+function collectQualifications() {
+  const items = [
+    ['q_matric', 'Matric / O Level'],
+    ['q_inter', 'Inter / A Level'],
+    ['q_bachelors', 'BS / BA / BSc / ADP'],
+    ['q_masters', 'MS / MA / CA / ACCA'],
+    ['q_other', 'Other']
+  ];
+
+  const selected = [];
+  for (const [prefix, label] of items) {
+    if (!document.getElementById(prefix + '_chk').checked) continue;
+
+    const institution = obVal(prefix + '_institution', 140);
+    const fieldOfStudy = obVal(prefix + '_field', 120);
+    const marksOrGrades = obVal(prefix + '_marks', 80);
+    const passingYear = obVal(prefix + '_year', 20);
+
+    if (!institution || !fieldOfStudy || !marksOrGrades || !passingYear) {
+      throw new Error('Please complete all qualification details for ' + label + '.');
+    }
+
+    selected.push({ level: label, institution, fieldOfStudy, marksOrGrades, passingYear });
+  }
+
+  if (!selected.length) throw new Error('Please select at least one qualification.');
+  return selected;
+}
+
+function collectExperienceRows() {
+  const rows = [];
+  document.querySelectorAll('.ob-experience-row').forEach(row => {
+    const designation = cleanText(row.querySelector('.ob-exp-designation')?.value, 100);
+    const companyName = cleanText(row.querySelector('.ob-exp-company')?.value, 140);
+    const joiningYear = cleanText(row.querySelector('.ob-exp-join')?.value, 20);
+    const leavingYear = cleanText(row.querySelector('.ob-exp-leave')?.value, 20);
+    const hasAny = designation || companyName || joiningYear || leavingYear;
+
+    if (hasAny && (!designation || !companyName || !joiningYear || !leavingYear)) {
+      throw new Error('Please complete every field in Employment Experience, or leave the row blank.');
+    }
+
+    if (hasAny) rows.push({ designation, companyName, joiningYear, leavingYear });
+  });
+  return rows;
+}
+
+function collectSiblingRows(siblingCount) {
+  const rows = [];
+  document.querySelectorAll('.ob-sibling-row').forEach(row => {
+    const name = cleanText(row.querySelector('.ob-sib-name')?.value, 100);
+    const relationship = cleanText(row.querySelector('.ob-sib-relationship')?.value, 80);
+    const qualification = cleanText(row.querySelector('.ob-sib-qualification')?.value, 120);
+    const fieldOfStudy = cleanText(row.querySelector('.ob-sib-field')?.value, 120);
+    const occupation = cleanText(row.querySelector('.ob-sib-occupation')?.value, 120);
+    const hasAny = name || relationship || qualification || fieldOfStudy || occupation;
+
+    if (hasAny && (!name || !relationship || !qualification || !fieldOfStudy || !occupation)) {
+      throw new Error('Please complete every field in Sibling Information, or leave the row blank.');
+    }
+
+    if (hasAny) rows.push({ name, relationship, qualification, fieldOfStudy, occupation });
+  });
+
+  if (siblingCount > 0 && !rows.length) {
+    throw new Error('Please add at least one sibling information row.');
+  }
+
+  return rows;
+}
+
+async function checkOnboardingStatus() {
+  if (!currentUser || !currentUser.uid) return;
+
+  const existing = await fsGet('employeeOnboarding', currentUser.uid);
+  if (!existing || existing.declarationAccepted !== true) {
+    document.getElementById('modalOnboarding').classList.add('show');
+  }
+}
+
+async function submitOnboardingForm() {
+  if (!currentUser || !currentUser.uid) return;
+
+  const msg = document.getElementById('onboardingMsg');
+  const btn = document.getElementById('onboardingSubmitBtn');
+  if (btn) btn.disabled = true;
+  msg.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">Saving information...</div>';
+
+  try {
+    const languages = checkedValues('ob_languages');
+    const hasDisability = document.getElementById('ob_hasDisability').value;
+    const hasOrgRelation = document.getElementById('ob_hasOrgRelation').value;
+    const siblingCountRaw = obVal('ob_siblingCount', 4);
+    const siblingCount = Number(siblingCountRaw);
+
+    const required = [
+      ['Father Name', obVal('ob_fatherName')],
+      ['Mother Name', obVal('ob_motherName')],
+      ['Date of Birth', document.getElementById('ob_dob').value],
+      ['Place of Birth', obVal('ob_placeOfBirth')],
+      ['Nationality', obVal('ob_nationality')],
+      ['CNIC Number', obVal('ob_cnic', 40)],
+      ['Gender', document.getElementById('ob_gender').value],
+      ['Religion', obVal('ob_religion')],
+      ['Marital Status', document.getElementById('ob_maritalStatus').value],
+      ['Blood Group', document.getElementById('ob_bloodGroup').value],
+      ['Primary Contact Number', obVal('ob_primaryContact', 40)],
+      ['Secondary Contact Number', obVal('ob_secondaryContact', 40)],
+      ['Emergency Number', obVal('ob_emergencyNumber', 40)],
+      ["Father's Occupation", obVal('ob_fatherOccupation')],
+      ["Mother's Occupation", obVal('ob_motherOccupation')],
+      ['Number of Siblings', siblingCountRaw],
+      ['Address', obVal('ob_address', 500)],
+      ['Any Disability', hasDisability],
+      ['Friends or Family in Organization', hasOrgRelation]
+    ];
+
+    for (const [label, value] of required) {
+      if (value === '' || value === null || value === undefined) {
+        throw new Error('Please fill: ' + label + '.');
+      }
+    }
+
+    if (Number.isNaN(siblingCount) || siblingCount < 0) {
+      throw new Error('Please enter a valid number of siblings.');
+    }
+
+    if (!languages.length) {
+      throw new Error('Please select at least one language.');
+    }
+
+    const disabilityDetails = obVal('ob_disabilityDetails', 500);
+    if (hasDisability === 'yes' && !disabilityDetails) {
+      throw new Error('Please write about your condition.');
+    }
+
+    let orgRelation = null;
+    if (hasOrgRelation === 'yes') {
+      orgRelation = {
+        name: obVal('ob_orgRelationName', 120),
+        relationship: obVal('ob_orgRelationRelation', 100),
+        designationOrDepartment: obVal('ob_orgRelationDesignation', 140)
+      };
+
+      if (!orgRelation.name || !orgRelation.relationship || !orgRelation.designationOrDepartment) {
+        throw new Error('Please complete all friend/family organization details.');
+      }
+    }
+
+    if (!document.getElementById('ob_declaration').checked) {
+      throw new Error('Please accept the declaration before submitting.');
+    }
+
+    const onboardingData = {
+      uid: currentUser.uid,
+      empId: currentUser.id,
+      empName: currentUser.name || '',
+      fatherName: obVal('ob_fatherName'),
+      motherName: obVal('ob_motherName'),
+      dob: document.getElementById('ob_dob').value,
+      placeOfBirth: obVal('ob_placeOfBirth'),
+      nationality: obVal('ob_nationality'),
+      cnic: obVal('ob_cnic', 40),
+      gender: document.getElementById('ob_gender').value,
+      religion: obVal('ob_religion'),
+      maritalStatus: document.getElementById('ob_maritalStatus').value,
+      languages,
+      hasDisability,
+      disabilityDetails: hasDisability === 'yes' ? disabilityDetails : '',
+      bloodGroup: document.getElementById('ob_bloodGroup').value,
+      primaryContact: obVal('ob_primaryContact', 40),
+      secondaryContact: obVal('ob_secondaryContact', 40),
+      emergencyNumber: obVal('ob_emergencyNumber', 40),
+      fatherOccupation: obVal('ob_fatherOccupation'),
+      motherOccupation: obVal('ob_motherOccupation'),
+      siblingCount,
+      address: obVal('ob_address', 500),
+      qualifications: collectQualifications(),
+      employmentExperience: collectExperienceRows(),
+      siblings: collectSiblingRows(siblingCount),
+      hasOrgRelation,
+      orgRelation,
+      declarationAccepted: true,
+      submittedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const saved = await fsSet('employeeOnboarding', currentUser.uid, onboardingData);
+    if (!saved) {
+      throw new Error('Firebase blocked the save. Please ask admin to update Firestore rules.');
+    }
+
+    document.getElementById('modalOnboarding').classList.remove('show');
+    msg.innerHTML = '<div class="alert-success">Information submitted successfully.</div>';
+  } catch(e) {
+    if (btn) btn.disabled = false;
+    onboardingError(e.message || 'Please check the form and try again.');
+  }
+}
+
 document.querySelectorAll('.modal-backdrop').forEach(m => {
-  m.addEventListener('click', e => { if(e.target === m) m.classList.remove('show'); });
+  m.addEventListener('click', e => {
+    if (e.target === m && m.id !== 'modalOnboarding') m.classList.remove('show');
+  });
 });
 
 // ══════════════════════════════════════════════════════════════
@@ -2230,7 +2781,7 @@ if (isBlockedEmployee(profile)) {
 
 
     err.classList.remove('show');
-    currentUser = { ...profile };
+    currentUser = { uid, ...profile };
     store('session', { id: profile.id });
     enterPortal();
 
@@ -2338,9 +2889,10 @@ const isDarkLocal = load('darkMode_' + currentUser.id, false);
   resumeClockState();
   refreshStats();
   refreshLeaveHistory();
-  startHeartbeat();
+startHeartbeat();
 
   startAccountStatusWatcher();
+  checkOnboardingStatus();
 
 
   const params = new URLSearchParams(window.location.search);
