@@ -1430,7 +1430,7 @@
         <div class="field-wrap"><label class="field-label">Emergency Number</label><input class="field-input" id="ob_emergencyNumber"></div>
         <div class="field-wrap"><label class="field-label">Father's Occupation</label><input class="field-input" id="ob_fatherOccupation"></div>
         <div class="field-wrap"><label class="field-label">Mother's Occupation</label><input class="field-input" id="ob_motherOccupation"></div>
-        <div class="field-wrap"><label class="field-label">Number of Siblings (excluding you)</label><input class="field-input" type="number" min="0" id="ob_siblingCount"></div>
+        <div class="field-wrap"><label class="field-label">Number of Siblings (excluding you)</label><input class="field-input" type="number" min="0" id="ob_siblingCount" oninput="renderSiblingRows(this.value)"></div>
       </div>
       <div class="field-wrap">
         <label class="field-label">Address</label>
@@ -1504,17 +1504,8 @@
     </div>
 
     <div class="onboard-section">
-      <div class="onboard-section-title">Sibling Information</div>
-      <div id="ob_siblingRows">
-        <div class="mini-row ob-sibling-row" style="grid-template-columns:repeat(5,minmax(0,1fr));">
-          <input class="field-input ob-sib-name" placeholder="Sibling name">
-          <input class="field-input ob-sib-relationship" placeholder="Relationship">
-          <input class="field-input ob-sib-qualification" placeholder="Qualification">
-          <input class="field-input ob-sib-field" placeholder="Field of study">
-          <input class="field-input ob-sib-occupation" placeholder="Occupation">
-        </div>
-      </div>
-      <button class="btn-sm-outline" type="button" onclick="addSiblingRow()">+ Add Sibling</button>
+<div class="onboard-section-title">Sibling Information</div>
+      <div id="ob_siblingRows"></div>
     </div>
 
     <div class="onboard-section">
@@ -2439,20 +2430,35 @@ function addExperienceRow() {
   wrap.appendChild(row);
 }
 
-function addSiblingRow() {
+function renderSiblingRows(value) {
+  const count = Math.max(0, Math.min(20, parseInt(value) || 0));
   const wrap = document.getElementById('ob_siblingRows');
-  const row = document.createElement('div');
-  row.className = 'mini-row ob-sibling-row';
-  row.style.gridTemplateColumns = 'repeat(5,minmax(0,1fr))';
-  row.innerHTML = `
-    <input class="field-input ob-sib-name" placeholder="Sibling name">
-    <input class="field-input ob-sib-relationship" placeholder="Relationship">
-    <input class="field-input ob-sib-qualification" placeholder="Qualification">
-    <input class="field-input ob-sib-field" placeholder="Field of study">
-    <input class="field-input ob-sib-occupation" placeholder="Occupation">
-  `;
-  wrap.appendChild(row);
+  const existing = wrap.querySelectorAll('.ob-sibling-row');
+
+  // Add rows if we need more
+  while (wrap.querySelectorAll('.ob-sibling-row').length < count) {
+    const row = document.createElement('div');
+    row.className = 'mini-row ob-sibling-row';
+    row.style.gridTemplateColumns = 'repeat(5,minmax(0,1fr))';
+    const n = wrap.querySelectorAll('.ob-sibling-row').length + 1;
+    row.innerHTML = `
+      <input class="field-input ob-sib-name" placeholder="Sibling ${n} name">
+      <input class="field-input ob-sib-relationship" placeholder="Relationship">
+      <input class="field-input ob-sib-qualification" placeholder="Qualification">
+      <input class="field-input ob-sib-field" placeholder="Field of study">
+      <input class="field-input ob-sib-occupation" placeholder="Occupation">
+    `;
+    wrap.appendChild(row);
+  }
+
+  // Remove rows if we need fewer
+  const rows = wrap.querySelectorAll('.ob-sibling-row');
+  for (let i = rows.length - 1; i >= count; i--) {
+    rows[i].remove();
+  }
 }
+
+function addSiblingRow() {} // kept as empty stub so window.addSiblingRow assignment doesn't error
 
 function obVal(id, maxLength = 160) {
   return cleanText(document.getElementById(id)?.value || '', maxLength);
