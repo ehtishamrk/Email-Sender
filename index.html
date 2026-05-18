@@ -1363,7 +1363,8 @@
         <div class="field-wrap"><label class="field-label">Date of Birth</label><input class="field-input" type="date" id="ob_dob"></div>
         <div class="field-wrap"><label class="field-label">Place of Birth</label><input class="field-input" id="ob_placeOfBirth"></div>
         <div class="field-wrap"><label class="field-label">Nationality</label><input class="field-input" id="ob_nationality"></div>
-        <div class="field-wrap"><label class="field-label">CNIC Number</label><input class="field-input" id="ob_cnic" placeholder="00000-0000000-0"></div>
+       <div class="field-wrap"><label class="field-label">CNIC Number</label><input class="field-input" id="ob_cnic" placeholder="00000-0000000-0" oninput="formatCnic(this)" onchange="checkRelativesDebounced()"></div>
+        <div class="field-wrap"><label class="field-label">Father's CNIC Number</label><input class="field-input" id="ob_fatherCnic" placeholder="00000-0000000-0" oninput="formatCnic(this)" onchange="checkRelativesDebounced()"></div>
         <div class="field-wrap">
           <label class="field-label">Gender</label>
           <select class="field-input" id="ob_gender">
@@ -1508,8 +1509,14 @@
       <div id="ob_siblingRows"></div>
     </div>
 
-    <div class="onboard-section">
-      <div class="onboard-section-title">Friends or Family in Organization</div>
+<div class="onboard-section">
+      <div class="onboard-section-title">Relatives / Friends in Organization</div>
+
+      <!-- Auto-detection warning (shown when fatherCnic matches) -->
+      <div id="ob_relativeWarning" style="display:none;padding:12px 16px;border-radius:10px;background:#FFF8E1;border:1.5px solid #FFC107;color:#795600;font-size:13px;line-height:1.5;margin-bottom:16px;">
+        ⚠️ <strong>Relative detected:</strong> <span id="ob_relativeWarningText"></span>
+      </div>
+
       <div class="field-wrap">
         <label class="field-label">Do you have any friend or family member working in our organization?</label>
         <select class="field-input" id="ob_hasOrgRelation" onchange="toggleOrgRelationDetails(this.value)">
@@ -1518,12 +1525,10 @@
           <option value="yes">Yes</option>
         </select>
       </div>
-      <div class="dynamic-box" id="ob_orgRelationBox">
-        <div class="onboard-grid-3">
-          <input class="field-input" id="ob_orgRelationName" placeholder="Name">
-          <input class="field-input" id="ob_orgRelationRelation" placeholder="Relationship">
-          <input class="field-input" id="ob_orgRelationDesignation" placeholder="Designation / Department">
-        </div>
+
+      <div id="ob_orgRelationBox" style="display:none;margin-top:12px;">
+        <div id="ob_orgRelationRows"></div>
+        <button class="btn-sm-outline" type="button" onclick="addRelativeRow()" style="margin-top:8px;">+ Add Another</button>
       </div>
     </div>
 
@@ -1541,6 +1546,22 @@
   </div>
 </div>
 
+<!-- ── EMPLOYEE FULL PROFILE MODAL (admin only) ── -->
+<div class="modal-backdrop" id="modalEmpProfile">
+  <div class="modal-box" style="max-width:720px;width:95vw;max-height:88vh;overflow-y:auto;padding:28px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;position:sticky;top:0;background:var(--modal-bg,var(--surface));z-index:1;padding-bottom:12px;border-bottom:1px solid var(--border);">
+      <div>
+        <div class="modal-title" id="empProfileName" style="margin:0;font-size:20px;">Employee Profile</div>
+        <div id="empProfileSub" style="font-size:12px;color:var(--text-muted);margin-top:3px;"></div>
+      </div>
+      <button onclick="hideModal('modalEmpProfile')" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--bg2);cursor:pointer;font-size:18px;line-height:1;color:var(--text-mid);flex-shrink:0;">×</button>
+    </div>
+    <div id="empProfileContent">
+      <div class="empty-state"><div class="empty-text">Loading...</div></div>
+    </div>
+  </div>
+</div>
+  
 <!-- ── EDIT EMPLOYEE DETAILS MODAL (admin only) ── -->
 <div class="modal-backdrop" id="modalEditEmp">
   <div class="modal-box">
@@ -2685,16 +2706,14 @@ async function submitOnboardingForm() {
       throw new Error('Please write about your condition.');
     }
 
-    let orgRelation = null;
+let orgRelation = null;
     if (hasOrgRelation === 'yes') {
-      orgRelation = {
-        name: obVal('ob_orgRelationName', 120),
-        relationship: obVal('ob_orgRelationRelation', 100),
-        designationOrDepartment: obVal('ob_orgRelationDesignation', 140)
-      };
-
-      if (!orgRelation.name || !orgRelation.relationship || !orgRelation.designationOrDepartment) {
-        throw new Error('Please complete all friend/family organization details.');
+      orgRelation = collectRelatives();
+      if (!orgRelation.length) {
+        throw new Error('Please add at least one relative or friend in the organization.');
+      }
+      if (orgRelation.some(r => !r.name || !r.relationship || !r.designationOrDepartment)) {
+        throw new Error('Please complete all fields (name, relationship, designation) for every relative listed.');
       }
     }
 
@@ -2712,6 +2731,7 @@ async function submitOnboardingForm() {
       placeOfBirth: obVal('ob_placeOfBirth'),
       nationality: obVal('ob_nationality'),
       cnic: obVal('ob_cnic', 40),
+      fatherCnic: obVal('ob_fatherCnic', 20),
       gender: document.getElementById('ob_gender').value,
       religion: obVal('ob_religion'),
       maritalStatus: document.getElementById('ob_maritalStatus').value,
@@ -2736,9 +2756,23 @@ async function submitOnboardingForm() {
       updatedAt: new Date().toISOString()
     };
 
-    const saved = await fsSet('employeeOnboarding', currentUser.uid, onboardingData);
+const saved = await fsSet('employeeOnboarding', currentUser.uid, onboardingData);
     if (!saved) {
       throw new Error('Firebase blocked the save. Please ask admin to update Firestore rules.');
+    }
+
+    // Update the relativeIndex so future employees can detect this person as a relative
+    const normalizedFatherCnic = normalizeCnic(onboardingData.fatherCnic || '');
+    if (normalizedFatherCnic.length === 13) {
+      const existing = await fsGet('relativeIndex', normalizedFatherCnic) || { entries: [] };
+      const otherEntries = (existing.entries || []).filter(e => e.uid !== currentUser.uid);
+      otherEntries.push({
+        uid: currentUser.uid,
+        empId: currentUser.id,
+        empName: currentUser.name || '',
+        designation: currentUser.designation || '',
+      });
+      await fsSet('relativeIndex', normalizedFatherCnic, { entries: otherEntries });
     }
 
     document.getElementById('modalOnboarding').classList.remove('show');
@@ -3697,11 +3731,15 @@ ${!isFormerEmployee ? `
 Mark Left
         </button>` : ''}
 
-        ${!isFormerEmployee ? `
+${!isFormerEmployee ? `
         <button onclick="openEmpEditModal('${escapeHtml(emp.uid || '')}')"
           style="padding:8px 14px;border-radius:10px;background:var(--bg2);border:1.5px solid var(--border2);color:var(--text-mid);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
           ✏️ Edit Details
         </button>` : ''}
+        <button onclick="openEmpProfile('${escapeHtml(emp.uid || '')}')"
+          style="padding:8px 14px;border-radius:10px;background:var(--navy);color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          👁 View Profile
+        </button>
         
       </div>
     </div>`;
@@ -3801,9 +3839,10 @@ async function approveAccessRequest(requestId) {
       hasEmailAccess: false,
       hasVoiceAccess: false,
       accountStatus: 'active',
-      isFrozen: false,
+isFrozen: false,
       createdAt: new Date().toISOString(),
-      createdFromRequest: requestId
+      createdFromRequest: requestId,
+      initialPassword: tempPassword
     });
 
     const indexSaved = await fsSet('loginIndex', empId, {
@@ -3948,7 +3987,8 @@ async function addNewUser() {
       hasVoiceAccess: false,
       accountStatus: 'active',
 isFrozen: false,
-createdAt: new Date().toISOString()
+createdAt: new Date().toISOString(),
+initialPassword: tempPassword
 
     });
 
@@ -5111,6 +5151,281 @@ async function saveEmpDetails() {
   msg.innerHTML = '<div style="color:var(--green);">✅ Saved successfully.</div>';
   setTimeout(() => { hideModal('modalEditEmp'); renderAdminUsers(); }, 1200);
 }
+
+// ══════════════════════════════════════════════════════════════
+//  CNIC FORMATTING
+// ══════════════════════════════════════════════════════════════
+function formatCnic(input) {
+  const digits = input.value.replace(/[^0-9]/g, '').slice(0, 13);
+  let formatted = digits;
+  if (digits.length > 5)  formatted = digits.slice(0, 5) + '-' + digits.slice(5);
+  if (digits.length > 12) formatted = digits.slice(0, 5) + '-' + digits.slice(5, 12) + '-' + digits.slice(12);
+  input.value = formatted;
+}
+
+function normalizeCnic(val) {
+  return (val || '').replace(/[^0-9]/g, '');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  REAL-TIME RELATIVE DETECTION
+// ══════════════════════════════════════════════════════════════
+let _relCheckTimer = null;
+function checkRelativesDebounced() {
+  clearTimeout(_relCheckTimer);
+  _relCheckTimer = setTimeout(checkRelativesRealTime, 800);
+}
+
+async function checkRelativesRealTime() {
+  const warning     = document.getElementById('ob_relativeWarning');
+  const warningText = document.getElementById('ob_relativeWarningText');
+  if (!warning) return;
+
+  const ownCnic    = normalizeCnic(document.getElementById('ob_cnic')?.value || '');
+  const fatherCnic = normalizeCnic(document.getElementById('ob_fatherCnic')?.value || '');
+
+  const detected = []; // { empId, empName, designation, type }
+
+  // Check 1: Is anyone in the firm my sibling? (they share my father's CNIC)
+  if (fatherCnic.length === 13) {
+    const idx = await fsGet('relativeIndex', fatherCnic);
+    if (idx?.entries?.length) {
+      idx.entries.forEach(e => {
+        // Exclude self (in case they're re-submitting)
+        if (e.uid !== currentUser?.uid) {
+          detected.push({ ...e, type: 'sibling', label: `${e.empName || e.empId} (same father — likely sibling)` });
+        }
+      });
+    }
+  }
+
+  // Check 2: Is anyone in the firm my child? (their father's CNIC is my own CNIC)
+  if (ownCnic.length === 13) {
+    const idx = await fsGet('relativeIndex', ownCnic);
+    if (idx?.entries?.length) {
+      idx.entries.forEach(e => {
+        if (e.uid !== currentUser?.uid) {
+          detected.push({ ...e, type: 'parent-child', label: `${e.empName || e.empId} (you are their parent)` });
+        }
+      });
+    }
+  }
+
+  if (detected.length) {
+    const names = detected.map(e => e.label).join('; ');
+    warningText.textContent = `Relative(s) found in firm: ${names}. You must declare them below.`;
+    warning.style.display = '';
+
+    // Force the dropdown to "yes"
+    const select = document.getElementById('ob_hasOrgRelation');
+    if (select && select.value !== 'yes') select.value = 'yes';
+    toggleOrgRelationDetails('yes');
+
+    // Auto-add rows for each detected relative (skip if already added by name)
+    const existingNames = [...document.querySelectorAll('.ob-rel-name')].map(i => i.value.trim().toLowerCase());
+    detected.forEach(e => {
+      const name = (e.empName || '').trim();
+      if (name && !existingNames.includes(name.toLowerCase())) {
+        addRelativeRow({
+          name,
+          relationship: e.type === 'sibling' ? 'Sibling' : 'Parent/Child',
+          desig: e.designation || '',
+          locked: true
+        });
+      }
+    });
+  } else {
+    warning.style.display = 'none';
+    warningText.textContent = '';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  RELATIVE ROWS (orgRelation)
+// ══════════════════════════════════════════════════════════════
+function toggleOrgRelationDetails(value) {
+  const box  = document.getElementById('ob_orgRelationBox');
+  const rows = document.getElementById('ob_orgRelationRows');
+  if (value === 'yes') {
+    box.style.display = '';
+    if (!rows.querySelector('.ob-relative-row')) {
+      addRelativeRow(); // at least one row
+    }
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+function addRelativeRow(prefill = {}) {
+  const rows = document.getElementById('ob_orgRelationRows');
+  const div  = document.createElement('div');
+  div.className = 'ob-relative-row';
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:center;margin-bottom:10px;';
+
+  const nameInput = document.createElement('input');
+  nameInput.className = 'field-input ob-rel-name';
+  nameInput.placeholder = 'Full Name';
+  nameInput.value = prefill.name || '';
+  if (prefill.locked) nameInput.style.background = 'var(--bg2)';
+
+  const relInput = document.createElement('input');
+  relInput.className = 'field-input ob-rel-relation';
+  relInput.placeholder = 'Relationship (e.g. Brother)';
+  relInput.value = prefill.relationship || '';
+
+  const desigInput = document.createElement('input');
+  desigInput.className = 'field-input ob-rel-desig';
+  desigInput.placeholder = 'Designation / Department';
+  desigInput.value = prefill.desig || '';
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.textContent = '×';
+  removeBtn.style.cssText = 'padding:8px 12px;border-radius:8px;background:#FFF0F0;border:1.5px solid #FFCACA;color:var(--red);cursor:pointer;font-size:16px;line-height:1;flex-shrink:0;';
+  removeBtn.onclick = () => div.remove();
+
+  div.appendChild(nameInput);
+  div.appendChild(relInput);
+  div.appendChild(desigInput);
+  div.appendChild(removeBtn);
+  rows.appendChild(div);
+}
+
+function collectRelatives() {
+  return [...document.querySelectorAll('.ob-relative-row')].map(row => ({
+    name: row.querySelector('.ob-rel-name')?.value.trim() || '',
+    relationship: row.querySelector('.ob-rel-relation')?.value.trim() || '',
+    designationOrDepartment: row.querySelector('.ob-rel-desig')?.value.trim() || '',
+  })).filter(r => r.name);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ADMIN — VIEW FULL EMPLOYEE PROFILE
+// ══════════════════════════════════════════════════════════════
+async function openEmpProfile(uid) {
+  if (!currentUser?.isAdmin) return;
+  showModal('modalEmpProfile');
+  document.getElementById('empProfileContent').innerHTML =
+    '<div class="empty-state"><div class="empty-text">Loading...</div></div>';
+
+  const [emp, ob] = await Promise.all([
+    fsGet('employees', uid),
+    fsGet('employeeOnboarding', uid)
+  ]);
+
+  document.getElementById('empProfileName').textContent = emp?.name || 'Unknown Employee';
+  document.getElementById('empProfileSub').textContent =
+    `${emp?.id || '—'} · ${emp?.designation || '—'} · ${emp?.department || '—'}`;
+
+  const row = (label, val, highlight) => `
+    <div style="padding:10px 0;border-bottom:1px solid var(--border);">
+      <div class="field-label" style="margin-bottom:4px;">${escapeHtml(label)}</div>
+      <div style="font-size:14px;color:${highlight ? 'var(--orange)' : 'var(--text)'};font-weight:${highlight ? '700' : '400'};font-family:${highlight ? "'Courier New',monospace" : 'inherit'};">${escapeHtml(String(val || '—'))}</div>
+    </div>`;
+
+  const section = (title, content) => `
+    <div style="margin-bottom:24px;">
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">${title}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px;">${content}</div>
+    </div>`;
+
+  // Employment section
+  const empSection = section('Employment Record', [
+    row('Employee ID',    emp?.id),
+    row('Email',          emp?.email),
+    row('Phone',          emp?.phone),
+    row('Joining Date',   emp?.joiningDate),
+    row('Designation',    emp?.designation),
+    row('Department',     emp?.department),
+    row('Reports To',     emp?.reportsToName || 'None (Top Level)'),
+    row('Role',           emp?.isAdmin ? 'Admin' : 'Employee'),
+    row('Account Status', emp?.accountStatus || 'active'),
+    row('Initial Portal Password', emp?.initialPassword || 'Not stored (sent via email reset)', !!emp?.initialPassword),
+  ].join(''));
+
+  // Personal section (from onboarding)
+  const personalSection = ob ? section('Personal Details', [
+    row('Father Name',       ob.fatherName),
+    row('Mother Name',       ob.motherName),
+    row('Date of Birth',     ob.dob),
+    row('Place of Birth',    ob.placeOfBirth),
+    row('CNIC',              ob.cnic),
+    row('Father CNIC',       ob.fatherCnic),
+    row('Gender',            ob.gender),
+    row('Nationality',       ob.nationality),
+    row('Religion',          ob.religion),
+    row('Marital Status',    ob.maritalStatus),
+    row('Blood Group',       ob.bloodGroup),
+    row('Primary Contact',   ob.primaryContact),
+    row('Secondary Contact', ob.secondaryContact),
+    row('Emergency Number',  ob.emergencyNumber),
+    row('Father Occupation', ob.fatherOccupation),
+    row('Mother Occupation', ob.motherOccupation),
+    row('Languages', Array.isArray(ob.languages) ? ob.languages.join(', ') : ob.languages),
+    row('Address', ob.address),
+  ].join('')) : '<div style="color:var(--text-muted);font-size:13px;padding:8px 0;">Onboarding form not yet submitted.</div>';
+
+  // Siblings
+  const sibSection = ob?.siblings?.length ? `
+    <div style="margin-bottom:24px;">
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Siblings (${ob.siblings.length})</div>
+      ${ob.siblings.map((s, i) => `
+        <div style="padding:8px 12px;border-radius:10px;background:var(--bg2);margin-bottom:8px;font-size:13px;">
+          <strong>${escapeHtml(s.name || `Sibling ${i+1}`)}</strong> · ${escapeHtml(s.relationship||'')} · ${escapeHtml(s.qualification||'')} · ${escapeHtml(s.occupation||'')}
+        </div>`).join('')}
+    </div>` : '';
+
+  // Qualifications
+  const qualSection = ob?.qualifications?.length ? `
+    <div style="margin-bottom:24px;">
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Qualifications</div>
+      ${ob.qualifications.map(q => `
+        <div style="padding:8px 12px;border-radius:10px;background:var(--bg2);margin-bottom:8px;font-size:13px;">
+          ${escapeHtml(q.degree||'')} · ${escapeHtml(q.institution||'')} · ${escapeHtml(q.year||'')} · ${escapeHtml(q.grade||'')}
+        </div>`).join('')}
+    </div>` : '';
+
+  // Experience
+  const expSection = ob?.employmentExperience?.length ? `
+    <div style="margin-bottom:24px;">
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Employment Experience</div>
+      ${ob.employmentExperience.map(e => `
+        <div style="padding:8px 12px;border-radius:10px;background:var(--bg2);margin-bottom:8px;font-size:13px;">
+          ${escapeHtml(e.company||'')} · ${escapeHtml(e.designation||'')} · ${escapeHtml(e.from||'')} to ${escapeHtml(e.to||'')}
+        </div>`).join('')}
+    </div>` : '';
+
+  // Org relatives
+  let relSection = '';
+  if (ob) {
+    const rels = ob.hasOrgRelation === 'yes' && ob.orgRelation;
+    if (rels) {
+      const relList = Array.isArray(rels) ? rels : [rels];
+      relSection = `
+        <div style="margin-bottom:24px;">
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Declared Relatives in Firm</div>
+          ${relList.map(r => `
+            <div style="padding:8px 12px;border-radius:10px;background:#FFF8E1;border:1.5px solid #FFC107;margin-bottom:8px;font-size:13px;color:#795600;">
+              <strong>${escapeHtml(r.name||'')}</strong> · ${escapeHtml(r.relationship||'')} · ${escapeHtml(r.designationOrDepartment||'')}
+            </div>`).join('')}
+        </div>`;
+    } else if (ob.hasOrgRelation === 'no') {
+      relSection = `<div style="margin-bottom:24px;font-size:13px;color:var(--text-muted);">Declared no relatives in organization.</div>`;
+    }
+  }
+
+  // Password note
+  const passNote = emp?.initialPassword
+    ? `<div style="margin-top:4px;font-size:11px;color:var(--text-muted);">⚠️ This is the initial system-generated password. The employee may have changed it since.</div>`
+    : '';
+
+  document.getElementById('empProfileContent').innerHTML =
+    empSection + passNote + personalSection + sibSection + qualSection + expSection + relSection;
+}
+
+window.openEmpProfile     = openEmpProfile;
+window.addRelativeRow     = addRelativeRow;
+window.checkRelativesDebounced = checkRelativesDebounced;
   
 function showCampaignMsg(msg, success) {
   const el = document.getElementById('campaignUploadMsg');
