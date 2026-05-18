@@ -1018,7 +1018,42 @@
  .empty-text { font-size:13px; }
   .divider { height:1px; background:var(--border); margin:20px 0; }
   .section-title { font-family:var(--font-d); font-size:16px; font-weight:700; color:var(--text); margin-bottom:16px; letter-spacing:-0.3px; }
+/* NOTICE BOARD */
+.noticeboard-wrap { margin-bottom: 36px; }
+.noticeboard-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.noticeboard-title-row { display:flex; align-items:center; gap:10px; }
+.noticeboard-icon { width:32px; height:32px; border-radius:10px; background:var(--orange-a10); border:1px solid var(--border-o); display:flex; align-items:center; justify-content:center; font-size:15px; }
+.noticeboard-label { font-family:var(--font-d); font-size:16px; font-weight:700; color:var(--text); letter-spacing:-0.3px; }
+.noticeboard-count { font-size:10px; font-weight:700; padding:3px 9px; border-radius:var(--r-full); background:var(--orange-a10); color:var(--orange); border:1px solid var(--border-o); }
+.noticeboard-list { display:flex; flex-direction:column; gap:12px; }
+.noticeboard-empty { background:var(--surface); border:1px dashed var(--border2); border-radius:var(--r-lg); padding:32px 24px; text-align:center; color:var(--text-muted); font-size:13px; }
+.noticeboard-empty-icon { font-size:28px; margin-bottom:8px; opacity:0.4; }
 
+.notice-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); padding:20px 24px; position:relative; overflow:hidden; animation:fadeUp 0.4s var(--ease) both; transition:border-color var(--t), box-shadow var(--t); }
+.notice-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; border-radius:0 2px 2px 0; }
+.notice-card.notice-urgent::before  { background:var(--red); }
+.notice-card.notice-info::before    { background:var(--orange); }
+.notice-card.notice-general::before { background:var(--navy-lt); }
+.notice-card:hover { border-color:var(--border-o); box-shadow:var(--sh); }
+.notice-top { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:8px; }
+.notice-badge { font-size:10px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; padding:3px 9px; border-radius:var(--r-full); flex-shrink:0; margin-top:2px; }
+.notice-badge.urgent  { background:var(--red-bg);    color:var(--red);    border:1px solid var(--red-border); }
+.notice-badge.info    { background:var(--orange-a10); color:var(--orange); border:1px solid var(--border-o); }
+.notice-badge.general { background:var(--surface2);  color:var(--text-mid); border:1px solid var(--border); }
+.notice-title { font-family:var(--font-d); font-size:15px; font-weight:700; color:var(--text); letter-spacing:-0.2px; line-height:1.3; }
+.notice-body  { font-size:13px; color:var(--text-mid); line-height:1.65; margin-bottom:12px; }
+.notice-footer { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.notice-meta   { font-size:11px; color:var(--text-muted); }
+.notice-expiry { font-size:11px; padding:2px 8px; border-radius:var(--r-full); background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); }
+
+.nb-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.nb-notice-item { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-md); padding:16px 18px; margin-bottom:12px; }
+.nb-notice-item-title { font-family:var(--font-d); font-size:14px; font-weight:700; color:var(--text); margin-bottom:4px; }
+.nb-notice-item-meta  { font-size:11px; color:var(--text-muted); margin-bottom:8px; display:flex; gap:10px; flex-wrap:wrap; }
+.nb-notice-item-body  { font-size:12px; color:var(--text-mid); line-height:1.6; margin-bottom:10px; }
+.nb-del-btn { font-size:11px; padding:5px 12px; border-radius:var(--r-full); background:var(--red-bg); border:1.5px solid var(--red-border); color:var(--red); cursor:pointer; font-weight:700; font-family:var(--font-b); }
+.nb-del-btn:hover { opacity:0.75; }
+@media(max-width:600px){ .nb-form-grid{ grid-template-columns:1fr; } .notice-card{ padding:16px 18px; } }
   .onboard-modal {
     max-width: 980px;
     max-height: 92vh;
@@ -1666,6 +1701,18 @@
           </div>
         </div>
 
+<!-- NOTICE BOARD -->
+<div class="noticeboard-wrap" id="noticeBoardWrap" style="display:none;">
+  <div class="noticeboard-header">
+    <div class="noticeboard-title-row">
+      <div class="noticeboard-icon">📌</div>
+      <div class="noticeboard-label">Notice Board</div>
+      <div class="noticeboard-count" id="noticeBoardCount"></div>
+    </div>
+  </div>
+  <div class="noticeboard-list" id="noticeBoardList"></div>
+</div>
+        
         <div class="section-title">Quick Access</div>
         <div class="cards-grid">
           <div class="nav-card" onclick="showView('viewAttendance')">
@@ -1796,6 +1843,7 @@
 <button class="tab-item" onclick="switchAdminTab('tabUsers', this)">Manage Users</button>
          <button class="tab-item" onclick="switchAdminTab('tabDataUpload', this)">Load Call Data</button>
          <button class="tab-item" onclick="switchAdminTab('tabCampaign', this)">Email Campaign Stats</button>
+         <button class="tab-item" onclick="switchAdminTab('tabNotices', this)">Notice Board</button>
        </div>
 
         <!-- Attendance Reports Tab -->
@@ -1852,6 +1900,57 @@
     </div>
   </div>
 
+</div>
+
+<!-- Notice Board Tab -->
+<div id="tabNotices" style="display:none;">
+  <div class="card-box" style="margin-bottom:16px;">
+    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:4px;">📌 Post Announcement</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Create announcements visible to employees on their home screen. Control who sees them and for how long.</div>
+    <div class="nb-form-grid">
+      <div class="field-wrap" style="margin:0 0 14px;">
+        <label class="field-label">Title</label>
+        <input class="field-input" id="nb_title" placeholder="e.g. Office closed on Eid day">
+      </div>
+      <div class="field-wrap" style="margin:0 0 14px;">
+        <label class="field-label">Priority</label>
+        <select class="field-input" id="nb_priority">
+          <option value="general">General</option>
+          <option value="info">Important</option>
+          <option value="urgent">Urgent</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-wrap">
+      <label class="field-label">Message</label>
+      <textarea class="field-input" id="nb_body" placeholder="Announcement details..." style="min-height:80px;resize:vertical;"></textarea>
+    </div>
+    <div class="nb-form-grid">
+      <div class="field-wrap" style="margin:0 0 14px;">
+        <label class="field-label">Visible Until (date &amp; time)</label>
+        <input class="field-input" id="nb_expires" type="datetime-local">
+      </div>
+      <div class="field-wrap" style="margin:0 0 14px;">
+        <label class="field-label">Exclude by Department (comma separated)</label>
+        <input class="field-input" id="nb_excl_dept" placeholder="e.g. Dispatch, Sales">
+      </div>
+    </div>
+    <div class="field-wrap">
+      <label class="field-label">Exclude Specific Employees (comma separated IDs e.g. HX-0001, HX-0002)</label>
+      <input class="field-input" id="nb_excl_ids" placeholder="HX-0001, HX-0004">
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:4px;">
+      <button class="btn-orange" style="padding:11px 28px;" onclick="adminPostNotice()">Post Announcement</button>
+      <div id="nb_msg" style="font-size:12px;display:none;"></div>
+    </div>
+  </div>
+  <div class="card-box">
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">All Announcements</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Expired notices are dimmed. Delete any notice to remove it from employee view immediately.</div>
+    <div id="nb_admin_list">
+      <div class="empty-state"><div class="empty-text">Loading...</div></div>
+    </div>
+  </div>
 </div>
         
         <!-- Load Call Data Tab -->
@@ -3085,11 +3184,21 @@ async function loadCampaignSettings() {
   } catch(e) {}
 }
 async function switchAdminTab(tabId, btn) {
-document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive,#tabDataUpload,#tabUsers,#tabCampaign').forEach(t => t.style.display = 'none');
+document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive,#tabDataUpload,#tabUsers,#tabCampaign,#tabNotices').forEach(t => t.style.display = 'none');
   document.getElementById(tabId).style.display = '';
   document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderAdmin();
+  if (tabId === 'tabNotices') {
+  renderAdminNotices();
+  const expInput = document.getElementById('nb_expires');
+  if (expInput) {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    expInput.min = now.toISOString().slice(0, 16);
+  }
+  return;
+}
   if (tabId === 'tabCampaign') {
   const access = await fsGet('toolAccess', window.__currentUser.id) || {};
   const hasCampaign = access.campaignAccess !== undefined ? access.campaignAccess : window.__currentUser.isAdmin;
@@ -5493,6 +5602,195 @@ async function renderReplyInbox() {
     el.innerHTML = '<div class="empty-state"><div class="empty-text">Error loading replies.</div></div>';
   }
 }
+
+/* ══════════════════════════════════════
+   NOTICE BOARD — EMPLOYEE VIEW
+══════════════════════════════════════ */
+async function loadNoticeBoard() {
+  const el = document.getElementById('noticeBoardList');
+  const wrap = document.getElementById('noticeBoardWrap');
+  const countEl = document.getElementById('noticeBoardCount');
+  if (!el || !currentUser) return;
+
+  try {
+    const allNotices = await fsGetAll('notices');
+    const now = new Date();
+    const empId = (currentUser.id || '').trim().toUpperCase();
+    const dept  = (currentUser.department || '').trim().toLowerCase();
+
+    const visible = Object.values(allNotices).filter(n => {
+      if (n.expiresAt && new Date(n.expiresAt) < now) return false;
+      if (n.excludedIds && n.excludedIds.length) {
+        const excl = n.excludedIds.map(x => x.trim().toUpperCase());
+        if (excl.includes(empId)) return false;
+      }
+      if (n.excludedDepts && n.excludedDepts.length) {
+        const exclD = n.excludedDepts.map(x => x.trim().toLowerCase());
+        if (dept && exclD.includes(dept)) return false;
+      }
+      return true;
+    }).sort((a, b) => {
+      const pOrder = { urgent:0, info:1, general:2 };
+      const pa = pOrder[a.priority] ?? 2;
+      const pb = pOrder[b.priority] ?? 2;
+      if (pa !== pb) return pa - pb;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+
+    if (!visible.length) {
+      wrap.style.display = 'none';
+      return;
+    }
+
+    wrap.style.display = '';
+    countEl.textContent = visible.length + (visible.length === 1 ? ' notice' : ' notices');
+
+    const badgeMap = { urgent:'urgent', info:'info', general:'general' };
+    const labelMap = { urgent:'🚨 Urgent', info:'📣 Important', general:'📌 General' };
+
+    el.innerHTML = visible.map((n, i) => {
+      const priority  = n.priority || 'general';
+      const expiresAt = n.expiresAt ? new Date(n.expiresAt) : null;
+      const daysLeft  = expiresAt ? Math.ceil((expiresAt - now) / 86400000) : null;
+      const expiryStr = daysLeft !== null ? (daysLeft <= 1 ? 'Expires today' : `Expires in ${daysLeft}d`) : '';
+      const postedStr = n.createdAt
+        ? new Date(n.createdAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
+        : '';
+      return `<div class="notice-card notice-${priority}" style="animation-delay:${i*60}ms">
+        <div class="notice-top">
+          <div class="notice-title">${escapeHtml(n.title || 'Announcement')}</div>
+          <span class="notice-badge ${badgeMap[priority]}">${labelMap[priority]}</span>
+        </div>
+        <div class="notice-body">${escapeHtml(n.body || '').replace(/\n/g,'<br>')}</div>
+        <div class="notice-footer">
+          ${postedStr ? `<span class="notice-meta">🗓 Posted ${postedStr}</span>` : ''}
+          ${expiryStr ? `<span class="notice-expiry">⏳ ${expiryStr}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+
+  } catch(e) {
+    document.getElementById('noticeBoardWrap').style.display = 'none';
+  }
+}
+
+/* ══════════════════════════════════════
+   NOTICE BOARD — ADMIN
+══════════════════════════════════════ */
+async function adminPostNotice() {
+  if (!currentUser || !currentUser.isAdmin) return;
+  const msg   = document.getElementById('nb_msg');
+  const title = (document.getElementById('nb_title').value || '').trim();
+  const body  = (document.getElementById('nb_body').value  || '').trim();
+  const prio  = document.getElementById('nb_priority').value || 'general';
+  const exp   = document.getElementById('nb_expires').value;
+  const exclIdsRaw   = (document.getElementById('nb_excl_ids').value || '').trim();
+  const exclDeptsRaw = (document.getElementById('nb_excl_dept').value || '').trim();
+
+  if (!title) { nbMsg(msg, 'Please enter a title.', false); return; }
+  if (!body)  { nbMsg(msg, 'Please enter a message.', false); return; }
+  if (!exp)   { nbMsg(msg, 'Please set an expiry date.', false); return; }
+  if (new Date(exp) < new Date()) { nbMsg(msg, 'Expiry must be in the future.', false); return; }
+
+  const excludedIds   = exclIdsRaw   ? exclIdsRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
+  const excludedDepts = exclDeptsRaw ? exclDeptsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+  const noticeId = 'notice_' + Date.now();
+  const notice = {
+    id: noticeId, title, body,
+    priority: prio,
+    expiresAt: new Date(exp).toISOString(),
+    excludedIds, excludedDepts,
+    createdAt: new Date().toISOString(),
+    createdBy: currentUser.id || currentUser.name || 'Admin'
+  };
+
+  try {
+    await fsSet('notices', noticeId, notice);
+    nbMsg(msg, '✅ Announcement posted!', true);
+    document.getElementById('nb_title').value = '';
+    document.getElementById('nb_body').value  = '';
+    document.getElementById('nb_expires').value = '';
+    document.getElementById('nb_excl_ids').value = '';
+    document.getElementById('nb_excl_dept').value = '';
+    document.getElementById('nb_priority').value = 'general';
+    renderAdminNotices();
+  } catch(e) {
+    nbMsg(msg, 'Error: ' + (e.message || 'Could not save.'), false);
+  }
+}
+
+async function adminDeleteNotice(noticeId) {
+  if (!currentUser || !currentUser.isAdmin) return;
+  if (!confirm('Delete this announcement?')) return;
+  try {
+    const { db, doc, deleteDoc } = window.__fb;
+    await deleteDoc(doc(db, 'notices', noticeId));
+    renderAdminNotices();
+    loadNoticeBoard();
+  } catch(e) {
+    alert('Could not delete: ' + (e.message || 'Unknown error'));
+  }
+}
+
+async function renderAdminNotices() {
+  const el = document.getElementById('nb_admin_list');
+  if (!el) return;
+  el.innerHTML = '<div class="empty-state"><div class="empty-text">Loading...</div></div>';
+  try {
+    const all = await fsGetAll('notices');
+    const now = new Date();
+    const sorted = Object.values(all).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    if (!sorted.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">📌</div><div class="empty-text">No announcements yet.</div></div>';
+      return;
+    }
+    const pLabel = { urgent:'🚨 Urgent', info:'📣 Important', general:'📌 General' };
+    const pColor = { urgent:'var(--red)', info:'var(--orange)', general:'var(--text-muted)' };
+    el.innerHTML = sorted.map(n => {
+      const expired = n.expiresAt && new Date(n.expiresAt) < now;
+      const expStr  = n.expiresAt
+        ? new Date(n.expiresAt).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' })
+        : 'No expiry';
+      const postedStr = n.createdAt
+        ? new Date(n.createdAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
+        : '';
+      const excl = [
+        n.excludedIds   && n.excludedIds.length   ? 'IDs: '   + n.excludedIds.join(', ')   : '',
+        n.excludedDepts && n.excludedDepts.length ? 'Depts: ' + n.excludedDepts.join(', ') : ''
+      ].filter(Boolean).join(' · ');
+      return `<div class="nb-notice-item" style="${expired ? 'opacity:0.4;' : ''}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+          <div style="flex:1;">
+            <div class="nb-notice-item-title">${escapeHtml(n.title || 'Untitled')}</div>
+            <div class="nb-notice-item-meta">
+              <span style="color:${pColor[n.priority]||'var(--text-muted)'};font-weight:700;">${pLabel[n.priority]||'📌 General'}</span>
+              ${postedStr ? `<span>Posted ${postedStr}</span>` : ''}
+              <span style="color:${expired ? 'var(--red)' : 'var(--text-muted)'};">${expired ? '⚠️ Expired' : '⏳ Expires'}: ${expStr}</span>
+            </div>
+            <div class="nb-notice-item-body">${escapeHtml(n.body || '').replace(/\n/g,'<br>')}</div>
+            ${excl ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">🚫 Hidden from — ${escapeHtml(excl)}</div>` : ''}
+          </div>
+          <button class="nb-del-btn" onclick="adminDeleteNotice('${escapeHtml(n.id||'')}')">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-text">Error loading.</div></div>';
+  }
+}
+
+function nbMsg(el, text, ok) {
+  el.textContent = text;
+  el.style.color = ok ? 'var(--green)' : 'var(--red)';
+  el.style.display = '';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+window.adminPostNotice    = adminPostNotice;
+window.adminDeleteNotice  = adminDeleteNotice;
+window.renderAdminNotices = renderAdminNotices;
+window.loadNoticeBoard    = loadNoticeBoard;
   
 </script>
 </body>
