@@ -1390,6 +1390,11 @@
     <div class="modal-title">Complete Employee Information</div>
     <div class="modal-sub">Please complete this form once. Your portal will keep showing this form until it is submitted.</div>
 
+<!-- Profile update banner — shown when re-opening to fill missing fields -->
+    <div id="ob_updateBanner" style="display:none;padding:14px 18px;border-radius:12px;background:#FFF8E1;border:1.5px solid #FFC107;color:#795600;font-size:13px;line-height:1.6;margin-bottom:20px;">
+      📋 <strong>Profile update required.</strong> Your existing information has been pre-filled below. Please provide the highlighted missing field(s) and re-confirm your declaration to save.
+    </div>
+    
     <div class="onboard-section">
       <div class="onboard-section-title">Personal Information</div>
       <div class="onboard-grid">
@@ -2740,7 +2745,21 @@ async function checkOnboardingStatus() {
   if (!currentUser || !currentUser.uid) return;
 
   const existing = await fsGet('employeeOnboarding', currentUser.uid);
+
+  // Brand new — show blank form
   if (!existing || existing.declarationAccepted !== true) {
+    document.getElementById('modalOnboarding').classList.add('show');
+    return;
+  }
+
+  // Check for fields added after initial submission
+  const missing = [];
+  if (!existing.fatherCnic) missing.push("Father's CNIC");
+
+  if (missing.length > 0) {
+    prefillOnboardingForm(existing);
+    const banner = document.getElementById('ob_updateBanner');
+    if (banner) banner.style.display = '';
     document.getElementById('modalOnboarding').classList.add('show');
   }
 }
@@ -5537,6 +5556,136 @@ window.checkRelativesDebounced = checkRelativesDebounced;
 window.renderSiblingRows       = renderSiblingRows;
 window.formatCnic              = formatCnic;
 window.normalizeCnic           = normalizeCnic;
+
+// ══════════════════════════════════════════════════════════════
+//  PRE-FILL ONBOARDING FORM (for profile updates)
+// ══════════════════════════════════════════════════════════════
+function prefillOnboardingForm(data) {
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val ?? '';
+  };
+
+  // ── Basic personal info ──
+  set('ob_fatherName',     data.fatherName);
+  set('ob_motherName',     data.motherName);
+  set('ob_dob',            data.dob);
+  set('ob_placeOfBirth',   data.placeOfBirth);
+  set('ob_nationality',    data.nationality);
+  set('ob_cnic',           data.cnic);
+  set('ob_fatherCnic',     data.fatherCnic || ''); // empty for pre-existing users
+  set('ob_gender',         data.gender);
+  set('ob_religion',       data.religion);
+  set('ob_maritalStatus',  data.maritalStatus);
+  set('ob_hasDisability',  data.hasDisability);
+  set('ob_disabilityDetails', data.disabilityDetails);
+  set('ob_bloodGroup',     data.bloodGroup);
+  set('ob_primaryContact', data.primaryContact);
+  set('ob_secondaryContact', data.secondaryContact);
+  set('ob_emergencyNumber', data.emergencyNumber);
+  set('ob_fatherOccupation', data.fatherOccupation);
+  set('ob_motherOccupation', data.motherOccupation);
+  set('ob_address',        data.address);
+
+  // Trigger disability box visibility
+  if (data.hasDisability === 'yes') toggleDisabilityDetails('yes');
+
+  // ── Languages ──
+  if (Array.isArray(data.languages)) {
+    document.querySelectorAll('[name="ob_languages"]').forEach(cb => {
+      cb.checked = data.languages.includes(cb.value);
+    });
+  }
+
+  // ── Qualifications ──
+  const qualMap = {
+    'Matric / O Level':     'q_matric',
+    'Inter / A Level':      'q_inter',
+    'BS / BA / BSc / ADP':  'q_bachelors',
+    'MS / MA / CA / ACCA':  'q_masters',
+    'Other':                'q_other',
+  };
+  if (Array.isArray(data.qualifications)) {
+    data.qualifications.forEach(q => {
+      const prefix = qualMap[q.level];
+      if (!prefix) return;
+      const chk = document.getElementById(prefix + '_chk');
+      if (!chk) return;
+      chk.checked = true;
+      toggleQualificationDetails(prefix, true);
+      set(prefix + '_institution', q.institution);
+      set(prefix + '_field',       q.fieldOfStudy);
+      set(prefix + '_marks',       q.marksOrGrades);
+      set(prefix + '_year',        q.passingYear);
+    });
+  }
+
+  // ── Employment experience ──
+  const expWrap = document.getElementById('ob_experienceRows');
+  if (expWrap && Array.isArray(data.employmentExperience) && data.employmentExperience.length) {
+    expWrap.innerHTML = '';
+    data.employmentExperience.forEach(exp => {
+      const row = document.createElement('div');
+      row.className = 'mini-row ob-experience-row';
+      row.innerHTML = `
+        <input class="field-input ob-exp-designation" placeholder="Designation"   value="${escapeHtml(exp.designation  || '')}">
+        <input class="field-input ob-exp-company"     placeholder="Company name"  value="${escapeHtml(exp.companyName  || '')}">
+        <input class="field-input ob-exp-join"        placeholder="Year of joining" value="${escapeHtml(exp.joiningYear || '')}">
+        <input class="field-input ob-exp-leave"       placeholder="Year of leaving" value="${escapeHtml(exp.leavingYear || '')}">
+      `;
+      expWrap.appendChild(row);
+    });
+  }
+
+  // ── Siblings ──
+  const count = Number(data.siblingCount) || 0;
+  set('ob_siblingCount', count > 0 ? String(count) : '');
+  if (count > 0) {
+    renderSiblingRows(count);
+    const sibRows = document.querySelectorAll('.ob-sibling-row');
+    if (Array.isArray(data.siblings)) {
+      data.siblings.forEach((sib, i) => {
+        const row = sibRows[i];
+        if (!row) return;
+        const q = (cls) => row.querySelector(cls);
+        if (q('.ob-sib-name'))         q('.ob-sib-name').value         = sib.name         || '';
+        if (q('.ob-sib-relationship')) q('.ob-sib-relationship').value = sib.relationship || '';
+        if (q('.ob-sib-qualification'))q('.ob-sib-qualification').value= sib.qualification|| '';
+        if (q('.ob-sib-field'))        q('.ob-sib-field').value        = sib.fieldOfStudy || '';
+        if (q('.ob-sib-occupation'))   q('.ob-sib-occupation').value   = sib.occupation   || '';
+      });
+    }
+  }
+
+  // ── Org relatives ──
+  if (data.hasOrgRelation) {
+    set('ob_hasOrgRelation', data.hasOrgRelation);
+    if (data.hasOrgRelation === 'yes') {
+      toggleOrgRelationDetails('yes');
+      document.getElementById('ob_orgRelationRows').innerHTML = '';
+      const rels = Array.isArray(data.orgRelation)
+        ? data.orgRelation
+        : (data.orgRelation ? [data.orgRelation] : []);
+      rels.forEach(r => addRelativeRow({
+        name:         r.name                    || '',
+        relationship: r.relationship            || '',
+        desig:        r.designationOrDepartment || '',
+      }));
+    }
+  }
+
+  // ── Declaration — always require re-confirmation ──
+  const decl = document.getElementById('ob_declaration');
+  if (decl) decl.checked = false;
+
+  // ── Highlight the father CNIC field if it's the missing one ──
+  const fatherCnicInput = document.getElementById('ob_fatherCnic');
+  if (fatherCnicInput && !data.fatherCnic) {
+    fatherCnicInput.style.border = '2px solid #FFC107';
+    fatherCnicInput.placeholder  = '⚠ Required — please enter father\'s CNIC';
+    fatherCnicInput.focus();
+  }
+}
   
 function showCampaignMsg(msg, success) {
   const el = document.getElementById('campaignUploadMsg');
