@@ -2830,9 +2830,6 @@ async function submitOnboardingForm() {
     if (relativeDetected && hasOrgRelation !== 'yes') {
       throw new Error('A relative has been detected in our firm based on your CNIC. You must select "Yes" and declare them before submitting.');
     }
-
-    let orgRelation = null;
-    if (hasOrgRelation === 'yes') {
     
 let orgRelation = null;
     if (hasOrgRelation === 'yes') {
