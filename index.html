@@ -2609,10 +2609,6 @@ function toggleQualificationDetails(prefix, checked) {
   document.getElementById(prefix + '_box').classList.toggle('show', checked);
 }
 
-function toggleOrgRelationDetails(value) {
-  document.getElementById('ob_orgRelationBox').classList.toggle('show', value === 'yes');
-}
-
 function addExperienceRow() {
   const wrap = document.getElementById('ob_experienceRows');
   const row = document.createElement('div');
