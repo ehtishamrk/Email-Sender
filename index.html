@@ -3111,6 +3111,7 @@ startHeartbeat();
   checkOnboardingStatus();
 checkTeamCard();
   loadNotificationBadge();
+  loadNoticeBoard();
 
   const params = new URLSearchParams(window.location.search);
   const requestedView = params.get('view');
@@ -3152,6 +3153,7 @@ function showView(id) {
     const f = document.getElementById('emailFrame');
     if (!f.src || f.src === window.location.href) f.src = EMAIL_SENDER_URL;
   }
+  if (id === 'viewDash') loadNoticeBoard();
   if (id === 'viewAttendance') renderAttReport();
   if (id === 'viewLeave') { refreshLeaveHistory(); }
   if (id === 'viewAdmin') renderAdmin();
