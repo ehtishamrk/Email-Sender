@@ -2148,7 +2148,11 @@
             Personal Details
             <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--bg2);padding:3px 10px;border-radius:20px;margin-left:8px;">From onboarding</span>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="ob_profileFields"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="ob_profileFields"></div>
+          <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <div style="font-size:12px;color:var(--text-muted);">Need to correct something? Re-open your form to update.</div>
+            <button class="btn-sm-outline" onclick="openOnboardingForEdit()" style="font-size:12px;">✏️ Edit My Details</button>
+          </div>
         </div>
 
       </div>
@@ -2820,6 +2824,16 @@ async function submitOnboardingForm() {
       throw new Error('Please write about your condition.');
     }
 
+// Block submission if relative detected but user selected No
+    const relWarning = document.getElementById('ob_relativeWarning');
+    const relativeDetected = relWarning && relWarning.style.display !== 'none';
+    if (relativeDetected && hasOrgRelation !== 'yes') {
+      throw new Error('A relative has been detected in our firm based on your CNIC. You must select "Yes" and declare them before submitting.');
+    }
+
+    let orgRelation = null;
+    if (hasOrgRelation === 'yes') {
+    
 let orgRelation = null;
     if (hasOrgRelation === 'yes') {
       orgRelation = collectRelatives();
@@ -5554,9 +5568,27 @@ window.openEmpProfile     = openEmpProfile;
 window.addRelativeRow          = addRelativeRow;
 window.checkRelativesDebounced = checkRelativesDebounced;
 window.renderSiblingRows       = renderSiblingRows;
+  window.openOnboardingForEdit   = openOnboardingForEdit;
 window.formatCnic              = formatCnic;
 window.normalizeCnic           = normalizeCnic;
 
+async function openOnboardingForEdit() {
+  if (!currentUser?.uid) return;
+  const existing = await fsGet('employeeOnboarding', currentUser.uid);
+  if (!existing) {
+    document.getElementById('modalOnboarding').classList.add('show');
+    return;
+  }
+  prefillOnboardingForm(existing);
+  const banner = document.getElementById('ob_updateBanner');
+  if (banner) {
+    banner.style.display = '';
+    banner.innerHTML = '✏️ <strong>Editing your details.</strong> All your saved information is pre-filled below. Make your changes, re-confirm the declaration, and click Submit to save.';
+  }
+  document.getElementById('modalOnboarding').classList.add('show');
+}
+
+  
 // ══════════════════════════════════════════════════════════════
 //  PRE-FILL ONBOARDING FORM (for profile updates)
 // ══════════════════════════════════════════════════════════════
