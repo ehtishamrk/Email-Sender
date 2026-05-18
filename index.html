@@ -5532,8 +5532,11 @@ async function openEmpProfile(uid) {
 }
 
 window.openEmpProfile     = openEmpProfile;
-window.addRelativeRow     = addRelativeRow;
+window.addRelativeRow          = addRelativeRow;
 window.checkRelativesDebounced = checkRelativesDebounced;
+window.renderSiblingRows       = renderSiblingRows;
+window.formatCnic              = formatCnic;
+window.normalizeCnic           = normalizeCnic;
   
 function showCampaignMsg(msg, success) {
   const el = document.getElementById('campaignUploadMsg');
