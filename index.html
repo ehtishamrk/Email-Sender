@@ -521,7 +521,16 @@
 
   .nav-btn:hover { border-color: var(--border-o); color: var(--orange); background: var(--orange-a10); }
   .nav-btn-danger:hover { background: var(--red-bg); border-color: var(--red-border); color: var(--red); }
-
+.notif-count-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    position: absolute; top: -5px; right: -5px;
+    min-width: 17px; height: 17px; padding: 0 4px;
+    border-radius: var(--r-full); background: var(--red);
+    color: #fff; font-size: 10px; font-weight: 700;
+    font-family: var(--font-d); letter-spacing: 0;
+    border: 2px solid var(--nav-bg);
+    pointer-events: none; line-height: 1;
+  }
   /* ══════════════════════════════════════
      PORTAL
   ══════════════════════════════════════ */
@@ -1018,42 +1027,141 @@
  .empty-text { font-size:13px; }
   .divider { height:1px; background:var(--border); margin:20px 0; }
   .section-title { font-family:var(--font-d); font-size:16px; font-weight:700; color:var(--text); margin-bottom:16px; letter-spacing:-0.3px; }
-/* NOTICE BOARD */
-.noticeboard-wrap { margin-bottom: 36px; }
-.noticeboard-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-.noticeboard-title-row { display:flex; align-items:center; gap:10px; }
-.noticeboard-icon { width:32px; height:32px; border-radius:10px; background:var(--orange-a10); border:1px solid var(--border-o); display:flex; align-items:center; justify-content:center; font-size:15px; }
-.noticeboard-label { font-family:var(--font-d); font-size:16px; font-weight:700; color:var(--text); letter-spacing:-0.3px; }
-.noticeboard-count { font-size:10px; font-weight:700; padding:3px 9px; border-radius:var(--r-full); background:var(--orange-a10); color:var(--orange); border:1px solid var(--border-o); }
-.noticeboard-list { display:flex; flex-direction:column; gap:12px; }
-.noticeboard-empty { background:var(--surface); border:1px dashed var(--border2); border-radius:var(--r-lg); padding:32px 24px; text-align:center; color:var(--text-muted); font-size:13px; }
-.noticeboard-empty-icon { font-size:28px; margin-bottom:8px; opacity:0.4; }
+/* ══════════════════════════════════════
+   DASHBOARD TWO-COLUMN LAYOUT
+══════════════════════════════════════ */
+.dash-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 28px;
+  align-items: start;
+}
+.dash-main-col { min-width: 0; }
+.dash-side-col { position: sticky; top: 80px; }
 
-.notice-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); padding:20px 24px; position:relative; overflow:hidden; animation:fadeUp 0.4s var(--ease) both; transition:border-color var(--t), box-shadow var(--t); }
-.notice-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; border-radius:0 2px 2px 0; }
-.notice-card.notice-urgent::before  { background:var(--red); }
-.notice-card.notice-info::before    { background:var(--orange); }
-.notice-card.notice-general::before { background:var(--navy-lt); }
-.notice-card:hover { border-color:var(--border-o); box-shadow:var(--sh); }
-.notice-top { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:8px; }
-.notice-badge { font-size:10px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; padding:3px 9px; border-radius:var(--r-full); flex-shrink:0; margin-top:2px; }
-.notice-badge.urgent  { background:var(--red-bg);    color:var(--red);    border:1px solid var(--red-border); }
-.notice-badge.info    { background:var(--orange-a10); color:var(--orange); border:1px solid var(--border-o); }
-.notice-badge.general { background:var(--surface2);  color:var(--text-mid); border:1px solid var(--border); }
-.notice-title { font-family:var(--font-d); font-size:15px; font-weight:700; color:var(--text); letter-spacing:-0.2px; line-height:1.3; }
-.notice-body  { font-size:13px; color:var(--text-mid); line-height:1.65; margin-bottom:12px; }
-.notice-footer { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
-.notice-meta   { font-size:11px; color:var(--text-muted); }
-.notice-expiry { font-size:11px; padding:2px 8px; border-radius:var(--r-full); background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); }
+/* ══════════════════════════════════════
+   NOTICE BOARD — REDESIGNED (ELEGANT)
+══════════════════════════════════════ */
+.noticeboard-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  box-shadow: var(--sh-sm);
+}
+.noticeboard-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.noticeboard-title-row { display: flex; align-items: center; gap: 10px; }
+.noticeboard-icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: var(--orange-a10); display: flex; align-items: center;
+  justify-content: center; font-size: 13px; flex-shrink: 0;
+}
+.noticeboard-label {
+  font-family: var(--font-d); font-size: 13px; font-weight: 700;
+  color: var(--text); letter-spacing: -0.2px;
+}
+.noticeboard-count {
+  font-size: 10px; font-weight: 700; padding: 2px 8px;
+  border-radius: var(--r-full); background: var(--orange-a10);
+  color: var(--orange); border: 1px solid var(--border-o);
+}
+.noticeboard-list { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.noticeboard-empty {
+  padding: 36px 20px; text-align: center; color: var(--text-muted); font-size: 12px;
+}
+.noticeboard-empty-icon { font-size: 24px; margin-bottom: 8px; opacity: 0.35; }
 
-.nb-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-.nb-notice-item { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-md); padding:16px 18px; margin-bottom:12px; }
-.nb-notice-item-title { font-family:var(--font-d); font-size:14px; font-weight:700; color:var(--text); margin-bottom:4px; }
-.nb-notice-item-meta  { font-size:11px; color:var(--text-muted); margin-bottom:8px; display:flex; gap:10px; flex-wrap:wrap; }
-.nb-notice-item-body  { font-size:12px; color:var(--text-mid); line-height:1.6; margin-bottom:10px; }
-.nb-del-btn { font-size:11px; padding:5px 12px; border-radius:var(--r-full); background:var(--red-bg); border:1.5px solid var(--red-border); color:var(--red); cursor:pointer; font-weight:700; font-family:var(--font-b); }
-.nb-del-btn:hover { opacity:0.75; }
-@media(max-width:600px){ .nb-form-grid{ grid-template-columns:1fr; } .notice-card{ padding:16px 18px; } }
+/* — Individual notice card inside sidebar — */
+.notice-card {
+  border-radius: var(--r-md);
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  animation: fadeUp 0.35s var(--ease) both;
+  transition: border-color var(--t), box-shadow var(--t), transform var(--t);
+  cursor: default;
+}
+.notice-card:hover {
+  border-color: var(--border-o);
+  box-shadow: var(--sh);
+  transform: translateY(-1px);
+}
+.notice-card-inner { padding: 14px 16px; }
+
+/* Priority accent bar */
+.notice-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px;
+}
+.notice-card.notice-urgent::before  { background: var(--red); }
+.notice-card.notice-info::before    { background: var(--orange); }
+.notice-card.notice-general::before { background: var(--navy-lt); }
+
+/* Priority background tint */
+.notice-card.notice-urgent  { background: var(--red-bg); }
+.notice-card.notice-info    { background: var(--orange-a10); }
+.notice-card.notice-general { background: var(--surface2); }
+[data-theme="dark"] .notice-card.notice-urgent  { background: rgba(220,38,38,0.08); }
+[data-theme="dark"] .notice-card.notice-info    { background: rgba(232,119,34,0.07); }
+[data-theme="dark"] .notice-card.notice-general { background: var(--surface2); }
+
+.notice-top {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 10px; margin-bottom: 6px;
+}
+.notice-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.8px;
+  text-transform: uppercase; padding: 2px 7px;
+  border-radius: var(--r-full); flex-shrink: 0; margin-top: 1px;
+  white-space: nowrap;
+}
+.notice-badge.urgent  { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+.notice-badge.info    { background: var(--orange-a10); color: var(--orange); border: 1px solid var(--border-o); }
+.notice-badge.general { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+[data-theme="dark"] .notice-badge.general { background: var(--surface3); }
+
+.notice-title {
+  font-family: var(--font-d); font-size: 13px; font-weight: 700;
+  color: var(--text); letter-spacing: -0.1px; line-height: 1.3; flex: 1;
+}
+.notice-body {
+  font-size: 12px; color: var(--text-mid); line-height: 1.6;
+  margin-bottom: 10px; word-break: break-word;
+}
+.notice-footer { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.notice-meta   { font-size: 10px; color: var(--text-muted); }
+.notice-expiry {
+  font-size: 10px; padding: 2px 7px; border-radius: var(--r-full);
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-muted);
+}
+
+/* Admin notice list items (inside admin panel) */
+.nb-notice-item {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 16px 18px; margin-bottom: 12px;
+}
+.nb-notice-item-title { font-family: var(--font-d); font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.nb-notice-item-meta  { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
+.nb-notice-item-body  { font-size: 12px; color: var(--text-mid); line-height: 1.6; margin-bottom: 10px; }
+
+@media(max-width:900px) {
+  .dash-layout { grid-template-columns: 1fr; }
+  .dash-side-col { position: static; }
+  .noticeboard-wrap { border-radius: var(--r-lg); }
+}
+
+  .nb-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  
+@media(max-width:600px) {
+  .nb-form-grid { grid-template-columns: 1fr; }
+  .notice-card-inner { padding: 12px 14px; }
+}
+
   .onboard-modal {
     max-width: 980px;
     max-height: 92vh;
@@ -1622,6 +1730,10 @@
         <option value="">No manager / top level</option>
       </select>
     </div>
+    <div class="field-wrap" style="margin-top:14px;">
+  <label class="field-label">Assigned Client Company</label>
+  <input class="field-input" id="editEmpCompany" placeholder="e.g. FastFreight LLC">
+</div>
     <div style="display:flex;gap:10px;margin-top:8px;">
       <button class="btn-orange" onclick="saveEmpDetails()" style="width:auto;padding:12px 24px;">Save Changes →</button>
       <button class="btn-sm-outline" onclick="hideModal('modalEditEmp')">Cancel</button>
@@ -1651,7 +1763,7 @@
 <button class="nav-btn" onclick="showView('viewProfile')">👤 Profile</button>
 <button class="nav-btn" onclick="showView('viewNotifications')" style="position:relative;">
   🔔 Notifications
-  <span id="notifBadge" style="display:none;position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:var(--red);border:2px solid var(--nav-bg);"></span>
+  <span id="notifBadge" class="notif-count-badge" style="display:none;">0</span>
 </button>
 <button class="nav-btn" onclick="showView('viewSettings')">⚙️ Settings</button><button class="nav-btn nav-btn-danger" onclick="doLogout()">Sign Out</button>
   </div>
@@ -1689,7 +1801,11 @@
       </div>
 
       <!-- Content -->
-      <div class="dash-content">
+  <div class="dash-content">
+        <div class="dash-layout">
+
+          <!-- LEFT: main column -->
+          <div class="dash-main-col">
 
         <div class="stats-row" id="statsRow">
           <div class="stat-chip">
@@ -1705,18 +1821,6 @@
             <div class="stat-chip-label">Pending leaves</div>
           </div>
         </div>
-
-<!-- NOTICE BOARD -->
-<div class="noticeboard-wrap" id="noticeBoardWrap" style="display:none;">
-  <div class="noticeboard-header">
-    <div class="noticeboard-title-row">
-      <div class="noticeboard-icon">📌</div>
-      <div class="noticeboard-label">Notice Board</div>
-      <div class="noticeboard-count" id="noticeBoardCount"></div>
-    </div>
-  </div>
-  <div class="noticeboard-list" id="noticeBoardList"></div>
-</div>
         
         <div class="section-title">Quick Access</div>
         <div class="cards-grid">
@@ -1763,10 +1867,31 @@
   <div class="nav-card-title">Download Matured Leads</div>
   <div class="nav-card-desc">Download today's cold call list — leads that have received all 3 emails.</div>
 </div>
-        </div>
+</div>
+          </div><!-- /.dash-main-col -->
 
-      </div>
-    </div>
+          <!-- RIGHT: notice board sidebar -->
+          <div class="dash-side-col">
+            <div class="noticeboard-wrap" id="noticeBoardWrap">
+              <div class="noticeboard-header">
+                <div class="noticeboard-title-row">
+                  <div class="noticeboard-icon">📌</div>
+                  <div class="noticeboard-label">Notice Board</div>
+                  <div class="noticeboard-count" id="noticeBoardCount"></div>
+                </div>
+              </div>
+              <div class="noticeboard-list" id="noticeBoardList">
+                <div class="noticeboard-empty">
+                  <div class="noticeboard-empty-icon">📌</div>
+                  <div>No announcements right now.</div>
+                </div>
+              </div>
+            </div>
+          </div><!-- /.dash-side-col -->
+
+        </div><!-- /.dash-layout -->
+      </div><!-- /.dash-content -->
+    </div><!-- /#viewDash -->
 
     <!-- ── ATTENDANCE REPORT ── -->
     <div id="viewAttendance" class="view">
@@ -5077,12 +5202,12 @@ async function renderCampaignStats() {
 // ══════════════════════════════════════════════════════════════
 //  NOTIFICATIONS
 // ══════════════════════════════════════════════════════════════
-async function writeNotification(empUid, title, body) {
+async function writeNotification(empUid, title, body, type = 'profile_update') {
   try {
     const notifId = Date.now().toString() + Math.random().toString(36).slice(2, 6);
     await fsSet('notifications/' + empUid + '/items', notifId, {
       id: notifId,
-      type: 'profile_update',
+      type,
       title,
       body,
       isRead: false,
@@ -5095,9 +5220,15 @@ async function writeNotification(empUid, title, body) {
 async function loadNotificationBadge() {
   if (!currentUser) return;
   const items = await fsGetSubcollection('notifications/' + currentUser.uid + '/items');
-  const hasUnread = items.some(n => !n.isRead);
+  const unreadCount = items.filter(n => !n.isRead).length;
   const badge = document.getElementById('notifBadge');
-  if (badge) badge.style.display = hasUnread ? '' : 'none';
+  if (!badge) return;
+  if (unreadCount > 0) {
+    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 async function loadNotifications() {
@@ -5113,22 +5244,30 @@ async function loadNotifications() {
     return;
   }
 
-  el.innerHTML = items.map(n => `
-    <div style="padding:14px;border-radius:12px;margin-bottom:10px;
+const typeIcon = { profile_update: '👤', notice_board: '📌', company_assign: '🏢' };
+  el.innerHTML = items.map(n => {
+    const icon = typeIcon[n.type] || '🔔';
+    const timeStr = n.createdAt
+      ? new Date(n.createdAt).toLocaleString('en-US', {month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})
+      : '—';
+    return `
+    <div style="padding:14px 16px;border-radius:14px;margin-bottom:10px;
       background:${n.isRead ? 'var(--surface2)' : 'var(--orange-a10)'};
-      border:1.5px solid ${n.isRead ? 'var(--border)' : 'var(--border-o)'};">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
-        <div style="flex:1;">
-          <div style="font-size:14px;font-weight:${n.isRead ? '500' : '700'};color:var(--text);">${escapeHtml(n.title || '')}</div>
-          <div style="font-size:13px;color:var(--text-mid);margin-top:4px;line-height:1.5;">${escapeHtml(n.body || '')}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">
-            ${n.createdAt ? new Date(n.createdAt).toLocaleString('en-US', {month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}) : '—'}
-          </div>
+      border:1.5px solid ${n.isRead ? 'var(--border)' : 'var(--border-o)'};
+      transition:background var(--t);">
+      <div style="display:flex;align-items:flex-start;gap:12px;">
+        <div style="width:34px;height:34px;border-radius:10px;background:var(--surface);
+          border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+          font-size:15px;flex-shrink:0;">${icon}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:${n.isRead ? '500' : '700'};color:var(--text);line-height:1.35;">${escapeHtml(n.title || '')}</div>
+          <div style="font-size:12px;color:var(--text-mid);margin-top:3px;line-height:1.55;">${escapeHtml(n.body || '')}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">${timeStr}</div>
         </div>
-        ${!n.isRead ? `<span style="width:8px;height:8px;border-radius:50%;background:var(--orange);flex-shrink:0;margin-top:4px;display:block;"></span>` : ''}
+        ${!n.isRead ? `<span style="width:7px;height:7px;border-radius:50%;background:var(--orange);flex-shrink:0;margin-top:5px;display:block;"></span>` : ''}
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 
   // Mark all unread as read
   const unread = items.filter(n => !n.isRead);
@@ -5221,6 +5360,7 @@ async function openEmpEditModal(uid) {
   document.getElementById('editEmpSubtitle').textContent = `Editing: ${emp.name || ''} (${emp.id || ''})`;
   document.getElementById('editEmpDesig').value = emp.designation || '';
   document.getElementById('editEmpDept').value  = emp.department  || '';
+  document.getElementById('editEmpCompany').value = emp.assignedCompany || '';
   document.getElementById('editEmpMsg').innerHTML = '';
 
   const allEmps = window.__allEmpsCache || await fsGetAll('employees');
@@ -5245,6 +5385,7 @@ async function saveEmpDetails() {
   const uid   = document.getElementById('editEmpUid').value;
   const desig = cleanText(document.getElementById('editEmpDesig').value, 80);
   const dept  = cleanText(document.getElementById('editEmpDept').value, 80);
+  const company = cleanText(document.getElementById('editEmpCompany').value, 100);
   const reportsToUid = document.getElementById('editEmpReports').value;
   const msg   = document.getElementById('editEmpMsg');
 
@@ -5258,12 +5399,13 @@ async function saveEmpDetails() {
   const manager = reportsToUid ? (Object.values(allEmps).find(e => e.uid === reportsToUid) || null) : null;
   const prev    = await fsGet('employees', uid);
 
-  const ok = await fsSet('employees', uid, {
+const ok = await fsSet('employees', uid, {
     designation:  desig,
     department:   dept,
     reportsToUid:  manager ? manager.uid  : '',
     reportsToId:   manager ? manager.id   : '',
     reportsToName: manager ? manager.name : '',
+    assignedCompany: company,
   });
 
   if (!ok) {
@@ -5272,17 +5414,21 @@ async function saveEmpDetails() {
   }
 
   // Build notification listing what changed
-  const changes = [];
+const changes = [];
   if (prev?.designation !== desig) changes.push(`Designation → ${desig}`);
   if (prev?.department  !== dept)  changes.push(`Department → ${dept}`);
   const prevMgr = prev?.reportsToName || 'None';
   const newMgr  = manager ? manager.name : 'None';
   if (prevMgr !== newMgr) changes.push(`Reports To → ${newMgr}`);
+  const prevCompany = prev?.assignedCompany || '';
+  if (prevCompany !== company && company) changes.push(`Assigned Company → ${company}`);
 
   if (changes.length > 0) {
+    const notifType = (prevCompany !== company && company) ? 'company_assign' : 'profile_update';
     await writeNotification(uid,
       'Your profile was updated',
-      `${currentUser.name} updated your profile: ${changes.join(', ')}.`
+      `${currentUser.name} updated your profile: ${changes.join(', ')}.`,
+      notifType
     );
   }
 
@@ -5817,34 +5963,38 @@ async function loadNoticeBoard() {
       return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     });
 
-    if (!visible.length) {
-      wrap.style.display = 'none';
+if (!visible.length) {
+      el.innerHTML = '<div class="noticeboard-empty"><div class="noticeboard-empty-icon">📌</div><div>No announcements right now.</div></div>';
+      countEl.textContent = '';
       return;
     }
-
-    wrap.style.display = '';
     countEl.textContent = visible.length + (visible.length === 1 ? ' notice' : ' notices');
 
     const badgeMap = { urgent:'urgent', info:'info', general:'general' };
     const labelMap = { urgent:'🚨 Urgent', info:'📣 Important', general:'📌 General' };
 
-    el.innerHTML = visible.map((n, i) => {
+el.innerHTML = visible.map((n, i) => {
       const priority  = n.priority || 'general';
       const expiresAt = n.expiresAt ? new Date(n.expiresAt) : null;
       const daysLeft  = expiresAt ? Math.ceil((expiresAt - now) / 86400000) : null;
-      const expiryStr = daysLeft !== null ? (daysLeft <= 1 ? 'Expires today' : `Expires in ${daysLeft}d`) : '';
-      const postedStr = n.createdAt
-        ? new Date(n.createdAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
+      const expiryStr = daysLeft !== null
+        ? (daysLeft <= 0 ? 'Expires today' : daysLeft === 1 ? 'Expires tomorrow' : `${daysLeft}d left`)
         : '';
-      return `<div class="notice-card notice-${priority}" style="animation-delay:${i*60}ms">
-        <div class="notice-top">
-          <div class="notice-title">${escapeHtml(n.title || 'Announcement')}</div>
-          <span class="notice-badge ${badgeMap[priority]}">${labelMap[priority]}</span>
-        </div>
-        <div class="notice-body">${escapeHtml(n.body || '').replace(/\n/g,'<br>')}</div>
-        <div class="notice-footer">
-          ${postedStr ? `<span class="notice-meta">🗓 Posted ${postedStr}</span>` : ''}
-          ${expiryStr ? `<span class="notice-expiry">⏳ ${expiryStr}</span>` : ''}
+      const postedStr = n.createdAt
+        ? new Date(n.createdAt).toLocaleDateString('en-US', { month:'short', day:'numeric' })
+        : '';
+      const iconMap = { urgent:'🚨', info:'📣', general:'📌' };
+      return `<div class="notice-card notice-${priority}" style="animation-delay:${i*70}ms">
+        <div class="notice-card-inner">
+          <div class="notice-top">
+            <div class="notice-title">${escapeHtml(n.title || 'Announcement')}</div>
+            <span class="notice-badge ${badgeMap[priority]}">${iconMap[priority]} ${priority === 'general' ? 'General' : priority === 'info' ? 'Important' : 'Urgent'}</span>
+          </div>
+          <div class="notice-body">${escapeHtml(n.body || '').replace(/\n/g,'<br>')}</div>
+          <div class="notice-footer">
+            ${postedStr ? `<span class="notice-meta">${postedStr}</span>` : ''}
+            ${expiryStr ? `<span class="notice-expiry">${expiryStr}</span>` : ''}
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -5885,8 +6035,36 @@ async function adminPostNotice() {
     createdBy: currentUser.id || currentUser.name || 'Admin'
   };
 
-  try {
+try {
     await fsSet('notices', noticeId, notice);
+
+    // ── Push notification to all eligible employees ──
+    try {
+      const allEmps = await fsGetAll('employees');
+      const notifPromises = Object.values(allEmps)
+        .filter(emp => {
+          if (!emp.uid) return false;
+          if (isBlockedEmployee && isBlockedEmployee(emp)) return false;
+          // Respect exclusions
+          if (excludedIds.length) {
+            const eid = (emp.id || '').trim().toUpperCase();
+            if (excludedIds.includes(eid)) return false;
+          }
+          if (excludedDepts.length) {
+            const edept = (emp.department || '').trim().toLowerCase();
+            const exclD = excludedDepts.map(x => x.trim().toLowerCase());
+            if (edept && exclD.includes(edept)) return false;
+          }
+          return true;
+        })
+        .map(emp => writeNotification(emp.uid,
+          `📌 New Announcement: ${title}`,
+          body,
+          'notice_board'
+        ));
+      await Promise.all(notifPromises);
+    } catch(ne) { /* don't fail the whole post if notifications fail */ }
+
     nbMsg(msg, '✅ Announcement posted!', true);
     document.getElementById('nb_title').value = '';
     document.getElementById('nb_body').value  = '';
