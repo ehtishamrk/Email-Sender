@@ -5576,7 +5576,8 @@ async function openOnboardingForEdit() {
     document.getElementById('modalOnboarding').classList.add('show');
     return;
   }
-  prefillOnboardingForm(existing);
+prefillOnboardingForm(existing);
+  await checkRelativesRealTime(); // re-run check so warning shows if fatherCnic matches
   const banner = document.getElementById('ob_updateBanner');
   if (banner) {
     banner.style.display = '';
