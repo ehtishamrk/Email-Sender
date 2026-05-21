@@ -5449,12 +5449,32 @@ const changes = [];
   const prevCompany = prev?.assignedCompany || '';
   if (prevCompany !== company && company) changes.push(`Assigned Company → ${company}`);
 
-  if (changes.length > 0) {
+if (changes.length > 0) {
     const notifType = (prevCompany !== company && company) ? 'company_assign' : 'profile_update';
     await writeNotification(uid,
       'Your profile was updated',
       `${currentUser.name} updated your profile: ${changes.join(', ')}.`,
       notifType
+    );
+  }
+
+  // Notify new supervisor that someone now reports to them
+  if (prevMgr !== newMgr && manager && manager.uid) {
+    const empBeingAssigned = prev?.name || uid;
+    await writeNotification(manager.uid,
+      '👥 New team member assigned',
+      `${empBeingAssigned} (${prev?.id || ''}) has been assigned to report to you by ${currentUser.name}.`,
+      'profile_update'
+    );
+  }
+
+  // Notify old supervisor that someone was removed from their team
+  if (prevMgr !== newMgr && prev?.reportsToUid && prev.reportsToUid !== (manager?.uid || '')) {
+    const empBeingAssigned = prev?.name || uid;
+    await writeNotification(prev.reportsToUid,
+      '👥 Team member reassigned',
+      `${empBeingAssigned} (${prev?.id || ''}) no longer reports to you. Reassigned by ${currentUser.name}.`,
+      'profile_update'
     );
   }
 
