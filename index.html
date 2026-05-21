@@ -1149,6 +1149,60 @@
 .nb-notice-item-meta  { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
 .nb-notice-item-body  { font-size: 12px; color: var(--text-mid); line-height: 1.6; margin-bottom: 10px; }
 
+/* ── Notice Board — Pin + Read Receipt styles ── */
+.nb-pin-btn {
+  padding: 7px 13px; border-radius: var(--r-full);
+  font-size: 11px; font-weight: 700; cursor: pointer;
+  font-family: var(--font-b); transition: all var(--t);
+  border: 1.5px solid var(--border2); background: var(--surface2);
+  color: var(--text-muted); white-space: nowrap;
+}
+.nb-pin-btn.pinned {
+  background: var(--orange-a10); border-color: var(--border-o);
+  color: var(--orange);
+}
+.nb-pin-btn:hover { border-color: var(--orange); color: var(--orange); }
+
+.nb-del-btn {
+  padding: 7px 13px; border-radius: var(--r-full);
+  font-size: 11px; font-weight: 700; cursor: pointer;
+  font-family: var(--font-b); transition: all var(--t);
+  background: var(--red-bg); border: 1.5px solid var(--red-border);
+  color: var(--red); white-space: nowrap;
+}
+.nb-del-btn:hover { background: var(--red); color: #fff; }
+
+.nb-read-bar {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.nb-read-track {
+  flex: 1; height: 5px; background: var(--border);
+  border-radius: var(--r-full); overflow: hidden;
+}
+.nb-read-fill {
+  height: 100%; background: var(--green);
+  border-radius: var(--r-full); transition: width 0.4s var(--ease);
+}
+.nb-read-label {
+  font-size: 10px; font-weight: 700;
+  color: var(--text-muted); white-space: nowrap;
+}
+.nb-read-names {
+  font-size: 10px; color: var(--text-muted);
+  margin-top: 4px; line-height: 1.6;
+}
+
+/* Pin indicator on employee-facing notice card */
+.notice-pin-flag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--orange);
+  background: var(--orange-a10); border: 1px solid var(--border-o);
+  border-radius: var(--r-full); padding: 2px 7px; margin-bottom: 6px;
+}
+  
 @media(max-width:900px) {
   .dash-layout { grid-template-columns: 1fr; }
   .dash-side-col { position: static; }
@@ -2069,7 +2123,13 @@
       <label class="field-label">Exclude Specific Employees (comma separated IDs e.g. HX-0001, HX-0002)</label>
       <input class="field-input" id="nb_excl_ids" placeholder="HX-0001, HX-0004">
     </div>
-    <div style="display:flex;gap:10px;align-items:center;margin-top:4px;">
+<div class="field-wrap" style="margin-top:4px;">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <input type="checkbox" id="nb_pinned" style="accent-color:var(--orange);width:15px;height:15px;">
+        <span style="font-size:13px;color:var(--text-mid);">📌 Pin this announcement <span style="font-size:11px;color:var(--text-muted);">(stays at top until unpinned)</span></span>
+      </label>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:12px;">
       <button class="btn-orange" style="padding:11px 28px;" onclick="adminPostNotice()">Post Announcement</button>
       <div id="nb_msg" style="font-size:12px;display:none;"></div>
     </div>
@@ -5980,7 +6040,6 @@ async function renderReplyInbox() {
 ══════════════════════════════════════ */
 async function loadNoticeBoard() {
   const el = document.getElementById('noticeBoardList');
-  const wrap = document.getElementById('noticeBoardWrap');
   const countEl = document.getElementById('noticeBoardCount');
   if (!el || !currentUser) return;
 
@@ -6002,6 +6061,10 @@ async function loadNoticeBoard() {
       }
       return true;
     }).sort((a, b) => {
+      // Pinned always first
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      // Then by priority
       const pOrder = { urgent:0, info:1, general:2 };
       const pa = pOrder[a.priority] ?? 2;
       const pb = pOrder[b.priority] ?? 2;
@@ -6009,17 +6072,18 @@ async function loadNoticeBoard() {
       return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     });
 
-if (!visible.length) {
+    if (!visible.length) {
       el.innerHTML = '<div class="noticeboard-empty"><div class="noticeboard-empty-icon">📌</div><div>No announcements right now.</div></div>';
       countEl.textContent = '';
       return;
     }
+
     countEl.textContent = visible.length + (visible.length === 1 ? ' notice' : ' notices');
 
     const badgeMap = { urgent:'urgent', info:'info', general:'general' };
-    const labelMap = { urgent:'🚨 Urgent', info:'📣 Important', general:'📌 General' };
+    const iconMap  = { urgent:'🚨', info:'📣', general:'📌' };
 
-el.innerHTML = visible.map((n, i) => {
+    el.innerHTML = visible.map((n, i) => {
       const priority  = n.priority || 'general';
       const expiresAt = n.expiresAt ? new Date(n.expiresAt) : null;
       const daysLeft  = expiresAt ? Math.ceil((expiresAt - now) / 86400000) : null;
@@ -6029,9 +6093,10 @@ el.innerHTML = visible.map((n, i) => {
       const postedStr = n.createdAt
         ? new Date(n.createdAt).toLocaleDateString('en-US', { month:'short', day:'numeric' })
         : '';
-      const iconMap = { urgent:'🚨', info:'📣', general:'📌' };
-      return `<div class="notice-card notice-${priority}" style="animation-delay:${i*70}ms">
+
+      return `<div class="notice-card notice-${priority}" style="animation-delay:${i*70}ms" data-notice-id="${escapeHtml(n.id||'')}">
         <div class="notice-card-inner">
+          ${n.isPinned ? '<div class="notice-pin-flag">📌 Pinned</div>' : ''}
           <div class="notice-top">
             <div class="notice-title">${escapeHtml(n.title || 'Announcement')}</div>
             <span class="notice-badge ${badgeMap[priority]}">${iconMap[priority]} ${priority === 'general' ? 'General' : priority === 'info' ? 'Important' : 'Urgent'}</span>
@@ -6045,8 +6110,21 @@ el.innerHTML = visible.map((n, i) => {
       </div>`;
     }).join('');
 
+    // Mark all visible notices as read for this employee (read receipts)
+    for (const n of visible) {
+      const alreadyRead = await fsGet('noticeReads/' + n.id + '/readers', currentUser.uid);
+      if (!alreadyRead) {
+        await fsSet('noticeReads/' + n.id + '/readers', currentUser.uid, {
+          uid:    currentUser.uid,
+          empId:  currentUser.id,
+          name:   currentUser.name,
+          readAt: new Date().toISOString()
+        });
+      }
+    }
+
   } catch(e) {
-    document.getElementById('noticeBoardWrap').style.display = 'none';
+    el.innerHTML = '<div class="noticeboard-empty"><div class="noticeboard-empty-icon">📌</div><div>Could not load notices.</div></div>';
   }
 }
 
@@ -6062,6 +6140,7 @@ async function adminPostNotice() {
   const exp   = document.getElementById('nb_expires').value;
   const exclIdsRaw   = (document.getElementById('nb_excl_ids').value || '').trim();
   const exclDeptsRaw = (document.getElementById('nb_excl_dept').value || '').trim();
+  const isPinned     = document.getElementById('nb_pinned').checked;
 
   if (!title) { nbMsg(msg, 'Please enter a title.', false); return; }
   if (!body)  { nbMsg(msg, 'Please enter a message.', false); return; }
@@ -6075,23 +6154,23 @@ async function adminPostNotice() {
   const notice = {
     id: noticeId, title, body,
     priority: prio,
+    isPinned,
     expiresAt: new Date(exp).toISOString(),
     excludedIds, excludedDepts,
     createdAt: new Date().toISOString(),
     createdBy: currentUser.id || currentUser.name || 'Admin'
   };
 
-try {
+  try {
     await fsSet('notices', noticeId, notice);
 
-    // ── Push notification to all eligible employees ──
+    // Push notification to all eligible employees
     try {
       const allEmps = await fsGetAll('employees');
       const notifPromises = Object.values(allEmps)
         .filter(emp => {
           if (!emp.uid) return false;
           if (isBlockedEmployee && isBlockedEmployee(emp)) return false;
-          // Respect exclusions
           if (excludedIds.length) {
             const eid = (emp.id || '').trim().toUpperCase();
             if (excludedIds.includes(eid)) return false;
@@ -6104,12 +6183,12 @@ try {
           return true;
         })
         .map(emp => writeNotification(emp.uid,
-          `📌 New Announcement: ${title}`,
+          `${isPinned ? '📌 Pinned' : '📌 New'} Announcement: ${title}`,
           body,
           'notice_board'
         ));
       await Promise.all(notifPromises);
-    } catch(ne) { /* don't fail the whole post if notifications fail */ }
+    } catch(ne) {}
 
     nbMsg(msg, '✅ Announcement posted!', true);
     document.getElementById('nb_title').value = '';
@@ -6118,6 +6197,7 @@ try {
     document.getElementById('nb_excl_ids').value = '';
     document.getElementById('nb_excl_dept').value = '';
     document.getElementById('nb_priority').value = 'general';
+    document.getElementById('nb_pinned').checked = false;
     renderAdminNotices();
   } catch(e) {
     nbMsg(msg, 'Error: ' + (e.message || 'Could not save.'), false);
@@ -6144,14 +6224,28 @@ async function renderAdminNotices() {
   try {
     const all = await fsGetAll('notices');
     const now = new Date();
-    const sorted = Object.values(all).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    // Pinned first, then by date
+    const sorted = Object.values(all).sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+
     if (!sorted.length) {
       el.innerHTML = '<div class="empty-state"><div class="empty-icon">📌</div><div class="empty-text">No announcements yet.</div></div>';
       return;
     }
+
+    // Fetch total eligible employee count (for read receipt denominator)
+    const allEmps = await fsGetAll('employees');
+    const activeEmps = Object.values(allEmps).filter(e => e.uid && !isBlockedEmployee(e));
+
     const pLabel = { urgent:'🚨 Urgent', info:'📣 Important', general:'📌 General' };
     const pColor = { urgent:'var(--red)', info:'var(--orange)', general:'var(--text-muted)' };
-    el.innerHTML = sorted.map(n => {
+
+    // Render each notice — fetch read receipts per notice
+    const items = await Promise.all(sorted.map(async n => {
       const expired = n.expiresAt && new Date(n.expiresAt) < now;
       const expStr  = n.expiresAt
         ? new Date(n.expiresAt).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' })
@@ -6163,22 +6257,67 @@ async function renderAdminNotices() {
         n.excludedIds   && n.excludedIds.length   ? 'IDs: '   + n.excludedIds.join(', ')   : '',
         n.excludedDepts && n.excludedDepts.length ? 'Depts: ' + n.excludedDepts.join(', ') : ''
       ].filter(Boolean).join(' · ');
-      return `<div class="nb-notice-item" style="${expired ? 'opacity:0.4;' : ''}">
+
+      // Read receipts
+      const reads = await fsGetAll('noticeReads/' + n.id + '/readers');
+      const readCount = Object.keys(reads).length;
+
+      // Eligible count for this notice (total active minus excluded)
+      const eligibleCount = activeEmps.filter(emp => {
+        if (n.excludedIds?.length) {
+          const eid = (emp.id || '').trim().toUpperCase();
+          if (n.excludedIds.map(x => x.trim().toUpperCase()).includes(eid)) return false;
+        }
+        if (n.excludedDepts?.length) {
+          const edept = (emp.department || '').trim().toLowerCase();
+          if (n.excludedDepts.map(x => x.trim().toLowerCase()).includes(edept)) return false;
+        }
+        return true;
+      }).length;
+
+      const pct = eligibleCount > 0 ? Math.round((readCount / eligibleCount) * 100) : 0;
+
+      // Who read it
+      const readerNames = Object.values(reads).map(r => escapeHtml(r.name || r.empId || '?')).join(', ');
+
+      const noticeIdSafe = escapeHtml(n.id || '');
+      const pinBtnClass  = n.isPinned ? 'nb-pin-btn pinned' : 'nb-pin-btn';
+      const pinBtnLabel  = n.isPinned ? '📌 Pinned' : 'Pin';
+
+      return `<div class="nb-notice-item" style="${expired ? 'opacity:0.5;' : ''}${n.isPinned ? 'border-color:var(--border-o);' : ''}">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
           <div style="flex:1;">
-            <div class="nb-notice-item-title">${escapeHtml(n.title || 'Untitled')}</div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+              ${n.isPinned ? '<span style="font-size:10px;font-weight:700;color:var(--orange);background:var(--orange-a10);border:1px solid var(--border-o);padding:2px 8px;border-radius:20px;">📌 PINNED</span>' : ''}
+              <div class="nb-notice-item-title" style="margin:0;">${escapeHtml(n.title || 'Untitled')}</div>
+            </div>
             <div class="nb-notice-item-meta">
               <span style="color:${pColor[n.priority]||'var(--text-muted)'};font-weight:700;">${pLabel[n.priority]||'📌 General'}</span>
               ${postedStr ? `<span>Posted ${postedStr}</span>` : ''}
               <span style="color:${expired ? 'var(--red)' : 'var(--text-muted)'};">${expired ? '⚠️ Expired' : '⏳ Expires'}: ${expStr}</span>
             </div>
             <div class="nb-notice-item-body">${escapeHtml(n.body || '').replace(/\n/g,'<br>')}</div>
-            ${excl ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">🚫 Hidden from — ${escapeHtml(excl)}</div>` : ''}
+            ${excl ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">🚫 Hidden from — ${escapeHtml(excl)}</div>` : ''}
+
+            <!-- Read receipt bar -->
+            <div class="nb-read-bar">
+              <div class="nb-read-track">
+                <div class="nb-read-fill" style="width:${pct}%;"></div>
+              </div>
+              <div class="nb-read-label">👁 ${readCount} / ${eligibleCount} seen (${pct}%)</div>
+            </div>
+            ${readerNames ? `<div class="nb-read-names">Seen by: ${readerNames}</div>` : ''}
           </div>
-          <button class="nb-del-btn" onclick="adminDeleteNotice('${escapeHtml(n.id||'')}')">Delete</button>
+
+          <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;">
+            <button class="${pinBtnClass}" onclick="adminTogglePin('${noticeIdSafe}', ${!n.isPinned})">${pinBtnLabel}</button>
+            <button class="nb-del-btn" onclick="adminDeleteNotice('${noticeIdSafe}')">Delete</button>
+          </div>
         </div>
       </div>`;
-    }).join('');
+    }));
+
+    el.innerHTML = items.join('');
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><div class="empty-text">Error loading.</div></div>';
   }
@@ -6190,11 +6329,19 @@ function nbMsg(el, text, ok) {
   el.style.display = '';
   setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
-
+async function adminTogglePin(noticeId, pin) {
+  if (!currentUser || !currentUser.isAdmin) return;
+  await fsSet('notices', noticeId, { isPinned: pin });
+  renderAdminNotices();
+  loadNoticeBoard();
+}
 window.adminPostNotice    = adminPostNotice;
 window.adminDeleteNotice  = adminDeleteNotice;
+window.adminTogglePin     = adminTogglePin;
 window.renderAdminNotices = renderAdminNotices;
 window.loadNoticeBoard    = loadNoticeBoard;
+
+  
   
 </script>
 </body>
