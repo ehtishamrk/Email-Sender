@@ -1819,7 +1819,10 @@
   🔔 Notifications
   <span id="notifBadge" class="notif-count-badge" style="display:none;">0</span>
 </button>
-<button class="nav-btn" onclick="showView('viewSettings')">⚙️ Settings</button><button class="nav-btn nav-btn-danger" onclick="doLogout()">Sign Out</button>
+<button class="nav-btn" onclick="showView('viewTasks')">✅ Tasks</button>
+<button class="nav-btn" onclick="showView('viewApplications')">📝 Applications</button>
+<button class="nav-btn" onclick="showView('viewSettings')">⚙️ Settings</button>
+      <button class="nav-btn nav-btn-danger" onclick="doLogout()">Sign Out</button>
   </div>
 </div>
   <!-- Main -->
@@ -1899,10 +1902,25 @@
             <div class="nav-card-desc">Launch your team line, access voicemail, messages and call history.</div>
           </div>
           <!-- Admin only card (shown conditionally) -->
-          <div class="nav-card" id="teamCard" style="display:none;" onclick="showView('viewTeam')">
+<div class="nav-card" onclick="showView('viewTeam')">
             <div class="nav-card-icon icon-teal">👥</div>
             <div class="nav-card-title">Your Team</div>
             <div class="nav-card-desc">View profiles and details of employees reporting to you.</div>
+          </div>
+          <div class="nav-card" onclick="showView('viewTasks')">
+            <div class="nav-card-icon icon-green">✅</div>
+            <div class="nav-card-title">Tasks</div>
+            <div class="nav-card-desc">View tasks assigned to you, mark completed, and assign tasks to your team.</div>
+          </div>
+          <div class="nav-card" onclick="showView('viewApplications')">
+            <div class="nav-card-icon icon-purple">📝</div>
+            <div class="nav-card-title">Applications</div>
+            <div class="nav-card-desc">Write applications to management or view applications sent to you.</div>
+          </div>
+          <div class="nav-card" id="assignmentsCard" onclick="showView('viewAssignments')" style="display:none;">
+            <div class="nav-card-icon icon-orange">📋</div>
+            <div class="nav-card-title">My Assignments</div>
+            <div class="nav-card-desc">View companies and drivers assigned to you — full details and documents.</div>
           </div>
           <div class="nav-card" id="adminCard" style="display:none;" onclick="showView('viewAdmin')">
             <div class="nav-card-icon icon-purple">🛡️</div>
@@ -2431,6 +2449,173 @@
       </div>
     </div>
 
+<!-- ── TASKS VIEW ── -->
+    <div id="viewTasks" class="view">
+      <div class="view-shell-wide">
+        <div class="view-header">
+          <div class="view-title">Tasks ✅</div>
+          <div class="view-sub">Your assigned tasks and tasks you've assigned to others.</div>
+        </div>
+
+        <div class="tab-strip" style="margin-bottom:20px;">
+          <button class="tab-item active" onclick="switchTaskTab('mine', this)">My Tasks <span id="myTasksBadge" style="background:var(--orange);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;margin-left:4px;display:none;"></span></button>
+          <button class="tab-item" onclick="switchTaskTab('assigned', this)">Assigned by Me</button>
+        </div>
+
+        <!-- My Tasks -->
+        <div id="taskTabMine">
+          <div id="myTasksList"><div class="empty-state"><div class="empty-text">Loading…</div></div></div>
+        </div>
+
+        <!-- Assigned by Me -->
+        <div id="taskTabAssigned" style="display:none;">
+          <button class="btn-orange" style="margin-bottom:16px;width:auto;padding:10px 20px;" onclick="openAssignTaskModal()">+ Assign New Task</button>
+          <div id="assignedTasksList"><div class="empty-state"><div class="empty-text">Loading…</div></div></div>
+        </div>
+      </div>
+    </div>
+<!-- ── APPLICATIONS VIEW ── -->
+    <div id="viewApplications" class="view">
+      <div class="view-shell-wide">
+        <div class="view-header">
+          <div class="view-title">Applications 📝</div>
+          <div class="view-sub">Write formal applications or view ones addressed to you.</div>
+        </div>
+
+        <div class="tab-strip" style="margin-bottom:20px;">
+          <button class="tab-item active" onclick="switchAppTab('inbox', this)">Inbox <span id="appInboxBadge" style="background:var(--orange);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;margin-left:4px;display:none;"></span></button>
+          <button class="tab-item" onclick="switchAppTab('sent', this)">Sent</button>
+          <button class="tab-item" onclick="switchAppTab('compose', this)">✍️ Write Application</button>
+        </div>
+
+        <!-- Inbox -->
+        <div id="appTabInbox">
+          <div id="appInboxList"><div class="empty-state"><div class="empty-text">Loading…</div></div></div>
+        </div>
+
+        <!-- Sent -->
+        <div id="appTabSent" style="display:none;">
+          <div id="appSentList"><div class="empty-state"><div class="empty-text">Loading…</div></div></div>
+        </div>
+
+        <!-- Compose -->
+        <div id="appTabCompose" style="display:none;">
+          <div class="card-box" style="max-width:580px;">
+            <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;">Write an Application</div>
+
+<div class="field-wrap">
+              <label class="field-label">To</label>
+              <select class="field-input" id="appToUid" style="padding:12px 14px;">
+                <option value="">Loading employees…</option>
+              </select>
+            </div>
+            <div class="field-wrap">
+              <label class="field-label">Subject</label>
+              <input class="field-input" type="text" id="appSubject" placeholder="e.g. Request for Leave Extension">
+            </div>
+            <div class="field-wrap">
+              <label class="field-label">Application Body</label>
+              <textarea class="field-input" id="appBody" style="min-height:140px;" placeholder="Write your application here…"></textarea>
+            </div>
+            <div id="appComposeError" style="color:var(--red);font-size:12px;margin-bottom:8px;"></div>
+            <button class="btn-orange" style="width:auto;padding:12px 28px;" onclick="submitApplication()">Submit Application →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- APPLICATION DETAIL MODAL -->
+    <div id="appDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9100;overflow-y:auto;padding:20px;">
+      <div style="max-width:620px;margin:40px auto;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;" id="appDetailTitle">Application</div>
+          <button onclick="document.getElementById('appDetailModal').style.display='none'" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">✕</button>
+        </div>
+        <div id="appDetailBody"></div>
+      </div>
+    </div>
+    <!-- ASSIGN TASK MODAL -->
+    <div id="assignTaskModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9100;overflow-y:auto;padding:20px;">
+      <div style="max-width:540px;margin:60px auto;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;">Assign Task</div>
+          <button onclick="document.getElementById('assignTaskModal').style.display='none'" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">✕</button>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Assign To (Employee ID or select)</label>
+          <select class="field-input" id="taskAssignTo" style="padding:12px 14px;">
+            <option value="">Loading employees…</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Task Title</label>
+          <input class="field-input" type="text" id="taskTitle" placeholder="e.g. Update client load sheet">
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Description / Instructions</label>
+          <textarea class="field-input" id="taskDesc" style="min-height:100px;" placeholder="Detailed instructions…"></textarea>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Due Date (optional)</label>
+          <input class="field-input" type="date" id="taskDue">
+        </div>
+        <div id="assignTaskError" style="color:var(--red);font-size:12px;margin-bottom:8px;"></div>
+        <button class="btn-orange" style="width:100%;" onclick="submitAssignTask()">Assign Task →</button>
+      </div>
+    </div>
+
+    <!-- TASK COMMENT MODAL -->
+    <div id="taskCommentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9200;overflow-y:auto;padding:20px;">
+      <div style="max-width:580px;margin:60px auto;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;" id="taskCommentModalTitle">Task Comments</div>
+          <button onclick="document.getElementById('taskCommentModal').style.display='none'" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">✕</button>
+        </div>
+        <div id="taskCommentBody"></div>
+        <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px;">
+          <textarea class="field-input" id="taskCommentInput" style="min-height:80px;" placeholder="Add a comment or ask for clarification…"></textarea>
+          <button class="btn-orange" style="margin-top:10px;width:auto;padding:10px 20px;" onclick="submitTaskComment()">Send Comment</button>
+        </div>
+      </div>
+    </div>
+    
+<!-- ── MY ASSIGNMENTS VIEW ── -->
+    <div id="viewAssignments" class="view">
+      <div class="view-shell">
+        <div class="view-header">
+          <div class="view-title">My Assignments 📋</div>
+          <div class="view-sub">Companies and drivers assigned to you by admin.</div>
+        </div>
+
+        <!-- Tab strip -->
+        <div class="tab-strip" style="margin-bottom:20px;">
+          <button class="tab-item active" onclick="switchAssignTab('companies', this)">Companies</button>
+          <button class="tab-item" onclick="switchAssignTab('drivers', this)">Drivers</button>
+        </div>
+
+        <!-- Companies tab -->
+        <div id="assignTabCompanies">
+          <div id="assignCompaniesList"><div class="empty-state"><div class="empty-text">Loading…</div></div></div>
+        </div>
+
+        <!-- Drivers tab -->
+        <div id="assignTabDrivers" style="display:none;">
+          <div id="assignDriversList"><div class="empty-state"><div class="empty-text">Loading…</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ASSIGNMENT DETAIL MODAL ── -->
+    <div id="assignDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;overflow-y:auto;padding:20px;">
+      <div style="max-width:640px;margin:40px auto;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;" id="assignDetailTitle">Details</div>
+          <button onclick="document.getElementById('assignDetailModal').style.display='none'" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">✕</button>
+        </div>
+        <div id="assignDetailBody"></div>
+      </div>
+    </div>
+    
     <!-- ── YOUR TEAM VIEW ── -->
     <div id="viewTeam" class="view">
       <div class="view-shell">
@@ -3390,10 +3575,23 @@ function showView(id) {
     const f = document.getElementById('emailFrame');
     if (!f.src || f.src === window.location.href) f.src = EMAIL_SENDER_URL;
   }
-  if (id === 'viewDash') loadNoticeBoard();
+  if (id === 'viewDash') { loadNoticeBoard(); loadAssignments(); }
   if (id === 'viewAttendance') renderAttReport();
   if (id === 'viewLeave') { refreshLeaveHistory(); }
   if (id === 'viewAdmin') renderAdmin();
+  if (id === 'viewAssignments') loadAssignments();
+  if (id === 'viewTasks') { loadMyTasks(); }
+  if (id === 'viewApplications') {
+    loadAppInbox();
+    fsGetAll('employees').then(all => {
+      const sel = document.getElementById('appToUid');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">— Select recipient —</option>' +
+        Object.entries(all).map(([uid, e]) =>
+          `<option value="${uid}">${escapeHtml(e.name||uid)} — ${escapeHtml(e.designation||'')} (${e.id||uid})</option>`
+        ).join('');
+    });
+  }
 if (id === 'viewProfile') { loadProfile(); }
   if (id === 'viewNotifications') loadNotifications();
   if (id === 'viewTeam') loadTeamView();
@@ -6342,7 +6540,575 @@ window.renderAdminNotices = renderAdminNotices;
 window.loadNoticeBoard    = loadNoticeBoard;
 
   
-  
+// ══════════════════════════════════════════════════════════════
+//  MY ASSIGNMENTS
+// ══════════════════════════════════════════════════════════════
+function switchAssignTab(tab, btn) {
+  document.getElementById('assignTabCompanies').style.display = tab === 'companies' ? '' : 'none';
+  document.getElementById('assignTabDrivers').style.display   = tab === 'drivers'   ? '' : 'none';
+  document.querySelectorAll('#viewAssignments .tab-item').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+async function loadAssignments() {
+  if (!currentUser) return;
+  const uid = currentUser.uid;
+
+  // Show/hide card based on whether any assignments exist
+  const [compSnap, drSnap] = await Promise.all([
+    fsGetSubcollection('assignments/' + uid + '/companies'),
+    fsGetSubcollection('assignments/' + uid + '/drivers'),
+  ]);
+
+  const card = document.getElementById('assignmentsCard');
+  if (card) card.style.display = (compSnap.length || drSnap.length) ? '' : 'none';
+
+  // Render companies
+  const compEl = document.getElementById('assignCompaniesList');
+  if (compEl) {
+    if (!compSnap.length) {
+      compEl.innerHTML = '<div class="empty-state"><div class="empty-icon">🏢</div><div class="empty-text">No companies assigned yet.</div></div>';
+    } else {
+      compEl.innerHTML = compSnap.map(c => `
+        <div class="card-box" style="margin-bottom:12px;cursor:pointer;" onclick="openAssignDetail('company', '${c.customerId || c.id}')">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${escapeHtml(c.company || c.name || '—')}</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${escapeHtml(c.email || '')} ${c.phone ? '· ' + escapeHtml(c.phone) : ''}</div>
+            </div>
+            <div style="font-size:12px;color:var(--orange);font-weight:600;">${escapeHtml(c.plan || '')}</div>
+          </div>
+          <div style="display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--text-muted);">
+            <span>MC: ${escapeHtml(c.mc || '—')}</span>
+            <span>DOT: ${escapeHtml(c.dot || '—')}</span>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:var(--text-muted);">Assigned ${c.assignedAt ? new Date(c.assignedAt).toLocaleDateString() : '—'} · Click to view full details →</div>
+        </div>`).join('');
+    }
+  }
+
+  // Render drivers
+  const drEl = document.getElementById('assignDriversList');
+  if (drEl) {
+    if (!drSnap.length) {
+      drEl.innerHTML = '<div class="empty-state"><div class="empty-icon">🚛</div><div class="empty-text">No drivers assigned yet.</div></div>';
+    } else {
+      drEl.innerHTML = drSnap.map(d => `
+        <div class="card-box" style="margin-bottom:12px;cursor:pointer;" onclick="openAssignDetail('driver', '${d.driverId || d.id}')">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${escapeHtml(d.name || '—')}</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${escapeHtml(d.email || '')} ${d.phone ? '· ' + escapeHtml(d.phone) : ''}</div>
+            </div>
+            <div style="font-size:12px;color:var(--orange);font-weight:600;">${escapeHtml(d.cdlClass || '')}</div>
+          </div>
+          <div style="display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--text-muted);">
+            <span>Run: ${escapeHtml(d.runType || '—')}</span>
+            <span>Status: ${escapeHtml(d.status || '—')}</span>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:var(--text-muted);">Assigned ${d.assignedAt ? new Date(d.assignedAt).toLocaleDateString() : '—'} · Click to view full details →</div>
+        </div>`).join('');
+    }
+  }
+}
+
+async function openAssignDetail(type, id) {
+  const modal = document.getElementById('assignDetailModal');
+  const title = document.getElementById('assignDetailTitle');
+  const body  = document.getElementById('assignDetailBody');
+  modal.style.display = '';
+  body.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>';
+
+  const uid = currentUser.uid;
+  const path = type === 'company' ? 'assignments/' + uid + '/companies' : 'assignments/' + uid + '/drivers';
+  const items = await fsGetSubcollection(path);
+  const item  = items.find(x => (x.customerId || x.driverId || x.id) === id) || items[0];
+  if (!item) { body.innerHTML = '<p style="color:var(--text-muted);">Not found.</p>'; return; }
+
+  if (type === 'company') {
+    title.textContent = item.company || item.name || 'Company Details';
+    const docs = item.documents || {};
+    const docLabels = { mcPermit:'MC Permit', w9:'W-9 Form', coi:'Certificate of Insurance', voidedCheck:'Voided Check' };
+    const docRows = Object.entries(docLabels).map(([k, label]) => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
+        <span style="font-size:13px;font-weight:600;">${label}</span>
+        ${docs[k] ? `<a href="${docs[k]}" target="_blank" style="font-size:12px;color:var(--orange);font-weight:600;">View / Download →</a>` : `<span style="font-size:12px;color:var(--text-muted);">Not uploaded</span>`}
+      </div>`).join('');
+    const trucks = (item.trucks || []).map((t,i) => `<div style="font-size:12px;color:var(--text-muted);">Truck ${i+1}: ${t.type||'—'} · ${t.trailerLength||'—'} · ${t.year||''}</div>`).join('') || '<div style="font-size:12px;color:var(--text-muted);">No trucks listed</div>';
+    body.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Company</div><div style="font-size:14px;font-weight:600;">${escapeHtml(item.company||'—')}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Plan</div><div style="font-size:14px;font-weight:600;">${escapeHtml(item.plan||'—')}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Email</div><div style="font-size:13px;">${escapeHtml(item.email||'—')}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Phone</div><div style="font-size:13px;">${escapeHtml(item.phone||'—')}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">MC Number</div><div style="font-size:13px;">${escapeHtml(item.mc||'—')}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">DOT Number</div><div style="font-size:13px;">${escapeHtml(item.dot||'—')}</div></div>
+        <div style="grid-column:1/-1;"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Address</div><div style="font-size:13px;">${escapeHtml(item.address||'—')}</div></div>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:10px;">Fleet</div>
+      ${trucks}
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin:16px 0 10px;">Documents</div>
+      ${docRows}`;
+  } else {
+    title.textContent = item.name || 'Driver Details';
+    const docs = item.documents || {};
+    const docRows = Object.entries(docs).map(([k, url]) => url ? `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
+        <span style="font-size:13px;font-weight:600;">${escapeHtml(k)}</span>
+        <a href="${url}" target="_blank" style="font-size:12px;color:var(--orange);font-weight:600;">View / Download →</a>
+      </div>` : '').join('') || '<div style="font-size:12px;color:var(--text-muted);">No documents uploaded</div>';
+    const equip = Array.isArray(item.equipment) ? item.equipment.join(', ') : (item.equipment || '—');
+    body.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Full Name</div><div style="font-size:14px;font-weight:600;">${escapeHtml(item.name||'—')}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">CDL Class</div><div style="font-size:14px;font-weight:600;">${escapeHtml(item.cdlClass||'—')}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Email</div><div style="font-size:13px;">${escapeHtml(item.email||'—')}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Phone</div><div style="font-size:13px;">${escapeHtml(item.phone||'—')}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">CDL State</div><div style="font-size:13px;">${escapeHtml(item.cdlState||'—')}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">CDL Expiry</div><div style="font-size:13px;">${escapeHtml(item.cdlExpiry||'—')}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Run Type</div><div style="font-size:13px;">${escapeHtml(item.runType||'—')}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Experience</div><div style="font-size:13px;">${escapeHtml(item.experience||'—')}</div></div>
+        <div style="grid-column:1/-1;"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Equipment</div><div style="font-size:13px;">${escapeHtml(equip)}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Status</div><div style="font-size:13px;">${escapeHtml(item.status||'—')}</div></div>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin:16px 0 10px;">Documents</div>
+      ${docRows}`;
+  }
+}
+  // ══════════════════════════════════════════════════════════════
+//  TASKS
+// ══════════════════════════════════════════════════════════════
+let _currentTaskId = null;
+let _allEmployeesForTasks = {};
+
+function switchTaskTab(tab, btn) {
+  document.getElementById('taskTabMine').style.display     = tab === 'mine'     ? '' : 'none';
+  document.getElementById('taskTabAssigned').style.display = tab === 'assigned' ? '' : 'none';
+  document.querySelectorAll('#viewTasks .tab-item').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (tab === 'mine')     loadMyTasks();
+  if (tab === 'assigned') loadAssignedByMeTasks();
+}
+
+async function loadMyTasks() {
+  if (!currentUser) return;
+  const el = document.getElementById('myTasksList');
+  el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>';
+
+  const all = await fsGetSubcollection('tasks');
+  const mine = all.filter(t => t.assignedToUid === currentUser.uid).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+
+  const pending = mine.filter(t => t.status !== 'confirmed');
+  const badge = document.getElementById('myTasksBadge');
+  if (badge) { badge.textContent = pending.length; badge.style.display = pending.length ? '' : 'none'; }
+
+  if (!mine.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">No tasks assigned to you yet.</div></div>'; return; }
+
+  el.innerHTML = mine.map(t => {
+    const statusColor = { pending:'var(--orange)', completed:'var(--green)', rejected:'var(--red)', confirmed:'var(--green)' }[t.status] || 'var(--text-muted)';
+    const hasUnread = (t.comments||[]).some(c => c.authorUid !== currentUser.uid && !c.readByAssignee);
+    return `<div class="card-box" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${escapeHtml(t.title||'Untitled')}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:3px;">Assigned by ${escapeHtml(t.assignedByName||'Admin')} ${t.dueDate ? '· Due '+t.dueDate : ''}</div>
+          <div style="font-size:13px;color:var(--text);margin-top:8px;line-height:1.5;">${escapeHtml(t.description||'')}</div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:${statusColor};white-space:nowrap;">${(t.status||'pending').toUpperCase()}</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+        ${t.status === 'pending' ? `<button class="btn-sm" style="background:var(--green);color:#fff;" onclick="markTaskCompleted('${t.id}')">✓ Mark Completed</button>` : ''}
+        <button class="btn-sm-outline" onclick="openTaskComments('${t.id}', '${escapeHtml(t.title||'')}', false)">
+          💬 Comments${hasUnread ? ' 🔴' : ''}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadAssignedByMeTasks() {
+  if (!currentUser) return;
+  const el = document.getElementById('assignedTasksList');
+  el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>';
+
+  const all = await fsGetSubcollection('tasks');
+  const mine = all.filter(t => t.assignedByUid === currentUser.uid).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+
+  if (!mine.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">You haven\'t assigned any tasks yet.</div></div>'; return; }
+
+  el.innerHTML = mine.map(t => {
+    const statusColor = { pending:'var(--orange)', completed:'#f97316', rejected:'var(--red)', confirmed:'var(--green)' }[t.status] || 'var(--text-muted)';
+    return `<div class="card-box" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${escapeHtml(t.title||'Untitled')}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:3px;">To: ${escapeHtml(t.assignedToName||'—')} ${t.dueDate ? '· Due '+t.dueDate : ''}</div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:${statusColor};white-space:nowrap;">${(t.status||'pending').toUpperCase()}</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+        ${t.status === 'completed' ? `
+          <button class="btn-sm" style="background:var(--green);color:#fff;" onclick="resolveTask('${t.id}','confirmed')">✓ Confirm Complete</button>
+          <button class="btn-sm" style="background:var(--red);color:#fff;" onclick="resolveTask('${t.id}','rejected')">✗ Reject Claim</button>
+        ` : ''}
+        <button class="btn-sm-outline" onclick="openTaskComments('${t.id}', '${escapeHtml(t.title||'')}', true)">💬 Comments</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function openAssignTaskModal() {
+  document.getElementById('assignTaskModal').style.display = '';
+  document.getElementById('assignTaskError').textContent = '';
+  // Populate assignee dropdown
+  const sel = document.getElementById('taskAssignTo');
+  sel.innerHTML = '<option value="">Loading…</option>';
+
+  const all = await fsGetAll('employees');
+  _allEmployeesForTasks = all;
+  let options = '<option value="">— Select employee —</option>';
+
+  if (currentUser.isAdmin) {
+    // Admin can assign to anyone
+    Object.entries(all).forEach(([uid, e]) => {
+      options += `<option value="${uid}">${escapeHtml(e.name||uid)} (${e.id||uid}) — ${escapeHtml(e.designation||'')}</option>`;
+    });
+  } else {
+    // Supervisor: only their direct reports
+    Object.entries(all).forEach(([uid, e]) => {
+      if (e.reportsToUid === currentUser.uid) {
+        options += `<option value="${uid}">${escapeHtml(e.name||uid)} (${e.id||uid})</option>`;
+      }
+    });
+  }
+  sel.innerHTML = options;
+}
+
+async function submitAssignTask() {
+  const toUid   = document.getElementById('taskAssignTo').value.trim();
+  const title   = document.getElementById('taskTitle').value.trim();
+  const desc    = document.getElementById('taskDesc').value.trim();
+  const due     = document.getElementById('taskDue').value;
+  const errEl   = document.getElementById('assignTaskError');
+
+  if (!toUid)  { errEl.textContent = 'Please select an employee.'; return; }
+  if (!title)  { errEl.textContent = 'Title is required.'; return; }
+  if (!desc)   { errEl.textContent = 'Description is required.'; return; }
+  errEl.textContent = '';
+
+  const toEmp = _allEmployeesForTasks[toUid] || {};
+  const taskId = 'TASK_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+
+  await fsSet('tasks', taskId, {
+    id: taskId,
+    title, description: desc, dueDate: due,
+    assignedToUid: toUid,
+    assignedToName: toEmp.name || toUid,
+    assignedByUid: currentUser.uid,
+    assignedByName: currentUser.name,
+    status: 'pending',
+    comments: [],
+    createdAt: new Date().toISOString(),
+  });
+
+  await writeNotification(toUid,
+    '📋 New Task Assigned',
+    `${currentUser.name} assigned you a task: "${title}". ${due ? 'Due: '+due : ''}`,
+    'task_assigned'
+  );
+
+  document.getElementById('assignTaskModal').style.display = 'none';
+  document.getElementById('taskTitle').value = '';
+  document.getElementById('taskDesc').value = '';
+  document.getElementById('taskDue').value = '';
+  loadAssignedByMeTasks();
+}
+
+async function markTaskCompleted(taskId) {
+  const tasks = await fsGetSubcollection('tasks');
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  await fsSet('tasks', taskId, { status: 'completed' });
+
+  await writeNotification(task.assignedByUid,
+    '✅ Task Marked Complete',
+    `${currentUser.name} has marked the task "${task.title}" as completed. Review and confirm or reject.`,
+    'task_completed'
+  );
+  loadMyTasks();
+}
+
+async function resolveTask(taskId, resolution) {
+  const tasks = await fsGetSubcollection('tasks');
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  await fsSet('tasks', taskId, { status: resolution });
+
+  const msg = resolution === 'confirmed'
+    ? `${currentUser.name} confirmed your task "${task.title}" as complete. Well done!`
+    : `${currentUser.name} rejected the completion claim on "${task.title}". Please review and resubmit.`;
+
+  await writeNotification(task.assignedToUid,
+    resolution === 'confirmed' ? '✅ Task Confirmed' : '❌ Task Claim Rejected',
+    msg,
+    'task_resolved'
+  );
+  loadAssignedByMeTasks();
+}
+
+async function openTaskComments(taskId, taskTitle, isAssigner) {
+  _currentTaskId = taskId;
+  document.getElementById('taskCommentModalTitle').textContent = `💬 ${taskTitle}`;
+  document.getElementById('taskCommentModal').style.display = '';
+  await renderTaskComments(taskId, isAssigner);
+}
+
+async function renderTaskComments(taskId, isAssigner) {
+  const el = document.getElementById('taskCommentBody');
+  const tasks = await fsGetSubcollection('tasks');
+  const task = tasks.find(t => t.id === taskId);
+  const comments = task?.comments || [];
+
+  el.innerHTML = !comments.length
+    ? '<div style="color:var(--text-muted);font-size:13px;padding:8px 0;">No comments yet.</div>'
+    : comments.map(c => `
+        <div style="margin-bottom:12px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">${escapeHtml(c.authorName||'?')} · ${c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</div>
+          <div style="font-size:13px;line-height:1.5;">${escapeHtml(c.text||'')}</div>
+        </div>`).join('');
+}
+
+async function submitTaskComment() {
+  const text = document.getElementById('taskCommentInput').value.trim();
+  if (!text || !_currentTaskId) return;
+
+  const tasks = await fsGetSubcollection('tasks');
+  const task = tasks.find(t => t.id === _currentTaskId);
+  if (!task) return;
+
+  const comment = {
+    authorUid: currentUser.uid,
+    authorName: currentUser.name,
+    text,
+    createdAt: new Date().toISOString(),
+    readByAssignee: currentUser.uid === task.assignedToUid,
+  };
+
+  const updatedComments = [...(task.comments || []), comment];
+  await fsSet('tasks', _currentTaskId, { comments: updatedComments });
+
+  // Notify the other party
+  const notifyUid = currentUser.uid === task.assignedByUid ? task.assignedToUid : task.assignedByUid;
+  const notifyName = currentUser.uid === task.assignedByUid ? task.assignedToName : task.assignedByName;
+  await writeNotification(notifyUid,
+    '💬 Comment on Task',
+    `${currentUser.name} commented on task "${task.title}": "${text.slice(0,80)}${text.length>80?'…':''}"`,
+    'task_comment'
+  );
+
+  document.getElementById('taskCommentInput').value = '';
+  const isAssigner = currentUser.uid === task.assignedByUid;
+  await renderTaskComments(_currentTaskId, isAssigner);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  APPLICATIONS
+// ══════════════════════════════════════════════════════════════
+// Role-to-UID mapping — populate from employees collection
+// Roles are stored as special sentinel UIDs that route to role holders
+const ROLE_DISPLAY = { ceo:'CEO', coo:'COO', head_dispatch:'Head of Dispatch', hr:'HR / Admin' };
+
+function switchAppTab(tab, btn) {
+  document.getElementById('appTabInbox').style.display   = tab === 'inbox'   ? '' : 'none';
+  document.getElementById('appTabSent').style.display    = tab === 'sent'    ? '' : 'none';
+  document.getElementById('appTabCompose').style.display = tab === 'compose' ? '' : 'none';
+  document.querySelectorAll('#viewApplications .tab-item').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (tab === 'inbox')   loadAppInbox();
+  if (tab === 'sent')    loadAppSent();
+}
+
+async function loadAppInbox() {
+  if (!currentUser) return;
+  const el = document.getElementById('appInboxList');
+  el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>';
+
+  const all = await fsGetSubcollection('applications');
+  // Inbox = apps addressed to me (by uid or by role I hold)
+  const inbox = all.filter(a => a.toUid === currentUser.uid || a.toRole && currentUser.isAdmin).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+
+  const unread = inbox.filter(a => !a.isReadByRecipient).length;
+  const badge = document.getElementById('appInboxBadge');
+  if (badge) { badge.textContent = unread; badge.style.display = unread ? '' : 'none'; }
+
+  if (!inbox.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">📬</div><div class="empty-text">No applications received yet.</div></div>'; return; }
+
+  el.innerHTML = inbox.map(a => `
+    <div class="card-box" style="margin-bottom:12px;cursor:pointer;" onclick="openAppDetail('${a.id}', true)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${escapeHtml(a.subject||'(No subject)')}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:3px;">From: ${escapeHtml(a.fromName||'—')} · ${a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ''}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          ${!a.isReadByRecipient ? '<span style="width:8px;height:8px;background:var(--orange);border-radius:50%;display:inline-block;"></span>' : ''}
+          <span style="font-size:11px;font-weight:700;color:var(--orange);">${escapeHtml(a.status||'pending')}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function loadAppSent() {
+  if (!currentUser) return;
+  const el = document.getElementById('appSentList');
+  el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>';
+
+  const all = await fsGetSubcollection('applications');
+  const sent = all.filter(a => a.fromUid === currentUser.uid).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+
+  if (!sent.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">📤</div><div class="empty-text">No applications sent yet.</div></div>'; return; }
+
+  el.innerHTML = sent.map(a => `
+    <div class="card-box" style="margin-bottom:12px;cursor:pointer;" onclick="openAppDetail('${a.id}', false)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${escapeHtml(a.subject||'(No subject)')}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:3px;">To: ${escapeHtml(a.toName || ROLE_DISPLAY[a.toRole] || '—')} · ${a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ''}</div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--orange);">${escapeHtml(a.status||'pending')}</div>
+      </div>
+      ${a.reply ? `<div style="margin-top:8px;padding:8px 12px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;font-size:12px;">💬 Reply: ${escapeHtml(a.reply.slice(0,100))}${a.reply.length>100?'…':''}</div>` : ''}
+    </div>`).join('');
+}
+
+async function submitApplication() {
+  const toUid = document.getElementById('appToUid').value;
+  const subj  = document.getElementById('appSubject').value.trim();
+  const body  = document.getElementById('appBody').value.trim();
+  const errEl = document.getElementById('appComposeError');
+
+  if (!toUid) { errEl.textContent = 'Please select a recipient.'; return; }
+  if (!subj)  { errEl.textContent = 'Subject is required.'; return; }
+  if (!body)  { errEl.textContent = 'Body is required.'; return; }
+  errEl.textContent = 'Sending…';
+
+  const all = await fsGetAll('employees');
+  const toEmp = all[toUid] || {};
+  const toName = toEmp.name || toUid;
+
+  const appId = 'APP_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+  await fsSet('applications', appId, {
+    id: appId,
+    subject: subj, body,
+    fromUid: currentUser.uid, fromName: currentUser.name, fromId: currentUser.id,
+    toUid, toName,
+    status: 'pending',
+    isReadByRecipient: false,
+    reply: '',
+    replies: [],
+    createdAt: new Date().toISOString(),
+  });
+
+  if (toUid) {
+    await writeNotification(toUid,
+      '📝 New Application Received',
+      `${currentUser.name} sent you an application: "${subj}". Open Applications to review.`,
+      'application_received'
+    );
+  }
+
+  errEl.style.color = 'var(--green)';
+  errEl.textContent = '✓ Application submitted successfully.';
+  document.getElementById('appToUid').value = '';
+  document.getElementById('appSubject').value = '';
+  document.getElementById('appBody').value = '';
+  setTimeout(() => { errEl.textContent = ''; errEl.style.color = 'var(--red)'; }, 3000);
+}
+
+async function openAppDetail(appId, isRecipient) {
+  const modal = document.getElementById('appDetailModal');
+  const title = document.getElementById('appDetailTitle');
+  const body  = document.getElementById('appDetailBody');
+  modal.style.display = '';
+  body.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>';
+
+  const all = await fsGetSubcollection('applications');
+  const app = all.find(a => a.id === appId);
+  if (!app) { body.innerHTML = '<p style="color:var(--text-muted);">Not found.</p>'; return; }
+
+  title.textContent = app.subject || 'Application';
+
+  // Mark as read
+  if (isRecipient && !app.isReadByRecipient) {
+    await fsSet('applications', appId, { isReadByRecipient: true, status: 'acknowledged' });
+    await writeNotification(app.fromUid, '👁 Application Acknowledged',
+      `${currentUser.name} has acknowledged your application: "${app.subject}".`, 'application_update');
+  }
+
+  const statusOptions = isRecipient ? `
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px;">
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:10px;">Respond</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <button class="btn-sm" style="background:var(--green);color:#fff;" onclick="updateAppStatus('${appId}','${app.fromUid}','accepted')">✓ Accept</button>
+        <button class="btn-sm" style="background:var(--red);color:#fff;" onclick="updateAppStatus('${appId}','${app.fromUid}','rejected')">✗ Reject</button>
+        <button class="btn-sm" style="background:var(--orange);color:#fff;" onclick="updateAppStatus('${appId}','${app.fromUid}','in_review')">🔍 In Review</button>
+        <button class="btn-sm btn-sm-outline" onclick="updateAppStatus('${appId}','${app.fromUid}','thanks')">🙏 Thank You</button>
+        <button class="btn-sm btn-sm-outline" onclick="updateAppStatus('${appId}','${app.fromUid}','will_respond')">⏳ Will Get Back</button>
+      </div>
+      <textarea class="field-input" id="appReplyInput" style="min-height:80px;" placeholder="Type a reply message (optional)…"></textarea>
+      <button class="btn-sm" style="margin-top:8px;background:var(--navy3);color:var(--text);" onclick="sendAppReply('${appId}','${app.fromUid}')">Send Reply</button>
+    </div>` : '';
+
+  const replies = (app.replies || []).map(r => `
+    <div style="margin-bottom:10px;padding:10px 14px;background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.2);border-radius:10px;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">${escapeHtml(r.authorName||'?')} · ${r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}</div>
+      <div style="font-size:13px;">${escapeHtml(r.text||'')}</div>
+    </div>`).join('');
+
+  body.innerHTML = `
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:12px;color:var(--text-muted);">
+      <span>From: <strong style="color:var(--text);">${escapeHtml(app.fromName||'—')} (${escapeHtml(app.fromId||'')})</strong></span>
+      <span>To: <strong style="color:var(--text);">${escapeHtml(app.toName || ROLE_DISPLAY[app.toRole] || '—')}</strong></span>
+      <span>Status: <strong style="color:var(--orange);">${escapeHtml(app.status||'pending')}</strong></span>
+      <span>${app.createdAt ? new Date(app.createdAt).toLocaleString() : ''}</span>
+    </div>
+    <div style="padding:16px;background:var(--bg);border:1px solid var(--border);border-radius:10px;font-size:14px;line-height:1.7;white-space:pre-wrap;">${escapeHtml(app.body||'')}</div>
+    ${replies ? `<div style="margin-top:16px;"><div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:10px;">Replies</div>${replies}</div>` : ''}
+    ${statusOptions}`;
+}
+
+async function updateAppStatus(appId, fromUid, newStatus) {
+  await fsSet('applications', appId, { status: newStatus });
+  const statusMsg = { accepted:'accepted', rejected:'rejected', in_review:'marked In Review', thanks:'sent a Thank You', will_respond:'noted they will respond' }[newStatus] || newStatus;
+  await writeNotification(fromUid, '📝 Application Update',
+    `${currentUser.name} has ${statusMsg} your application.`, 'application_update');
+  // Re-render
+  await openAppDetail(appId, true);
+}
+
+async function sendAppReply(appId, fromUid) {
+  const text = document.getElementById('appReplyInput').value.trim();
+  if (!text) return;
+
+  const all = await fsGetSubcollection('applications');
+  const app = all.find(a => a.id === appId);
+  const reply = {
+    authorUid: currentUser.uid,
+    authorName: currentUser.name,
+    text,
+    createdAt: new Date().toISOString(),
+  };
+  const replies = [...(app?.replies||[]), reply];
+  await fsSet('applications', appId, { reply: text, replies });
+
+  await writeNotification(fromUid, '💬 Reply to Your Application',
+    `${currentUser.name} replied to your application "${app?.subject||''}": "${text.slice(0,80)}${text.length>80?'…':''}"`, 'application_reply');
+
+  document.getElementById('appReplyInput').value = '';
+  await openAppDetail(appId, true);
+}
 </script>
 </body>
 </html>
