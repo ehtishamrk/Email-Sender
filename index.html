@@ -2398,7 +2398,7 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDBd2hw7Gq1-mwR5evKF-YPcAGRYDNl3fw",
@@ -2572,6 +2572,31 @@ let clockedIn = false;
 let clockInTimestamp = null;
 
   let accountStatusInterval = null;
+
+  let _notifUnsubscribe = null;
+
+function startNotificationListener() {
+  if (!currentUser) return;
+  // Clean up any existing listener first
+  if (_notifUnsubscribe) { _notifUnsubscribe(); _notifUnsubscribe = null; }
+
+  const { db, collection } = window.__fb;
+  const colRef = collection(db, 'notifications/' + currentUser.uid + '/items');
+
+  _notifUnsubscribe = onSnapshot(colRef, (snap) => {
+    const unreadCount = snap.docs.filter(d => !d.data().isRead).length;
+    const badge = document.getElementById('notifBadge');
+    if (!badge) return;
+    if (unreadCount > 0) {
+      badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+      badge.style.display = '';
+    } else {
+      badge.style.display = 'none';
+    }
+  }, () => {
+    // On error, fall back silently
+  });
+}
 
 
   function isBlockedEmployee(profile) {
@@ -3180,10 +3205,11 @@ async function doLogout() {
   await window.__fb.signOut(window.__fb.auth);
 } catch(e) {}
 
-  currentUser = null; clockedIn = false; clockInTimestamp = null;
+currentUser = null; clockedIn = false; clockInTimestamp = null;
   store('session', null);
   clearInterval(clockInterval);
   clearInterval(accountStatusInterval);
+  if (_notifUnsubscribe) { _notifUnsubscribe(); _notifUnsubscribe = null; }
 
   showLoginScreen();
   document.getElementById('portalScreen').classList.remove('show');
@@ -3261,7 +3287,7 @@ startHeartbeat();
   startAccountStatusWatcher();
   checkOnboardingStatus();
 checkTeamCard();
-  loadNotificationBadge();
+startNotificationListener();
   loadNoticeBoard();
 
   const params = new URLSearchParams(window.location.search);
