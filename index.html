@@ -1763,6 +1763,27 @@
     </div>
   </div>
 </div>
+
+<!-- READ-ONLY VIEW AS EMPLOYEE MODAL -->
+<div class="modal-backdrop" id="modalViewAsEmployee">
+  <div class="modal-box" style="max-width:760px;width:95vw;max-height:88vh;overflow-y:auto;padding:28px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;position:sticky;top:0;background:var(--modal-bg,var(--surface));z-index:1;padding-bottom:12px;border-bottom:1px solid var(--border);">
+      <div>
+        <div class="modal-title" id="viewAsTitle" style="margin:0;font-size:20px;">View As Employee</div>
+        <div id="viewAsSub" style="font-size:12px;color:var(--text-muted);margin-top:3px;">Read-only super admin view</div>
+      </div>
+      <button onclick="hideModal('modalViewAsEmployee')" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--bg2);cursor:pointer;font-size:18px;line-height:1;color:var(--text-mid);flex-shrink:0;">x</button>
+    </div>
+
+    <div style="padding:12px 14px;border-radius:12px;background:#FFF8E1;border:1.5px solid #FFC107;color:#795600;font-size:13px;line-height:1.5;margin-bottom:18px;">
+      You are viewing this employee in read-only mode. No password is shown and no employee action is performed.
+    </div>
+
+    <div id="viewAsBody">
+      <div class="empty-state"><div class="empty-text">Loading...</div></div>
+    </div>
+  </div>
+</div>
   
 <!-- ── EDIT EMPLOYEE DETAILS MODAL (admin only) ── -->
 <div class="modal-backdrop" id="modalEditEmp">
@@ -4250,6 +4271,7 @@ const statusColor = isBlocked ? 'var(--red)' : 'var(--green)';
     const idArg = encodeURIComponent(emp.id || '');
     const nameArg = encodeURIComponent(emp.name || '');
 const isFormerEmployee = ['left', 'resigned', 'terminated'].includes(empStatus);
+    const canViewAsTarget = currentUser.id === 'HX-0001' && emp.uid && emp.uid !== currentUser.uid;
     const rowOpacity = isFormerEmployee ? '0.55' : '1';
 
 const freezeAction = isBlocked && !isFormerEmployee ? 'Unfreeze' : 'Freeze';
@@ -4302,9 +4324,15 @@ ${!isFormerEmployee ? `
           style="padding:8px 14px;border-radius:10px;background:var(--bg2);border:1.5px solid var(--border2);color:var(--text-mid);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
           ✏️ Edit Details
         </button>` : ''}
+${canViewAsTarget ? `
+        <button onclick="openViewAsEmployee(decodeURIComponent('${uidArg}'))"
+          style="padding:8px 14px;border-radius:10px;background:var(--orange-a10);border:1.5px solid var(--border-o);color:var(--orange);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          View As
+        </button>` : ''}
+
         <button onclick="openEmpProfile('${escapeHtml(emp.uid || '')}')"
           style="padding:8px 14px;border-radius:10px;background:var(--navy);color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
-          👁 View Profile
+          View Profile
         </button>
         
       </div>
@@ -5904,6 +5932,183 @@ function collectRelatives() {
   })).filter(r => r.name);
 }
 
+function canUseViewAsEmployee() {
+  return currentUser && currentUser.id === 'HX-0001';
+}
+
+function viewAsDate(value) {
+  if (!value) return '—';
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleString();
+}
+
+function viewAsRows(rows) {
+  return rows.map(([label, value]) => `
+    <div style="padding:8px 0;border-bottom:1px solid var(--border);">
+      <div class="field-label" style="margin-bottom:3px;">${escapeHtml(label)}</div>
+      <div style="font-size:13px;color:var(--text);">${escapeHtml(String(value || '—'))}</div>
+    </div>
+  `).join('');
+}
+
+function viewAsSection(title, content) {
+  return `
+    <div style="margin-bottom:22px;">
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px;">${escapeHtml(title)}</div>
+      ${content}
+    </div>
+  `;
+}
+
+function viewAsList(items, emptyText, renderItem) {
+  if (!items.length) {
+    return `<div style="font-size:13px;color:var(--text-muted);padding:10px 0;">${escapeHtml(emptyText)}</div>`;
+  }
+
+  return items.map(renderItem).join('');
+}
+
+function noticesVisibleToViewAsEmployee(allNotices, emp) {
+  const now = new Date();
+  const empId = String(emp.id || '').trim().toUpperCase();
+  const dept = String(emp.department || '').trim().toLowerCase();
+
+  return Object.values(allNotices).filter(n => {
+    if (n.expiresAt && new Date(n.expiresAt) < now) return false;
+
+    if (Array.isArray(n.excludedIds) && n.excludedIds.length) {
+      const excludedIds = n.excludedIds.map(x => String(x).trim().toUpperCase());
+      if (excludedIds.includes(empId)) return false;
+    }
+
+    if (Array.isArray(n.excludedDepts) && n.excludedDepts.length) {
+      const excludedDepts = n.excludedDepts.map(x => String(x).trim().toLowerCase());
+      if (dept && excludedDepts.includes(dept)) return false;
+    }
+
+    return true;
+  }).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+}
+
+async function openViewAsEmployee(uid) {
+  if (!canUseViewAsEmployee()) {
+    alert('Only HX-0001 can use View As.');
+    return;
+  }
+
+  if (!uid || uid === currentUser.uid) return;
+
+  showModal('modalViewAsEmployee');
+
+  const title = document.getElementById('viewAsTitle');
+  const sub = document.getElementById('viewAsSub');
+  const body = document.getElementById('viewAsBody');
+
+  title.textContent = 'View As Employee';
+  sub.textContent = 'Read-only super admin view';
+  body.innerHTML = '<div class="empty-state"><div class="empty-text">Loading...</div></div>';
+
+  const [emp, ob, tasks, applications, notices] = await Promise.all([
+    fsGet('employees', uid),
+    fsGet('employeeOnboarding', uid),
+    fsGetSubcollection('tasks'),
+    fsGetSubcollection('applications'),
+    fsGetAll('notices')
+  ]);
+
+  if (!emp) {
+    body.innerHTML = '<div class="empty-state"><div class="empty-text">Employee not found.</div></div>';
+    return;
+  }
+
+  await fsSet('viewAsAudit', 'VIEWAS_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8), {
+    viewerUid: currentUser.uid,
+    viewerEmpId: currentUser.id,
+    viewerName: currentUser.name || currentUser.id,
+    targetUid: uid,
+    targetEmpId: emp.id || '',
+    targetName: emp.name || '',
+    mode: 'read_only',
+    createdAt: new Date().toISOString()
+  });
+
+  title.textContent = 'Viewing: ' + (emp.name || 'Employee');
+  sub.textContent = (emp.id || '—') + ' · ' + (emp.designation || '—') + ' · Read-only';
+
+  const assignedToEmployee = tasks
+    .filter(t => t.assignedToUid === uid)
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+  const assignedByEmployee = tasks
+    .filter(t => t.assignedByUid === uid)
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+  const sentApplications = applications
+    .filter(a => a.fromUid === uid)
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+  const receivedApplications = applications
+    .filter(a => a.toUid === uid || (a.toRole && emp.isAdmin === true))
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+  const visibleNotices = noticesVisibleToViewAsEmployee(notices, emp);
+
+  const employmentHtml = viewAsRows([
+    ['Employee ID', emp.id],
+    ['Name', emp.name],
+    ['Email', emp.email],
+    ['Designation', emp.designation],
+    ['Department', emp.department],
+    ['Reports To', emp.reportsToName || 'None'],
+    ['Joining Date', emp.joiningDate],
+    ['Account Status', emp.accountStatus || 'active']
+  ]);
+
+  const personalHtml = ob ? viewAsRows([
+    ['Father Name', ob.fatherName],
+    ['Mother Name', ob.motherName],
+    ['Date of Birth', ob.dob],
+    ['CNIC', ob.cnic],
+    ['Blood Group', ob.bloodGroup],
+    ['Primary Contact', ob.primaryContact],
+    ['Emergency Number', ob.emergencyNumber],
+    ['Address', ob.address]
+  ]) : '<div style="font-size:13px;color:var(--text-muted);padding:10px 0;">Onboarding form not submitted.</div>';
+
+  const taskItem = t => `
+    <div style="padding:10px 12px;border-radius:10px;background:var(--bg2);margin-bottom:8px;">
+      <div style="font-size:13px;font-weight:700;color:var(--text);">${escapeHtml(t.title || 'Untitled Task')}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:3px;">Status: ${escapeHtml(t.status || 'pending')} ${t.dueDate ? ' · Due: ' + escapeHtml(t.dueDate) : ''}</div>
+      <div style="font-size:12px;color:var(--text-mid);margin-top:6px;line-height:1.5;">${escapeHtml(t.description || '')}</div>
+    </div>
+  `;
+
+  const appItem = a => `
+    <div style="padding:10px 12px;border-radius:10px;background:var(--bg2);margin-bottom:8px;">
+      <div style="font-size:13px;font-weight:700;color:var(--text);">${escapeHtml(a.subject || 'No subject')}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:3px;">Status: ${escapeHtml(a.status || 'pending')} · ${escapeHtml(viewAsDate(a.createdAt))}</div>
+      <div style="font-size:12px;color:var(--text-mid);margin-top:6px;line-height:1.5;white-space:pre-wrap;">${escapeHtml(a.body || '')}</div>
+    </div>
+  `;
+
+  const noticeItem = n => `
+    <div style="padding:10px 12px;border-radius:10px;background:var(--bg2);margin-bottom:8px;">
+      <div style="font-size:13px;font-weight:700;color:var(--text);">${escapeHtml(n.title || 'Announcement')}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:3px;">Priority: ${escapeHtml(n.priority || 'general')} · Expires: ${escapeHtml(viewAsDate(n.expiresAt))}</div>
+      <div style="font-size:12px;color:var(--text-mid);margin-top:6px;line-height:1.5;white-space:pre-wrap;">${escapeHtml(n.body || '')}</div>
+    </div>
+  `;
+
+  body.innerHTML =
+    viewAsSection('Employment', `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 18px;">${employmentHtml}</div>`) +
+    viewAsSection('Personal / Onboarding', `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 18px;">${personalHtml}</div>`) +
+    viewAsSection('Tasks Assigned To Employee', viewAsList(assignedToEmployee, 'No tasks assigned to this employee.', taskItem)) +
+    viewAsSection('Tasks Assigned By Employee', viewAsList(assignedByEmployee, 'This employee has not assigned tasks.', taskItem)) +
+    viewAsSection('Applications Sent By Employee', viewAsList(sentApplications, 'No sent applications.', appItem)) +
+    viewAsSection('Applications Received By Employee', viewAsList(receivedApplications, 'No received applications.', appItem)) +
+    viewAsSection('Notices Visible To Employee', viewAsList(visibleNotices, 'No visible notices.', noticeItem));
+}
+  
 // ══════════════════════════════════════════════════════════════
 //  ADMIN — VIEW FULL EMPLOYEE PROFILE
 // ══════════════════════════════════════════════════════════════
@@ -6024,6 +6229,7 @@ async function openEmpProfile(uid) {
 }
 
 window.openEmpProfile     = openEmpProfile;
+  window.openViewAsEmployee = openViewAsEmployee;
 window.addRelativeRow          = addRelativeRow;
 window.checkRelativesDebounced = checkRelativesDebounced;
 window.renderSiblingRows       = renderSiblingRows;
