@@ -4407,8 +4407,7 @@ async function approveAccessRequest(requestId) {
       accountStatus: 'active',
 isFrozen: false,
       createdAt: new Date().toISOString(),
-      createdFromRequest: requestId,
-      initialPassword: tempPassword
+      createdFromRequest: requestId
     });
 
     const indexSaved = await fsSet('loginIndex', empId, {
@@ -4551,10 +4550,9 @@ async function addNewUser() {
       isAdmin,
       hasEmailAccess: false,
       hasVoiceAccess: false,
-      accountStatus: 'active',
+accountStatus: 'active',
 isFrozen: false,
-createdAt: new Date().toISOString(),
-initialPassword: tempPassword
+createdAt: new Date().toISOString()
 
     });
 
@@ -5947,7 +5945,6 @@ async function openEmpProfile(uid) {
     row('Reports To',     emp?.reportsToName || 'None (Top Level)'),
     row('Role',           emp?.isAdmin ? 'Admin' : 'Employee'),
     row('Account Status', emp?.accountStatus || 'active'),
-    row('Initial Portal Password', emp?.initialPassword || 'Not stored (sent via email reset)', !!emp?.initialPassword),
   ].join(''));
 
   // Personal section (from onboarding)
@@ -6022,12 +6019,8 @@ async function openEmpProfile(uid) {
   }
 
   // Password note
-  const passNote = emp?.initialPassword
-    ? `<div style="margin-top:4px;font-size:11px;color:var(--text-muted);">⚠️ This is the initial system-generated password. The employee may have changed it since.</div>`
-    : '';
-
   document.getElementById('empProfileContent').innerHTML =
-    empSection + passNote + personalSection + sibSection + qualSection + expSection + relSection;
+    empSection + personalSection + sibSection + qualSection + expSection + relSection;
 }
 
 window.openEmpProfile     = openEmpProfile;
