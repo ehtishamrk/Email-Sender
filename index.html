@@ -4127,35 +4127,39 @@ const frozenCount = emps.filter(emp => {
   return isBlockedEmployee(emp) && !['left', 'resigned', 'terminated'].includes(status);
 }).length;
 
+  const isSuper = currentUser.id === 'HX-0001';
+  const myAccessForUsers = isSuper ? { accessManager: true, profileAccess: true } : await fsGet('toolAccess', currentUser.id) || {};
+  const canRequestAdminRole = isSuper || myAccessForUsers.accessManager === true;
+  const canUseProfileTools = isSuper || (currentUser.isAdmin === true && myAccessForUsers.profileAccess === true);
+
+  window.__hasProfileAccess = canUseProfileTools;
+
   const allRequests = isSuper ? await fsGetAll('accessRequests') : {};
   const pendingRequests = Object.values(allRequests)
     .filter(req => String(req.status || 'pending').toLowerCase() === 'pending')
     .sort((a, b) => new Date(a.submittedAt || 0) - new Date(b.submittedAt || 0));
+
+  const adminRoleRequestsRaw = isSuper ? await fsGetAll('adminRoleRequests') : {};
+  const pendingAdminRoleRequests = Object.values(adminRoleRequestsRaw)
+    .filter(req => String(req.status || '').toLowerCase() === 'pending')
+    .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
 
   const managerOptions = emps
     .filter(emp => emp.uid && !isBlockedEmployee(emp))
     .map(emp => `<option value="${escapeHtml(emp.uid)}">${escapeHtml(emp.id || '')} - ${escapeHtml(emp.name || '')}</option>`)
     .join('');
 
-  const isSuper = currentUser.id === 'HX-0001';
-  const myAccessForUsers = isSuper ? { accessManager: true } : await fsGet('toolAccess', currentUser.id) || {};
-  const canRequestAdminRole = isSuper || myAccessForUsers.accessManager === true;
+  let html = '';
 
-  const adminRoleRequestsRaw = isSuper ? await fsGetAll('adminRoleRequests') : {};
-  const pendingAdminRoleRequests = Object.values(adminRoleRequestsRaw)
-    .filter(req => String(req.status || '').toLowerCase() === 'pending')
-    .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
-  
-  let html = `
   if (isSuper) {
     html += `
-  <div class="card-box" style="margin-bottom:20px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px;">
-      <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">Pending Admin Role Requests</div>
-      <span style="font-size:11px;padding:4px 10px;border-radius:20px;background:var(--orange-a10);color:var(--orange);font-weight:700;">${pendingAdminRoleRequests.length} pending</span>
-    </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;">Approve or reject requests to make/remove admins.</div>
-`;
+      <div class="card-box" style="margin-bottom:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px;">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">Pending Admin Role Requests</div>
+          <span style="font-size:11px;padding:4px 10px;border-radius:20px;background:var(--orange-a10);color:var(--orange);font-weight:700;">${pendingAdminRoleRequests.length} pending</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;">Approve or reject requests to make/remove admins.</div>
+    `;
 
     if (!pendingAdminRoleRequests.length) {
       html += '<div class="empty-state" style="padding:24px 12px;"><div class="empty-text">No pending admin role requests.</div></div>';
@@ -4164,137 +4168,24 @@ const frozenCount = emps.filter(emp => {
         const reqArg = encodeURIComponent(req.id || '');
         const actionText = req.action === 'make_admin' ? 'Make Admin' : 'Remove Admin';
         html += `
-      <div style="border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;background:var(--surface2);">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--text);">${escapeHtml(actionText)}: ${escapeHtml(req.targetName || '')}</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${escapeHtml(req.targetEmpId || '')} · Requested by ${escapeHtml(req.requestedByName || req.requestedByEmpId || '')}</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${req.createdAt ? escapeHtml(new Date(req.createdAt).toLocaleString()) : ''}</div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn-approve" onclick="reviewAdminRoleRequest(decodeURIComponent('${reqArg}'), 'approved')">Approve</button>
-            <button class="btn-reject" onclick="reviewAdminRoleRequest(decodeURIComponent('${reqArg}'), 'rejected')">Reject</button>
-          </div>
-        </div>
-      </div>`;
+          <div style="border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;background:var(--surface2);">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+              <div>
+                <div style="font-size:14px;font-weight:700;color:var(--text);">${escapeHtml(actionText)}: ${escapeHtml(req.targetName || '')}</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${escapeHtml(req.targetEmpId || '')} - Requested by ${escapeHtml(req.requestedByName || req.requestedByEmpId || '')}</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${req.createdAt ? escapeHtml(new Date(req.createdAt).toLocaleString()) : ''}</div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn-approve" onclick="reviewAdminRoleRequest(decodeURIComponent('${reqArg}'), 'approved')">Approve</button>
+                <button class="btn-reject" onclick="reviewAdminRoleRequest(decodeURIComponent('${reqArg}'), 'rejected')">Reject</button>
+              </div>
+            </div>
+          </div>`;
       });
     }
 
-    html += `</div>`;
+    html += '</div>';
   }
-  ${isSuper ? `
-  <div class="card-box" style="margin-bottom:20px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px;">
-      <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">Pending Access Requests</div>
-      <span style="font-size:11px;padding:4px 10px;border-radius:20px;background:var(--orange-a10);color:var(--orange);font-weight:700;">${pendingRequests.length} pending</span>
-    </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;">Review portal access applications submitted from the login screen.</div>
-`;
-
-  if (!pendingRequests.length) {
-    html += '<div class="empty-state" style="padding:24px 12px;"><div class="empty-text">No pending access requests.</div></div>';
-  } else {
-    pendingRequests.forEach(req => {
-      const requestId = req.id || '';
-      const reqDomId = safeDomId(requestId);
-      const reqArg = encodeURIComponent(requestId);
-      const safeName = escapeHtml(req.name || `${req.firstName || ''} ${req.lastName || ''}`.trim() || 'Applicant');
-      const safeEmail = escapeHtml(req.email || '');
-      const safePhone = escapeHtml(req.phone || '');
-      const safeDesignation = escapeHtml(req.designation || '');
-      const safeJoin = escapeHtml(req.joiningDate || '');
-      const submitted = req.submittedAt
-        ? escapeHtml(new Date(req.submittedAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }))
-        : 'Unknown date';
-
-      html += `
-      <div style="border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;background:var(--surface2);">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px;">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--text);">${safeName}</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${safeDesignation} · ${safeEmail} · ${safePhone}</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Joining: ${safeJoin || '—'} · Submitted: ${submitted}</div>
-          </div>
-          <button onclick="rejectAccessRequest(decodeURIComponent('${reqArg}'))"
-            style="padding:8px 14px;border-radius:10px;background:var(--red-bg);border:1.5px solid var(--red-border);color:var(--red);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">
-            Reject
-          </button>
-        </div>
-
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end;">
-          <div class="field-wrap" style="margin:0;">
-            <label class="field-label">Employee ID</label>
-            <input class="field-input" id="ar_emp_${reqDomId}" placeholder="0007" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-          </div>
-          <div class="field-wrap" style="margin:0;">
-            <label class="field-label">Department</label>
-            <input class="field-input" id="ar_dept_${reqDomId}" placeholder="Dispatch">
-          </div>
-          <div class="field-wrap" style="margin:0;">
-            <label class="field-label">Reports To</label>
-            <select class="field-input" id="ar_reports_${reqDomId}">
-              <option value="">No manager / top level</option>
-              ${managerOptions}
-            </select>
-          </div>
-          <div class="field-wrap" style="margin:0;">
-            <label class="field-label">Role</label>
-            <select class="field-input" id="ar_admin_${reqDomId}">
-              <option value="false">Employee</option>
-              <option value="true">Admin</option>
-            </select>
-          </div>
-        </div>
-        <div style="display:flex;justify-content:flex-end;margin-top:12px;">
-          <button class="btn-orange" onclick="approveAccessRequest(decodeURIComponent('${reqArg}'))" style="width:auto;padding:10px 22px;">Approve & Send Setup Email →</button>
-        </div>
-        <div id="ar_msg_${reqDomId}" style="margin-top:10px;"></div>
-      </div>`;
-    });
-  }
-
-  html += `</div>
-
-` : ''}
-${isSuper ? `
-  <div class="card-box" style="margin-bottom:20px;">
-    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Add New Employee</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Creates Firebase Auth account, employee profile, login index, and sends a password setup email.</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-      <div class="field-wrap" style="margin:0;"><label class="field-label">Full Name</label><input class="field-input" id="nu_name" placeholder="John Smith"></div>
-      <div class="field-wrap" style="margin:0;"><label class="field-label">Employee ID (digits only)</label><input class="field-input" id="nu_id" placeholder="0007" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
-      <div class="field-wrap" style="margin:0;"><label class="field-label">Email</label><input class="field-input" id="nu_email" type="email" placeholder="john@haulxify.com"></div>
-      
-      <div class="field-wrap" style="margin:0;"><label class="field-label">Designation</label><input class="field-input" id="nu_desig" placeholder="Freight Coordinator"></div>
-      <div class="field-wrap" style="margin:0;"><label class="field-label">Department</label><input class="field-input" id="nu_dept" placeholder="Dispatch"></div>
-      <div class="field-wrap" style="margin:0;">
-        <label class="field-label">Reports To / Manager</label>
-        <select class="field-input" id="nu_reportsTo">
-          <option value="">No manager / top level</option>
-          ${managerOptions}
-        </select>
-      </div>
-      <div class="field-wrap" style="margin:0;"><label class="field-label">Joining Date</label><input class="field-input" id="nu_join" type="date"></div>
-      <div class="field-wrap" style="margin:0;">
-        <label class="field-label">Role</label>
-        <select class="field-input" id="nu_admin">
-          <option value="false">Employee</option>
-          <option value="true">Admin</option>
-        </select>
-      </div>
-    </div>
-    <button class="btn-orange" onclick="addNewUser()" style="width:auto;padding:12px 28px;">Add Employee & Send Setup Email →</button>
-    <div id="addUserMsg" style="margin-top:12px;"></div>
-  </div>
-` : ''}
-  <div class="card-box">
-    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:8px;">Employees</div>
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
-  <span style="font-size:11px;padding:4px 10px;border-radius:20px;background:var(--green-bg);color:var(--green);font-weight:700;">Active: ${activeCount}</span>
-  <span style="font-size:11px;padding:4px 10px;border-radius:20px;background:var(--red-bg);color:var(--red);font-weight:700;">Frozen: ${frozenCount}</span>
-  <span style="font-size:11px;padding:4px 10px;border-radius:20px;background:var(--bg2);color:var(--text-muted);font-weight:700;">Former: ${formerCount}</span>
-</div>`;
-
 
   emps.forEach(emp => {
     const isSelf = emp.uid === currentUser.uid || emp.id === currentUser.id;
