@@ -4843,6 +4843,23 @@ function showAdminToast(msg) {
 async function renderAdminAccess() {
   const el = document.getElementById('adminAccessContent');
   if (!el) return;
+
+  if (!currentUser || currentUser.isAdmin !== true) return;
+
+  const isSuper = currentUser.id === 'HX-0001';
+  const myAccess = isSuper ? { accessManager: true } : await fsGet('toolAccess', currentUser.id) || {};
+  const canManageAccess = isSuper || myAccess.accessManager === true;
+
+  if (!canManageAccess) {
+    el.innerHTML = `
+      <div class="card-box">
+        <div class="empty-state">
+          <div class="empty-text">You do not have permission to manage tool access.</div>
+        </div>
+      </div>`;
+    return;
+  }
+
   el.innerHTML = '<div class="card-box"><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center;">Loading access settings...</div></div>';
 
   const allEmps = await fsGetAll('employees');
@@ -4850,29 +4867,31 @@ async function renderAdminAccess() {
 
   let html = '<div class="card-box">';
   html += '<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Tool Access Control</div>';
-  html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">HX-0001 settings are locked and cannot be changed.</div>';
-  html += '<div style="font-size:12px;background:var(--orange-a10);color:var(--orange-dk);padding:10px 14px;border-radius:10px;margin-bottom:20px;">⚠️ Changes apply immediately.</div>';
-  html += `<div style="display:grid;grid-template-columns:1fr 80px 80px 80px 80px;gap:0;">
+  html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">HX-0001 is locked. Only HX-0001 can grant Profile or Access Manager permission.</div>';
+  html += '<div style="font-size:12px;background:var(--orange-a10);color:var(--orange-dk);padding:10px 14px;border-radius:10px;margin-bottom:20px;">Changes apply immediately.</div>';
+
+  html += `<div style="display:grid;grid-template-columns:1fr 80px 80px 80px 80px 90px 120px;gap:0;">
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;">Employee</div>
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Email</div>
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Voice</div>
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Time</div>
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Campaign</div>
-
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Time</div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Campaign</div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Profile</div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Access Manager</div>
   </div>`;
 
-  // Sort employees by id
-  const emps = Object.values(allEmps).sort((a,b) => a.id.localeCompare(b.id));
+  const emps = Object.values(allEmps).sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
 
   emps.forEach(emp => {
-    const locked   = emp.id === 'HX-0001';
-    const access   = allAccess[emp.id] || {};
+    const locked = emp.id === 'HX-0001';
+    const access = allAccess[emp.id] || {};
+
     const hasEmail = access.emailAccess !== undefined ? access.emailAccess : emp.hasEmailAccess;
     const hasVoice = access.voiceAccess !== undefined ? access.voiceAccess : emp.hasVoiceAccess;
     const hasTime = access.timeToolAccess !== undefined ? access.timeToolAccess : true;
     const hasCampaign = access.campaignAccess !== undefined ? access.campaignAccess : (emp.isAdmin ? true : false);
-
-    
+    const hasProfile = locked ? true : access.profileAccess === true;
+    const hasAccessManager = locked ? true : access.accessManager === true;
 
     const safeName = escapeHtml(emp.name || '');
     const safeId = escapeHtml(emp.id || '');
@@ -4880,28 +4899,29 @@ async function renderAdminAccess() {
     const empIdArg = encodeURIComponent(emp.id || '');
     const empDomId = safeDomId(emp.id || '');
 
+    const toggle = (type, checked, canChange) => {
+      if (locked || !canChange) {
+        return `<div style="text-align:center;font-size:12px;font-weight:700;color:${checked ? 'var(--green)' : 'var(--text-muted)'};">${checked ? 'Yes' : '-'}</div>`;
+      }
 
-
-    const toggle = (type, checked, empId) => {
-      if (locked) return `<div style="text-align:center;font-size:18px;">${checked ? '✅' : '—'}</div>`;
       return `<label style="display:flex;justify-content:center;position:relative;width:48px;height:26px;cursor:pointer;margin:auto;">
         <input type="checkbox" onchange="toggleToolAccess(decodeURIComponent('${empIdArg}'),'${type}',this.checked)" ${checked ? 'checked' : ''} style="opacity:0;width:0;height:0;">
-<span style="position:absolute;inset:0;background:${checked ? 'var(--orange)' : 'var(--border2)'};border-radius:26px;transition:0.3s;" id="tgt_${type}_${empDomId}"></span>
-<span style="position:absolute;left:${checked ? '25px' : '3px'};top:3px;width:20px;height:20px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.2);" id="tgthumb_${type}_${empDomId}"></span>
-
+        <span style="position:absolute;inset:0;background:${checked ? 'var(--orange)' : 'var(--border2)'};border-radius:26px;transition:0.3s;" id="tgt_${type}_${empDomId}"></span>
+        <span style="position:absolute;left:${checked ? '25px' : '3px'};top:3px;width:20px;height:20px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.2);" id="tgthumb_${type}_${empDomId}"></span>
       </label>`;
     };
-    html += `<div style="display:grid;grid-template-columns:1fr 80px 80px 80px 80px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
+
+    html += `<div style="display:grid;grid-template-columns:1fr 80px 80px 80px 80px 90px 120px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
       <div>
         <div style="font-size:14px;font-weight:600;color:var(--text);">${safeName} ${locked ? '<span style="font-size:10px;color:var(--orange);background:var(--orange-a10);padding:2px 8px;border-radius:20px;margin-left:6px;">LOCKED</span>' : ''}</div>
         <div style="font-size:11px;color:var(--text-muted);">${safeId} · ${safeDesignation}</div>
-
       </div>
-      ${toggle('email', hasEmail, emp.id)}
-      ${toggle('voice', hasVoice, emp.id)}
-            ${toggle('time', hasTime, emp.id)}
-            ${toggle('campaign', hasCampaign, emp.id)}
-
+      ${toggle('email', hasEmail, true)}
+      ${toggle('voice', hasVoice, true)}
+      ${toggle('time', hasTime, true)}
+      ${toggle('campaign', hasCampaign, true)}
+      ${toggle('profile', hasProfile, isSuper)}
+      ${toggle('accessManager', hasAccessManager, isSuper)}
     </div>`;
   });
 
@@ -4911,16 +4931,68 @@ async function renderAdminAccess() {
 
 async function toggleToolAccess(empId, type, granted) {
   if (empId === 'HX-0001') return;
-  const current = await fsGet('toolAccess', empId) || {};
-  const emailVal = type === 'email' ? granted : (current.emailAccess !== undefined ? current.emailAccess : false);
-  const voiceVal = type === 'voice' ? granted : (current.voiceAccess !== undefined ? current.voiceAccess : false);
-  const timeVal = type === 'time' ? granted : (current.timeToolAccess !== undefined ? current.timeToolAccess : true);
-  const campaignVal = type === 'campaign' ? granted : (current.campaignAccess !== undefined ? current.campaignAccess : false);
-  await fsSet('toolAccess', empId, { empId, emailAccess: emailVal, voiceAccess: voiceVal, timeToolAccess: timeVal, campaignAccess: campaignVal });
 
-const empDomId = safeDomId(empId);
-const track = document.getElementById('tgt_' + type + '_' + empDomId);
-const thumb = document.getElementById('tgthumb_' + type + '_' + empDomId);
+  const isSuper = currentUser.id === 'HX-0001';
+  const isSensitivePermission = type === 'profile' || type === 'accessManager';
+
+  const myAccess = isSuper ? { accessManager: true } : await fsGet('toolAccess', currentUser.id) || {};
+  const canManageAccess = isSuper || myAccess.accessManager === true;
+
+  if (!canManageAccess) {
+    alert('You do not have permission to manage tool access.');
+    renderAdminAccess();
+    return;
+  }
+
+  if (isSensitivePermission && !isSuper) {
+    alert('Only HX-0001 can grant Profile or Access Manager permission.');
+    renderAdminAccess();
+    return;
+  }
+
+  const currentDoc = await fsGet('toolAccess', empId);
+  const current = currentDoc || {};
+
+  const emailVal = type === 'email'
+    ? granted
+    : (current.emailAccess !== undefined ? current.emailAccess : false);
+
+  const voiceVal = type === 'voice'
+    ? granted
+    : (current.voiceAccess !== undefined ? current.voiceAccess : false);
+
+  const timeVal = type === 'time'
+    ? granted
+    : (current.timeToolAccess !== undefined ? current.timeToolAccess : true);
+
+  const campaignVal = type === 'campaign'
+    ? granted
+    : (current.campaignAccess !== undefined ? current.campaignAccess : false);
+
+  const payload = {
+    empId,
+    emailAccess: emailVal,
+    voiceAccess: voiceVal,
+    timeToolAccess: timeVal,
+    campaignAccess: campaignVal
+  };
+
+  if (isSuper) {
+    payload.profileAccess = type === 'profile' ? granted : current.profileAccess === true;
+    payload.accessManager = type === 'accessManager' ? granted : current.accessManager === true;
+  }
+
+  const saved = await fsSet('toolAccess', empId, payload);
+
+  if (!saved) {
+    alert('Firebase blocked this permission change. Please check rules or your access.');
+    renderAdminAccess();
+    return;
+  }
+
+  const empDomId = safeDomId(empId);
+  const track = document.getElementById('tgt_' + type + '_' + empDomId);
+  const thumb = document.getElementById('tgthumb_' + type + '_' + empDomId);
 
   if (track) track.style.background = granted ? 'var(--orange)' : 'var(--border2)';
   if (thumb) thumb.style.left = granted ? '25px' : '3px';
@@ -4935,6 +5007,11 @@ const thumb = document.getElementById('tgthumb_' + type + '_' + empDomId);
     store('voiceAccess_' + empId, voiceVal);
     store('timeAccess_' + empId, timeVal);
     store('campaignAccess_' + empId, campaignVal);
+
+    if (isSuper) {
+      store('profileAccess_' + empId, payload.profileAccess);
+      store('accessManager_' + empId, payload.accessManager);
+    }
   }
 }
 
