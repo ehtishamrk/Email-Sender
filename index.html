@@ -2699,6 +2699,7 @@ window.portalLoadCsv = portalLoadCsv;
 window.portalClearBdo = portalClearBdo;
   window.addNewUser = addNewUser;
 window.toggleAdminRole = toggleAdminRole;
+  window.reviewAdminRoleRequest = reviewAdminRoleRequest;
   window.toggleEmployeeFreeze = toggleEmployeeFreeze;
 
 window.removeUser = removeUser;
@@ -4126,7 +4127,7 @@ const frozenCount = emps.filter(emp => {
   return isBlockedEmployee(emp) && !['left', 'resigned', 'terminated'].includes(status);
 }).length;
 
-  const allRequests = await fsGetAll('accessRequests');
+  const allRequests = isSuper ? await fsGetAll('accessRequests') : {};
   const pendingRequests = Object.values(allRequests)
     .filter(req => String(req.status || 'pending').toLowerCase() === 'pending')
     .sort((a, b) => new Date(a.submittedAt || 0) - new Date(b.submittedAt || 0));
@@ -4136,7 +4137,52 @@ const frozenCount = emps.filter(emp => {
     .map(emp => `<option value="${escapeHtml(emp.uid)}">${escapeHtml(emp.id || '')} - ${escapeHtml(emp.name || '')}</option>`)
     .join('');
 
+  const isSuper = currentUser.id === 'HX-0001';
+  const myAccessForUsers = isSuper ? { accessManager: true } : await fsGet('toolAccess', currentUser.id) || {};
+  const canRequestAdminRole = isSuper || myAccessForUsers.accessManager === true;
+
+  const adminRoleRequestsRaw = isSuper ? await fsGetAll('adminRoleRequests') : {};
+  const pendingAdminRoleRequests = Object.values(adminRoleRequestsRaw)
+    .filter(req => String(req.status || '').toLowerCase() === 'pending')
+    .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+  
   let html = `
+  if (isSuper) {
+    html += `
+  <div class="card-box" style="margin-bottom:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px;">
+      <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">Pending Admin Role Requests</div>
+      <span style="font-size:11px;padding:4px 10px;border-radius:20px;background:var(--orange-a10);color:var(--orange);font-weight:700;">${pendingAdminRoleRequests.length} pending</span>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;">Approve or reject requests to make/remove admins.</div>
+`;
+
+    if (!pendingAdminRoleRequests.length) {
+      html += '<div class="empty-state" style="padding:24px 12px;"><div class="empty-text">No pending admin role requests.</div></div>';
+    } else {
+      pendingAdminRoleRequests.forEach(req => {
+        const reqArg = encodeURIComponent(req.id || '');
+        const actionText = req.action === 'make_admin' ? 'Make Admin' : 'Remove Admin';
+        html += `
+      <div style="border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;background:var(--surface2);">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--text);">${escapeHtml(actionText)}: ${escapeHtml(req.targetName || '')}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${escapeHtml(req.targetEmpId || '')} · Requested by ${escapeHtml(req.requestedByName || req.requestedByEmpId || '')}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${req.createdAt ? escapeHtml(new Date(req.createdAt).toLocaleString()) : ''}</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-approve" onclick="reviewAdminRoleRequest(decodeURIComponent('${reqArg}'), 'approved')">Approve</button>
+            <button class="btn-reject" onclick="reviewAdminRoleRequest(decodeURIComponent('${reqArg}'), 'rejected')">Reject</button>
+          </div>
+        </div>
+      </div>`;
+      });
+    }
+
+    html += `</div>`;
+  }
+  ${isSuper ? `
   <div class="card-box" style="margin-bottom:20px;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px;">
       <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">Pending Access Requests</div>
@@ -4209,6 +4255,8 @@ const frozenCount = emps.filter(emp => {
 
   html += `</div>
 
+` : ''}
+${isSuper ? `
   <div class="card-box" style="margin-bottom:20px;">
     <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Add New Employee</div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Creates Firebase Auth account, employee profile, login index, and sends a password setup email.</div>
@@ -4238,7 +4286,7 @@ const frozenCount = emps.filter(emp => {
     <button class="btn-orange" onclick="addNewUser()" style="width:auto;padding:12px 28px;">Add Employee & Send Setup Email →</button>
     <div id="addUserMsg" style="margin-top:12px;"></div>
   </div>
-
+` : ''}
   <div class="card-box">
     <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:8px;">Employees</div>
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
@@ -4344,8 +4392,8 @@ ${canViewAsTarget ? `
 }
 
 async function approveAccessRequest(requestId) {
-  if (!currentUser || !currentUser.isAdmin) {
-    alert('Only admins can approve access requests.');
+  if (!currentUser || currentUser.id !== 'HX-0001') {
+    alert('Only HX-0001 can approve access requests.');
     return;
   }
 
@@ -4485,8 +4533,8 @@ isFrozen: false,
 }
 
 async function rejectAccessRequest(requestId) {
-  if (!currentUser || !currentUser.isAdmin) {
-    alert('Only admins can reject access requests.');
+  if (!currentUser || currentUser.id !== 'HX-0001') {
+    alert('Only HX-0001 can reject access requests.');
     return;
   }
 
@@ -4510,6 +4558,10 @@ async function rejectAccessRequest(requestId) {
 }
 
 async function addNewUser() {
+    if (!currentUser || currentUser.id !== 'HX-0001') {
+    alert('Only HX-0001 can add new employees.');
+    return;
+  }
   const name  = cleanText(document.getElementById('nu_name').value, 120);
   const idRaw = document.getElementById('nu_id').value.trim();
   const email = normalizeEmail(document.getElementById('nu_email').value);
@@ -4684,12 +4736,88 @@ async function toggleAdminRole(uid, empId, makeAdmin) {
     return;
   }
 
-  if (!confirm(`${makeAdmin ? 'Grant admin rights to' : 'Remove admin rights from'} ${empId}?`)) return;
+  const isSuper = currentUser.id === 'HX-0001';
 
-  await fsSet('employees', uid, { isAdmin: makeAdmin });
+  if (isSuper) {
+    if (!confirm(`${makeAdmin ? 'Grant admin rights to' : 'Remove admin rights from'} ${empId}?`)) return;
+    await fsSet('employees', uid, { isAdmin: makeAdmin });
+    renderAdminUsers();
+    return;
+  }
+
+  const access = await fsGet('toolAccess', currentUser.id) || {};
+  if (access.accessManager !== true) {
+    alert('You do not have permission to request admin role changes.');
+    return;
+  }
+
+  const allEmps = await fsGetAll('employees');
+  const emp = Object.values(allEmps).find(e => e.uid === uid || e.id === empId) || null;
+
+  if (!emp) {
+    alert('Employee not found.');
+    return;
+  }
+
+  const action = makeAdmin ? 'make_admin' : 'remove_admin';
+
+  if (!confirm(`Send request to HX-0001 to ${makeAdmin ? 'make' : 'remove'} ${empId} as admin?`)) return;
+
+  const requestId = 'ADMIN_ROLE_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+  const saved = await fsSet('adminRoleRequests', requestId, {
+    id: requestId,
+    targetUid: uid,
+    targetEmpId: empId,
+    targetName: emp.name || empId,
+    action,
+    status: 'pending',
+    requestedByUid: currentUser.uid,
+    requestedByEmpId: currentUser.id,
+    requestedByName: currentUser.name || currentUser.id,
+    createdAt: new Date().toISOString()
+  });
+
+  if (!saved) {
+    alert('Request could not be submitted. Firebase blocked it.');
+    return;
+  }
+
+  alert('Request sent to HX-0001 for approval.');
   renderAdminUsers();
 }
 
+async function reviewAdminRoleRequest(requestId, decision) {
+  if (currentUser.id !== 'HX-0001') {
+    alert('Only HX-0001 can review admin role requests.');
+    return;
+  }
+
+  const req = await fsGet('adminRoleRequests', requestId);
+  if (!req || req.status !== 'pending') {
+    alert('This request is no longer pending.');
+    renderAdminUsers();
+    return;
+  }
+
+  if (!confirm(`${decision === 'approved' ? 'Approve' : 'Reject'} this admin role request?`)) return;
+
+  if (decision === 'approved') {
+    const makeAdmin = req.action === 'make_admin';
+    await fsSet('employees', req.targetUid, { isAdmin: makeAdmin });
+  }
+
+  await fsSet('adminRoleRequests', requestId, {
+    status: decision,
+    reviewedByUid: currentUser.uid,
+    reviewedByEmpId: currentUser.id,
+    reviewedByName: currentUser.name || currentUser.id,
+    reviewedAt: new Date().toISOString()
+  });
+
+  renderAdminUsers();
+}
+  
 async function removeUser(uid, name, empId) {
   if (empId === 'HX-0001') {
     alert('HX-0001 cannot be removed.');
