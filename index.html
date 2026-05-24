@@ -2097,6 +2097,35 @@
 <!-- Campaign Stats Tab -->
 <div id="tabCampaign" style="display:none;">
   <div id="campaignStatsContent"></div>
+
+  <!-- Campaign Controls -->
+  <div class="card-box" style="margin-top:16px;">
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:20px;">⚙️ Campaign Controls</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">Campaign Status</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Start or pause the entire email campaign</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="campaignStatusBadge" style="font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;background:var(--bg2);color:var(--text-muted);">Loading...</span>
+        <button class="btn-sm" onclick="setCampaignStatus(true)" style="background:var(--green);color:#fff;">▶ Start</button>
+        <button class="btn-sm" onclick="setCampaignStatus(false)" style="background:var(--red);color:#fff;">⏸ Pause</button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">Daily Emails Per Account</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">How many emails each Gmail account sends per day</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="dailyLimitInput" min="10" max="200" value="30"
+          style="width:70px;padding:8px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg2);color:var(--text);font-size:14px;font-weight:700;text-align:center;font-family:'Syne',sans-serif;">
+        <button class="btn-sm" onclick="saveDailyLimit()">Save</button>
+      </div>
+    </div>
+    <div id="campaignSettingsMsg" style="margin-top:8px;"></div>
+  </div>
+
   <div class="card-box" style="margin-top:16px;">
     <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">📥 Upload New Leads</div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Upload a CSV file of new leads. Required columns: email, company_name, mc_number, address, state, power_units, drivers, phone_number</div>
@@ -2425,32 +2454,6 @@
           </div>
         </div>
         <div id="settingsMsg" style="margin-top:4px;"></div>
-        <!-- Campaign Settings -->
-<div class="card-box">
-  <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:20px;">Campaign Settings ✉️</div>
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">
-    <div>
-      <div style="font-size:14px;font-weight:600;color:var(--text);">Daily Emails Per Account</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Current warmup limit per Gmail account</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <input type="number" id="dailyLimitInput" min="10" max="200" value="30"
-        style="width:70px;padding:8px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg2);color:var(--text);font-size:14px;font-weight:700;text-align:center;font-family:'Syne',sans-serif;">
-      <button class="btn-sm" onclick="saveDailyLimit()">Save</button>
-    </div>
-  </div>
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;">
-    <div>
-      <div style="font-size:14px;font-weight:600;color:var(--text);">Campaign Status</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Pause or resume the entire campaign</div>
-    </div>
-    <div style="display:flex;gap:8px;">
-      <button class="btn-sm" onclick="setCampaignStatus(true)" style="background:var(--green);color:#fff;">▶ Resume</button>
-      <button class="btn-sm" onclick="setCampaignStatus(false)" style="background:var(--red);color:#fff;">⏸ Pause</button>
-    </div>
-  </div>
-  <div id="campaignSettingsMsg" style="margin-top:8px;"></div>
-</div>
       </div>
     </div>
     <!-- ── NOTIFICATIONS VIEW ── -->
