@@ -4187,6 +4187,206 @@ const frozenCount = emps.filter(emp => {
     html += '</div>';
   }
 
+html += `
+    <div class="card-box" style="margin-bottom:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px;">
+        <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">Pending Access Requests</div>
+        <span style="font-size:11px;padding:4px 10px;border-radius:20px;background:var(--orange-a10);color:var(--orange);font-weight:700;">
+          ${pendingRequests.length} pending
+        </span>
+      </div>
+
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;">
+        Approve employee portal access requests.
+      </div>
+  `;
+
+  if (!pendingRequests.length) {
+    html += `
+      <div class="empty-state" style="padding:24px 12px;">
+        <div class="empty-text">No pending access requests.</div>
+      </div>
+    `;
+  } else {
+    pendingRequests.forEach(req => {
+      const reqDomId = safeDomId(req.id || '');
+
+      html += `
+        <div style="border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;background:var(--surface2);">
+
+          <div style="margin-bottom:14px;">
+            <div style="font-size:14px;font-weight:700;color:var(--text);">
+              ${escapeHtml(req.name || 'Unknown User')}
+            </div>
+
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">
+              ${escapeHtml(req.email || '')}
+            </div>
+
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
+              ${escapeHtml(req.designation || '')}
+            </div>
+          </div>
+
+          <div class="row-2">
+            <div class="field-wrap">
+              <label class="field-label">Employee ID</label>
+              <div class="input-group">
+                <span class="input-prefix">HX-</span>
+                <input
+                  id="ar_emp_${reqDomId}"
+                  class="field-input has-prefix"
+                  placeholder="0002"
+                >
+              </div>
+            </div>
+
+            <div class="field-wrap">
+              <label class="field-label">Department</label>
+              <input
+                id="ar_dept_${reqDomId}"
+                class="field-input"
+                placeholder="Operations"
+              >
+            </div>
+          </div>
+
+          <div class="row-2">
+            <div class="field-wrap">
+              <label class="field-label">Reports To</label>
+              <select id="ar_reports_${reqDomId}" class="field-input">
+                <option value="">No Manager</option>
+                ${managerOptions}
+              </select>
+            </div>
+
+            <div class="field-wrap">
+              <label class="field-label">Role</label>
+              <select id="ar_admin_${reqDomId}" class="field-input">
+                <option value="false">Employee</option>
+                <option value="true">Admin</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+            <button
+              class="btn-approve"
+              onclick="approveAccessRequest('${escapeHtml(req.id || '')}')"
+            >
+              Approve Access
+            </button>
+
+            <button
+              class="btn-reject"
+              onclick="rejectAccessRequest('${escapeHtml(req.id || '')}')"
+            >
+              Reject
+            </button>
+          </div>
+
+          <div id="ar_msg_${reqDomId}" style="margin-top:12px;"></div>
+        </div>
+      `;
+    });
+  }
+
+  html += `</div>`;
+
+
+  html += `
+    <div class="card-box" style="margin-bottom:20px;">
+
+      <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">
+        Add New Employee
+      </div>
+
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;">
+        Create employee accounts manually.
+      </div>
+
+      <div class="row-2">
+        <div class="field-wrap">
+          <label class="field-label">Full Name</label>
+          <input id="nu_name" class="field-input" placeholder="John Doe">
+        </div>
+
+        <div class="field-wrap">
+          <label class="field-label">Employee ID</label>
+          <div class="input-group">
+            <span class="input-prefix">HX-</span>
+            <input id="nu_id" class="field-input has-prefix" placeholder="0005">
+          </div>
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div class="field-wrap">
+          <label class="field-label">Email</label>
+          <input id="nu_email" class="field-input" placeholder="employee@haulxify.com">
+        </div>
+
+        <div class="field-wrap">
+          <label class="field-label">Password</label>
+          <input id="nu_password" type="password" class="field-input" placeholder="Temporary Password">
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div class="field-wrap">
+          <label class="field-label">Designation</label>
+          <input id="nu_designation" class="field-input" placeholder="Dispatcher">
+        </div>
+
+        <div class="field-wrap">
+          <label class="field-label">Department</label>
+          <input id="nu_department" class="field-input" placeholder="Operations">
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div class="field-wrap">
+          <label class="field-label">Reports To</label>
+          <select id="nu_reportsTo" class="field-input">
+            <option value="">No Manager</option>
+            ${managerOptions}
+          </select>
+        </div>
+
+        <div class="field-wrap">
+          <label class="field-label">Account Role</label>
+          <select id="nu_admin" class="field-input">
+            <option value="false">Employee</option>
+            <option value="true">Admin</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn-primary" onclick="addNewUser()">
+        Create Employee Account
+      </button>
+
+      <div id="newUserMsg" style="margin-top:14px;"></div>
+    </div>
+  `;
+
+
+  html += `
+    <div class="card-box">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">
+            Employees
+          </div>
+
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">
+            ${activeCount} active · ${frozenCount} frozen · ${formerCount} former employees
+          </div>
+        </div>
+      </div>
+        `;
+  
   emps.forEach(emp => {
     const isSelf = emp.uid === currentUser.uid || emp.id === currentUser.id;
 const isLocked = emp.id === 'HX-0001' || isSelf;
@@ -4210,7 +4410,7 @@ const statusColor = isBlocked ? 'var(--red)' : 'var(--green)';
     const idArg = encodeURIComponent(emp.id || '');
     const nameArg = encodeURIComponent(emp.name || '');
 const isFormerEmployee = ['left', 'resigned', 'terminated'].includes(empStatus);
-    const canViewAsTarget = currentUser.id === 'HX-0001' && emp.uid && emp.uid !== currentUser.uid;
+const canViewAsTarget = canUseProfileTools && emp.uid && emp.uid !== currentUser.uid;
     const rowOpacity = isFormerEmployee ? '0.55' : '1';
 
 const freezeAction = isBlocked && !isFormerEmployee ? 'Unfreeze' : 'Freeze';
@@ -4269,8 +4469,13 @@ ${canViewAsTarget ? `
           View As
         </button>` : ''}
 
-        <button onclick="openEmpProfile('${escapeHtml(emp.uid || '')}')"
-          style="padding:8px 14px;border-radius:10px;background:var(--navy);color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+${canUseProfileTools ? `
+<button onclick="openEmpProfile('${escapeHtml(emp.uid || '')}')"
+  style="padding:8px 14px;border-radius:10px;background:var(--navy);color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+  View Profile
+</button>
+` : ''}
+style="padding:8px 14px;border-radius:10px;background:var(--navy);color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
           View Profile
         </button>
         
