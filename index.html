@@ -3654,12 +3654,11 @@ function showView(id) {
 if (id === 'viewProfile') { loadProfile(); }
   if (id === 'viewNotifications') loadNotifications();
   if (id === 'viewTeam') loadTeamView();
-  if (id === 'viewSettings') {
+if (id === 'viewSettings') {
     const isDark = load('darkMode_' + currentUser.id, false);
     document.getElementById('darkModeToggle').checked = isDark;
 const cb = document.getElementById('darkModeToggle');
     if (cb) cb.checked = isDark;
-    loadCampaignSettings();
   }
   if (id === 'viewVoice') renderVoiceView();
 }
@@ -3688,7 +3687,7 @@ document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive,#tabDat
   }
   return;
 }
-  if (tabId === 'tabCampaign') {
+if (tabId === 'tabCampaign') {
   const access = await fsGet('toolAccess', window.__currentUser.id) || {};
   const hasCampaign = access.campaignAccess !== undefined ? access.campaignAccess : window.__currentUser.isAdmin;
   if (!hasCampaign) {
@@ -3696,7 +3695,8 @@ document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive,#tabDat
     return;
   }
   renderCampaignStats();
-    renderReplyInbox();
+  renderReplyInbox();
+  loadCampaignSettings();
 }
 }
 
