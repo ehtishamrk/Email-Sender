@@ -4331,15 +4331,15 @@ html += `
         </div>
       </div>
 
-      <div class="row-2">
+<div class="row-2">
         <div class="field-wrap">
           <label class="field-label">Email</label>
           <input id="nu_email" class="field-input" placeholder="employee@haulxify.com">
         </div>
 
         <div class="field-wrap">
-          <label class="field-label">Password</label>
-          <input id="nu_password" type="password" class="field-input" placeholder="Temporary Password">
+          <label class="field-label">Joining Date</label>
+          <input id="nu_join" type="date" class="field-input">
         </div>
       </div>
 
@@ -4486,9 +4486,6 @@ ${canUseProfileTools ? `
   View Profile
 </button>
 ` : ''}
-style="padding:8px 14px;border-radius:10px;background:var(--navy);color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
-          View Profile
-        </button>
         
       </div>
     </div>`;
@@ -4669,18 +4666,18 @@ async function addNewUser() {
     alert('Only HX-0001 can add new employees.');
     return;
   }
-  const name  = cleanText(document.getElementById('nu_name').value, 120);
+const name  = cleanText(document.getElementById('nu_name').value, 120);
   const idRaw = document.getElementById('nu_id').value.trim();
   const email = normalizeEmail(document.getElementById('nu_email').value);
-  const desig = cleanText(document.getElementById('nu_desig').value, 80);
-  const dept  = cleanText(document.getElementById('nu_dept').value, 80);
+  const desig = cleanText(document.getElementById('nu_designation').value, 80);
+  const dept  = cleanText(document.getElementById('nu_department').value, 80);
   const reportsToUid = document.getElementById('nu_reportsTo').value.trim();
   const join  = document.getElementById('nu_join').value.trim();
   const isAdmin = document.getElementById('nu_admin').value === 'true';
-  const msg   = document.getElementById('addUserMsg');
+  const msg   = document.getElementById('newUserMsg');
 
   if (!name || !idRaw || !email || !desig || !dept || !join) {
-    msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Please fill in all fields.</div>';
+    if (msg) msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Please fill in all fields.</div>';
     return;
   }
 
@@ -4751,7 +4748,7 @@ createdAt: new Date().toISOString()
     await sendPasswordResetEmail(auth, email);
 
     msg.innerHTML = '<div class="alert-success">Employee added. Password setup email sent.</div>';
-    ['nu_name','nu_id','nu_email','nu_desig','nu_dept','nu_join'].forEach(id => document.getElementById(id).value = '');
+    ['nu_name','nu_id','nu_email','nu_designation','nu_department','nu_join'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     document.getElementById('nu_reportsTo').value = '';
     document.getElementById('nu_admin').value = 'false';
 
