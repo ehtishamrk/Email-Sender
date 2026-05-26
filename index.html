@@ -5680,12 +5680,20 @@ async function setCampaignStatus(active) {
       body: JSON.stringify({ campaign_active: active })
     });
     const msg = document.getElementById('campaignSettingsMsg');
-    msg.innerHTML = '<div class="alert-success">✅ Campaign ' + (active ? 'resumed' : 'paused') + ' successfully.</div>';
-    setTimeout(() => msg.innerHTML = '', 4000);
+    if (msg) {
+      msg.innerHTML = '<div class="alert-success">✅ Campaign ' + (active ? 'started' : 'paused') + ' successfully.</div>';
+      setTimeout(() => msg.innerHTML = '', 4000);
+    }
+    const badge = document.getElementById('campaignStatusBadge');
+    if (badge) {
+      badge.textContent = active ? '🟢 Active' : '🔴 Paused';
+      badge.style.background = active ? '#F0FFF5' : '#FFF0F0';
+      badge.style.color = active ? '#15803D' : '#DC2626';
+    }
   } catch(e) {
     alert('Error saving. Check connection.');
   }
-} 
+}
   
 async function renderCampaignStats() {
   const el = document.getElementById('campaignStatsContent');
