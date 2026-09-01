@@ -2665,39 +2665,28 @@
     
 
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDBd2hw7Gq1-mwR5evKF-YPcAGRYDNl3fw",
-  authDomain: "haulxify-employee-portal.firebaseapp.com",
-  projectId: "haulxify-employee-portal",
-  storageBucket: "haulxify-employee-portal.firebasestorage.app",
-  messagingSenderId: "170605105002",
-  appId: "1:170605105002:web:d5da4718f77fd1182adf13"
-};
+// ══════════════════════════════════════════════════════════════
+//  PASTE YOUR OWN VALUES HERE (Project Settings -> API in Supabase)
+//  Both of these are SAFE to be public — same as your old Firebase
+//  apiKey was already public in this same file.
+// ══════════════════════════════════════════════════════════════
+const SUPABASE_URL = "https://nvgnuigtxfyzlminvmby.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52Z251aWd0eGZ5emxtaW52bWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4NTIzMzgsImV4cCI6MjEwMzQyODMzOH0.U7YKaFIS5_oj8ERKO3hkLcWQ6sjhJgloCJnZw2pYJ_Y";
 
-const _app = initializeApp(firebaseConfig);
-const auth = getAuth(_app);
-const db   = getFirestore(_app);
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const auth = supabase.auth; // kept as its own name since older code below refers to "auth"
 
-window.__fb = { auth, db, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, deleteDoc, signOut, sendPasswordResetEmail, signInWithEmailAndPassword };
+window.__sb = { supabase };
 
-// \u2500\u2500 Campaign API proxy (Cloudflare Worker) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-const CAMPAIGN_API = 'https://haulxify-campaign.founder-dappic.workers.dev/campaign';
-
-async function getCampaignToken() {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Not signed in');
-  return user.getIdToken();
+// ── Edge Functions (replace the old Cloudflare Worker + employee-creation trick) ──
+async function callEdgeFunction(name, body) {
+  const { data, error } = await supabase.functions.invoke(name, { body });
+  if (error) throw error;
+  return data;
 }
 
-async function campaignFetch(path, options = {}) {
-  const token   = await getCampaignToken();
-  const headers = { 'Authorization': 'Bearer ' + token, ...(options.headers || {}) };
-  return fetch(CAMPAIGN_API + path, { ...options, headers });
-}
 window.doLogin = doLogin;
 window.doLogout = doLogout;
 window.submitForgot = submitForgot;
@@ -2779,7 +2768,7 @@ window.openTimeTool = function() {
 // ══════════════════════════════════════════════════════════════
 const EMPLOYEES = {}; // now loaded from Firestore
 const EMAIL_SENDER_URL = 'email-sender.html';
-  const API = 'https://script.google.com/macros/s/AKfycbxkVYnxV3FmWq52UFipohgUXGV2RBC9S0EuZ_Wgj1xMn8pkY7WWfBZHtR9KeocPELC7/exec';
+  // The Google Sheet backend is retired — BDO leads now live in Supabase's bdo_leads table.
 
 // ══════════════════════════════════════════════════════════════
 //  STORAGE HELPERS (localStorage — GitHub Pages compatible)
@@ -2830,42 +2819,139 @@ function stopHeartbeat() {
 // ══════════════════════════════════════════════════════════════
 //  FIRESTORE API — replaces Google Sheets
 // ══════════════════════════════════════════════════════════════
-async function fsGet(colPath, docId) {
+// table    = Postgres table name (e.g. 'employees')
+// pkValue  = the value of the row's primary key (e.g. an employee's uid)
+// pkColumn = which column is the primary key — defaults to 'id';
+//            pass 'uid' for employees, 'emp_uid' for a couple of others
+async function fsGet(table, pkValue, pkColumn = 'id') {
   try {
-    const { db, doc, getDoc } = window.__fb;
-    const snap = await getDoc(doc(db, colPath, docId));
-    return snap.exists() ? snap.data() : null;
-  } catch(e) { return null; }
+    const { data, error } = await supabase.from(table).select('*').eq(pkColumn, pkValue).maybeSingle();
+    if (error) throw error;
+    return data;
+  } catch (e) { console.error('fsGet', table, e); return null; }
 }
 
-async function fsSet(colPath, docId, data) {
+// Returns every row in a table, optionally filtered — e.g.
+// fsGetAll('notifications', { emp_uid: myUid }) replaces what used to be
+// the 'notifications/<uid>/items' subcollection.
+async function fsGetAll(table, filters = {}) {
   try {
-    const { db, doc, setDoc } = window.__fb;
-    await setDoc(doc(db, colPath, docId), data, { merge: true });
+    let q = supabase.from(table).select('*');
+    for (const [col, val] of Object.entries(filters)) {
+      q = (val === null) ? q.is(col, null) : q.eq(col, val); // Postgres needs "is" for null checks
+    }
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  } catch (e) { console.error('fsGetAll', table, e); return []; }
+}
+
+// Creates a brand-new row. The database generates its id automatically
+// and hands the full new row back to you.
+async function fsInsert(table, data) {
+  try {
+    const { data: row, error } = await supabase.from(table).insert(data).select().single();
+    if (error) throw error;
+    return row;
+  } catch (e) { console.error('fsInsert', table, e); return null; }
+}
+
+// Updates a row you already know the id of.
+async function fsUpdate(table, pkValue, data, pkColumn = 'id') {
+  try {
+    const { error } = await supabase.from(table).update(data).eq(pkColumn, pkValue);
+    if (error) throw error;
     return true;
-  } catch(e) { return false; }
+  } catch (e) { console.error('fsUpdate', table, e); return false; }
 }
 
-async function fsGetAll(colPath) {
+// Creates a row OR updates it if one with this key already exists — the
+// Postgres equivalent of Firestore's old setDoc(..., {merge:true}).
+async function fsUpsert(table, data, pkColumn = 'id') {
   try {
-    const { db, collection, getDocs } = window.__fb;
-    const snap = await getDocs(collection(db, colPath));
-    const result = {};
-    snap.forEach(d => result[d.id] = d.data());
-    return result;
-  } catch(e) { return {}; }
+    const { error } = await supabase.from(table).upsert(data, { onConflict: pkColumn });
+    if (error) throw error;
+    return true;
+  } catch (e) { console.error('fsUpsert', table, e); return false; }
 }
 
-async function fsGetSubcollection(colPath) {
+async function fsDelete(table, pkValue, pkColumn = 'id') {
   try {
-    const { db, collection, getDocs } = window.__fb;
-    const snap = await getDocs(collection(db, colPath));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch(e) { return []; }
+    const { error } = await supabase.from(table).delete().eq(pkColumn, pkValue);
+    if (error) throw error;
+    return true;
+  } catch (e) { console.error('fsDelete', table, e); return false; }
 }
-// Legacy apiGet/apiPost stubs — now handled per-function via Firestore
-async function apiGet(params) { return null; }
-async function apiPost(data) { return null; }
+
+// The database stores employee columns as snake_case (e.g. account_status).
+// Every screen in this file was written expecting camelCase (accountStatus).
+// These two functions translate at the boundary so nothing else below has
+// to change.
+function normalizeEmployee(row) {
+  if (!row) return null;
+  return {
+    uid: row.uid, id: row.emp_id, name: row.name, email: row.email,
+    designation: row.designation, department: row.department,
+    reportsToUid: row.reports_to_uid, joiningDate: row.joining_date,
+    isAdmin: row.is_admin, hasEmailAccess: row.has_email_access,
+    hasVoiceAccess: row.has_voice_access, accountStatus: row.account_status,
+    employmentStatus: row.employment_status, isFrozen: row.is_frozen,
+    phone: row.phone, emergency: row.emergency_contact,
+    address: row.address, bloodGroup: row.blood_group,
+    statusUpdatedBy: row.status_updated_by, statusUpdatedByName: row.status_updated_by_name,
+    statusUpdatedAt: row.status_updated_at, leftAt: row.left_at, assignedCompany: row.assigned_company,
+    leftMarkedBy: row.left_marked_by, leftMarkedByName: row.left_marked_by_name,
+    createdAt: row.created_at
+  };
+}
+
+const EMP_FIELD_MAP = {
+  id: 'emp_id', name: 'name', email: 'email', designation: 'designation',
+  department: 'department', reportsToUid: 'reports_to_uid', joiningDate: 'joining_date',
+  isAdmin: 'is_admin', hasEmailAccess: 'has_email_access', hasVoiceAccess: 'has_voice_access',
+  accountStatus: 'account_status', employmentStatus: 'employment_status', isFrozen: 'is_frozen',
+  phone: 'phone', emergency: 'emergency_contact', address: 'address', bloodGroup: 'blood_group',
+  statusUpdatedBy: 'status_updated_by', statusUpdatedByName: 'status_updated_by_name',
+  statusUpdatedAt: 'status_updated_at', leftAt: 'left_at', assignedCompany: 'assigned_company',
+  leftMarkedBy: 'left_marked_by', leftMarkedByName: 'left_marked_by_name'
+};
+function denormalizeEmployee(obj) {
+  const out = {};
+  for (const [camel, snake] of Object.entries(EMP_FIELD_MAP)) {
+    if (obj[camel] !== undefined) out[snake] = obj[camel];
+  }
+  return out;
+}
+
+// Same idea, for the onboarding form's data (father's CNIC, qualifications, etc).
+const ONB_FIELD_MAP = {
+  fatherName: 'father_name', motherName: 'mother_name', dob: 'dob',
+  placeOfBirth: 'place_of_birth', nationality: 'nationality', cnic: 'cnic',
+  fatherCnic: 'father_cnic', gender: 'gender', religion: 'religion',
+  maritalStatus: 'marital_status', languages: 'languages',
+  hasDisability: 'has_disability', disabilityDetails: 'disability_details',
+  bloodGroup: 'blood_group', primaryContact: 'primary_contact',
+  secondaryContact: 'secondary_contact', emergencyNumber: 'emergency_number',
+  fatherOccupation: 'father_occupation', motherOccupation: 'mother_occupation',
+  siblingCount: 'sibling_count', address: 'address', qualifications: 'qualifications',
+  employmentExperience: 'employment_experience', siblings: 'siblings',
+  hasOrgRelation: 'has_org_relation', orgRelation: 'org_relation',
+  declarationAccepted: 'declaration_accepted', submittedAt: 'submitted_at',
+  updatedAt: 'updated_at'
+};
+function normalizeOnboarding(row) {
+  if (!row) return null;
+  const out = {};
+  for (const [camel, snake] of Object.entries(ONB_FIELD_MAP)) out[camel] = row[snake];
+  return out;
+}
+function denormalizeOnboarding(obj) {
+  const out = {};
+  for (const [camel, snake] of Object.entries(ONB_FIELD_MAP)) {
+    if (obj[camel] !== undefined) out[snake] = obj[camel];
+  }
+  return out;
+}
 
 // ══════════════════════════════════════════════════════════════
 //  STATE
@@ -2884,22 +2970,28 @@ function startNotificationListener() {
   // Clean up any existing listener first
   if (_notifUnsubscribe) { _notifUnsubscribe(); _notifUnsubscribe = null; }
 
-  const { db, collection } = window.__fb;
-  const colRef = collection(db, 'notifications/' + currentUser.uid + '/items');
+  const channel = supabase
+    .channel('notifications-' + currentUser.uid)
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'notifications', filter: 'emp_uid=eq.' + currentUser.uid },
+      () => refreshNotifBadge())
+    .subscribe();
 
-  _notifUnsubscribe = onSnapshot(colRef, (snap) => {
-    const unreadCount = snap.docs.filter(d => !d.data().isRead).length;
-    const badge = document.getElementById('notifBadge');
-    if (!badge) return;
-    if (unreadCount > 0) {
-      badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-      badge.style.display = '';
-    } else {
-      badge.style.display = 'none';
-    }
-  }, () => {
-    // On error, fall back silently
-  });
+  _notifUnsubscribe = () => supabase.removeChannel(channel);
+  refreshNotifBadge(); // show the current count immediately, don't wait for the first live change
+}
+
+async function refreshNotifBadge() {
+  const items = await fsGetAll('notifications', { emp_uid: currentUser.uid });
+  const unreadCount = items.filter(n => !n.is_read).length;
+  const badge = document.getElementById('notifBadge');
+  if (!badge) return;
+  if (unreadCount > 0) {
+    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 
@@ -2927,7 +3019,7 @@ function showBlockedAccountMessage() {
 async function enforceCurrentAccountStatus() {
   if (!currentUser || !currentUser.uid) return;
 
-  const latestProfile = await fsGet('employees', currentUser.uid);
+  const latestProfile = normalizeEmployee(await fsGet('employees', currentUser.uid, 'uid'));
 
 if (!latestProfile || isBlockedEmployee(latestProfile)) {
   clearInterval(accountStatusInterval);
@@ -2948,12 +3040,8 @@ function startAccountStatusWatcher() {
   
 // ── AUTO-RESTORE SESSION ON REFRESH ──
 (async function restoreSession() {
-  const authUser = await new Promise(resolve => {
-    const unsubscribe = onAuthStateChanged(auth, user => {
-      unsubscribe();
-      resolve(user);
-    });
-  });
+  const { data: { session: sbSession } } = await supabase.auth.getSession();
+  const authUser = sbSession ? sbSession.user : null;
 
 if (!authUser) {
   store('pendingSession', null);
@@ -2962,19 +3050,19 @@ if (!authUser) {
   return;
 }
 
-  const empSnap = await getDoc(doc(db, 'employees', authUser.uid));
-if (!empSnap.exists()) {
-  await signOut(auth);
+  const empRow = await fsGet('employees', authUser.id, 'uid');
+if (!empRow) {
+  await supabase.auth.signOut();
   store('pendingSession', null);
   store('session', null);
   showLoginScreen();
   return;
 }
 
-  const profile = empSnap.data();
+  const profile = normalizeEmployee(empRow);
 
   if (isBlockedEmployee(profile)) {
-  await signOut(auth);
+  await supabase.auth.signOut();
   store('pendingSession', null);
   store('session', null);
   currentUser = null;
@@ -2992,7 +3080,7 @@ if (!empSnap.exists()) {
   if (pending && pending.id === profile.id && !tabWasClosed) {
     store('pendingSession', null);
     store('session', { id: profile.id });
-        currentUser = { uid: authUser.uid, ...profile };
+        currentUser = { uid: authUser.id, ...profile };
 
     enterPortal();
     return;
@@ -3007,24 +3095,13 @@ if (!empSnap.exists()) {
       const outTs = new Date().toISOString();
       const durMins = Math.round((new Date(outTs) - new Date(inTs)) / 60000);
 
-      await fsSet('clockState', empId, {
-        clockedIn: false,
-        timestamp: null,
-        empId
-      });
+      await fsUpsert('clock_state', { emp_uid: authUser.id, clocked_in: false, since: null }, 'emp_uid');
 
       try {
-        const sessSnap = await getDocs(
-          query(collection(db, 'attendance/' + empId + '/sessions'), where('clockOut', '==', null))
-        );
-
-        sessSnap.forEach(async d => {
-          await fsSet('attendance/' + empId + '/sessions', d.id, {
-            clockOut: outTs,
-            duration: durMins,
-            autoOut: true
-          });
-        });
+        const openSessions = await fsGetAll('attendance_sessions', { emp_uid: authUser.id, clock_out: null });
+        for (const s of openSessions) {
+          await fsUpdate('attendance_sessions', s.id, { clock_out: outTs, duration_minutes: durMins, auto_out: true });
+        }
       } catch (e) {}
 
       store('clockState_' + empId, { clockedIn: false });
@@ -3034,13 +3111,13 @@ if (!empSnap.exists()) {
     store('session', null);
     store('pendingSession', null);
     localStorage.removeItem('hb_ts');
-    await signOut(auth);
+    await supabase.auth.signOut();
     showLoginScreen();
     return;
   }
 
   store('session', { id: profile.id });
-  currentUser = { uid: authUser.uid, ...profile };
+  currentUser = { uid: authUser.id, ...profile };
   enterPortal();
 })();
 
@@ -3202,7 +3279,7 @@ function collectSiblingRows(siblingCount) {
 async function checkOnboardingStatus() {
   if (!currentUser || !currentUser.uid) return;
 
-  const existing = await fsGet('employeeOnboarding', currentUser.uid);
+  const existing = normalizeOnboarding(await fsGet('employee_onboarding', currentUser.uid, 'uid'));
 
   // Brand new — show blank form
   if (!existing || existing.declarationAccepted !== true) {
@@ -3335,24 +3412,12 @@ let orgRelation = null;
       updatedAt: new Date().toISOString()
     };
 
-const saved = await fsSet('employeeOnboarding', currentUser.uid, onboardingData);
+const saved = await fsUpsert('employee_onboarding', { uid: currentUser.uid, ...denormalizeOnboarding(onboardingData) }, 'uid');
     if (!saved) {
-      throw new Error('Firebase blocked the save. Please ask admin to update Firestore rules.');
+      throw new Error('The save was blocked. Please ask admin to check Supabase security rules.');
     }
-
-    // Update the relativeIndex so future employees can detect this person as a relative
-    const normalizedFatherCnic = normalizeCnic(onboardingData.fatherCnic || '');
-    if (normalizedFatherCnic.length === 13) {
-      const existing = await fsGet('relativeIndex', normalizedFatherCnic) || { entries: [] };
-      const otherEntries = (existing.entries || []).filter(e => e.uid !== currentUser.uid);
-      otherEntries.push({
-        uid: currentUser.uid,
-        empId: currentUser.id,
-        empName: currentUser.name || '',
-        designation: currentUser.designation || '',
-      });
-      await fsSet('relativeIndex', normalizedFatherCnic, { entries: otherEntries });
-    }
+    // Note: there's no separate "relative index" to update anymore — the
+    // relatives check now searches employee_onboarding directly by CNIC.
 
     document.getElementById('modalOnboarding').classList.remove('show');
     msg.innerHTML = '<div class="alert-success">Information submitted successfully.</div>';
@@ -3384,10 +3449,10 @@ async function submitForgot() {
 
   try {
     const empId = 'HX-' + raw.padStart(4, '0');
-    const indexDoc = await getDoc(doc(db, 'loginIndex', empId));
+    const { data: email } = await supabase.rpc('lookup_login_email', { p_emp_id: empId });
 
-    if (indexDoc.exists() && indexDoc.data().email) {
-      await sendPasswordResetEmail(auth, indexDoc.data().email);
+    if (email) {
+      await supabase.auth.resetPasswordForEmail(email);
     }
   } catch(e) {
     // Keep the same message either way so employee IDs cannot be guessed.
@@ -3415,19 +3480,15 @@ async function submitSignup() {
     alert('Please enter a valid email address.'); return;
   }
 
-  const requestId = 'REQ_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-  const saved = await fsSet('accessRequests', requestId, {
-    id: requestId,
-    firstName: first,
-    lastName: last,
+  const saved = await fsInsert('access_requests', {
+    first_name: first,
+    last_name: last,
     name: `${first} ${last}`.trim(),
     designation: desig,
     email,
-    emailLower: email,
     phone,
-    joiningDate: joining,
-    status: 'pending',
-    submittedAt: new Date().toISOString()
+    joining_date: joining,
+    status: 'pending'
   });
 
   if (!saved) {
@@ -3454,24 +3515,23 @@ const pass = document.getElementById('empPass').value;
   btn.disabled = true;
 
   try {
-    // Find employee by ID in Firestore to get their email
-const { db, doc, getDoc, auth } = window.__fb;
-    const indexDoc = await getDoc(doc(db, 'loginIndex', 'HX-' + raw.padStart(4,'0')));
+    // Find this Employee ID's email — this one lookup is allowed before sign-in
+    const empId = 'HX-' + raw.padStart(4,'0');
+    const { data: email } = await supabase.rpc('lookup_login_email', { p_emp_id: empId });
 
-    if (!indexDoc.exists()) throw new Error('not-found');
+    if (!email) throw new Error('not-found');
 
-    const { email, uid } = indexDoc.data();
+    // Now sign in with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password: pass });
+    if (authError) throw authError;
+    const uid = authData.user.id;
 
-    // Now sign in with Firebase Auth
-    const { signInWithEmailAndPassword } = window.__fb;
-    const cred = await signInWithEmailAndPassword(auth, email, pass);
-
-    // Fetch full profile from Firestore (requires auth)
-    const empSnap = await getDoc(doc(db, 'employees', uid));
-    if (!empSnap.exists()) throw new Error('no-profile');
-    const profile = empSnap.data();
+    // Fetch full profile (only readable once signed in, per the security rules)
+    const empRow = await fsGet('employees', uid, 'uid');
+    if (!empRow) throw new Error('no-profile');
+    const profile = normalizeEmployee(empRow);
 if (isBlockedEmployee(profile)) {
-  await window.__fb.signOut(window.__fb.auth);
+  await supabase.auth.signOut();
   throw new Error('account-blocked');
 }
 
@@ -3506,7 +3566,7 @@ async function doLogout() {
   if (clockedIn) await performClockOut('auto');
 
   try {
-  await window.__fb.signOut(window.__fb.auth);
+  await supabase.auth.signOut();
 } catch(e) {}
 
 currentUser = null; clockedIn = false; clockInTimestamp = null;
@@ -3551,12 +3611,12 @@ function enterPortal() {
 
 
 
-  // Then fetch latest from sheet and update
-fsGet('toolAccess', currentUser.id).then(data => {
-const emailOk = data ? data.emailAccess : currentUser.hasEmailAccess;
-const voiceOk = data ? data.voiceAccess : currentUser.hasVoiceAccess;
-const timeOk = data && data.timeToolAccess !== undefined ? data.timeToolAccess : true;
-  const campaignOk = data && data.campaignAccess !== undefined ? data.campaignAccess : currentUser.isAdmin === true;
+  // Then fetch latest from the database and update
+fsGet('tool_access', currentUser.uid, 'emp_uid').then(data => {
+const emailOk = data ? data.email_access : currentUser.hasEmailAccess;
+const voiceOk = data ? data.voice_access : currentUser.hasVoiceAccess;
+const timeOk = data && data.time_access !== undefined ? data.time_access : true;
+  const campaignOk = data && data.campaign_access !== undefined ? data.campaign_access : currentUser.isAdmin === true;
 
 
 store('timeAccess_' + currentUser.id, timeOk);
@@ -3573,12 +3633,12 @@ document.getElementById('timeCard').style.display = timeOk ? '' : 'none';
   // Restore this user's dark mode preference
 const isDarkLocal = load('darkMode_' + currentUser.id, false);
   applyDarkMode(isDarkLocal);
-  fsGet('employees', currentUser.uid).then(data => {
-    if (data && data.darkMode !== undefined) {
-      store('darkMode_' + currentUser.id, data.darkMode);
-      applyDarkMode(data.darkMode);
+  fsGet('employees', currentUser.uid, 'uid').then(data => {
+    if (data && data.dark_mode !== undefined) {
+      store('darkMode_' + currentUser.id, data.dark_mode);
+      applyDarkMode(data.dark_mode);
       const cb = document.getElementById('darkModeToggle');
-      if (cb) cb.checked = data.darkMode;
+      if (cb) cb.checked = data.dark_mode;
     }
   });
   updateDashHeader();
@@ -3646,8 +3706,8 @@ function showView(id) {
       const sel = document.getElementById('appToUid');
       if (!sel) return;
       sel.innerHTML = '<option value="">— Select recipient —</option>' +
-        Object.entries(all).map(([uid, e]) =>
-          `<option value="${uid}">${escapeHtml(e.name||uid)} — ${escapeHtml(e.designation||'')} (${e.id||uid})</option>`
+        all.map(e =>
+          `<option value="${e.uid}">${escapeHtml(e.name||e.uid)} — ${escapeHtml(e.designation||'')} (${e.emp_id||e.uid})</option>`
         ).join('');
     });
   }
@@ -3664,10 +3724,9 @@ const cb = document.getElementById('darkModeToggle');
 }
 async function loadCampaignSettings() {
   try {
-    const res = await campaignFetch('/settings');
-    const data = await res.json();
-    if (data && data[0]) {
-      document.getElementById('dailyLimitInput').value = data[0].daily_limit_per_account;
+    const data = await fsGet('campaign_settings', 1);
+    if (data) {
+      document.getElementById('dailyLimitInput').value = data.daily_limit_per_account;
     }
   } catch(e) {}
 }
@@ -3688,8 +3747,8 @@ document.querySelectorAll('#tabAttendance,#tabLeaves,#tabAccess,#tabLive,#tabDat
   return;
 }
 if (tabId === 'tabCampaign') {
-  const access = await fsGet('toolAccess', window.__currentUser.id) || {};
-  const hasCampaign = access.campaignAccess !== undefined ? access.campaignAccess : window.__currentUser.isAdmin;
+  const access = await fsGet('tool_access', window.__currentUser.uid, 'emp_uid') || {};
+  const hasCampaign = access.campaign_access !== undefined ? access.campaign_access : window.__currentUser.isAdmin;
   if (!hasCampaign) {
     document.getElementById('campaignStatsContent').innerHTML = '<div class="card-box"><div class="empty-state"><div class="empty-icon">🔒</div><div class="empty-text">You do not have access to Campaign Stats.</div></div></div>';
     return;
@@ -3728,12 +3787,12 @@ function startClock() {
 }
 
 async function resumeClockState() {
-  // Always trust Firestore over localStorage
-  const state = await fsGet('clockState', currentUser.id);
-  if (state && state.clockedIn) {
+  // Always trust the database over localStorage
+  const state = await fsGet('clock_state', currentUser.uid, 'emp_uid');
+  if (state && state.clocked_in) {
     clockedIn = true;
-    clockInTimestamp = new Date(state.timestamp);
-    store('clockState_' + currentUser.id, { clockedIn: true, timestamp: state.timestamp });
+    clockInTimestamp = new Date(state.since);
+    store('clockState_' + currentUser.id, { clockedIn: true, timestamp: state.since });
     updateClockUI(true);
   } else {
     clockedIn = false;
@@ -3748,21 +3807,19 @@ async function toggleClock() {
     clockedIn = true;
     clockInTimestamp = new Date();
     const tsStr = clockInTimestamp.toISOString();
-    const sessionId = tsStr.replace(/[:.]/g, '-');
     store('clockState_' + currentUser.id, { clockedIn: true, timestamp: tsStr });
     updateClockUI(true);
-    // Save to Firestore
-    await fsSet('clockState', currentUser.id, { clockedIn: true, timestamp: tsStr, empId: currentUser.id });
-    await fsSet('attendance/' + currentUser.id + '/sessions', sessionId, {
-      empId: currentUser.id,
-      empName: currentUser.name,
-      clockIn: tsStr,
-      date: today(),
-      clockOut: null,
-      duration: null,
-      autoOut: false
+    // Save to Supabase
+    await fsUpsert('clock_state', { emp_uid: currentUser.uid, clocked_in: true, since: tsStr }, 'emp_uid');
+    const newSession = await fsInsert('attendance_sessions', {
+      emp_uid: currentUser.uid,
+      clock_in: tsStr,
+      session_date: today(),
+      clock_out: null,
+      duration_minutes: null,
+      auto_out: false
     });
-    store('lastSessionId_' + currentUser.id, sessionId);
+    if (newSession) store('lastSessionId_' + currentUser.id, newSession.id);
   } else {
     performClockOut('manual');
   }
@@ -3781,13 +3838,13 @@ async function performClockOut(reason) {
   updateClockUI(false);
   refreshStats();
 
-  // Save to Firestore
-  await fsSet('clockState', currentUser.id, { clockedIn: false, timestamp: null, empId: currentUser.id });
+  // Save to Supabase
+  await fsUpsert('clock_state', { emp_uid: currentUser.uid, clocked_in: false, since: null }, 'emp_uid');
   if (sessionId) {
-    await fsSet('attendance/' + currentUser.id + '/sessions', sessionId, {
-      clockOut: outTsStr,
-      duration: durMins,
-      autoOut: reason === 'auto'
+    await fsUpdate('attendance_sessions', sessionId, {
+      clock_out: outTsStr,
+      duration_minutes: durMins,
+      auto_out: reason === 'auto'
     });
   }
 }
@@ -3859,15 +3916,13 @@ window.addEventListener('beforeunload', () => {
 // ══════════════════════════════════════════════════════════════
 async function refreshStats() {
   if (!currentUser) return;
-  const sessions = await fsGetSubcollection('attendance/' + currentUser.id + '/sessions');
+  const sessions = await fsGetAll('attendance_sessions', { emp_uid: currentUser.uid });
   const thisMonth = new Date().toISOString().substring(0,7);
-  const daysSet = new Set(sessions.filter(s => s.clockIn && s.clockIn.startsWith(thisMonth)).map(s => s.date));
+  const daysSet = new Set(sessions.filter(s => s.clock_in && s.clock_in.startsWith(thisMonth)).map(s => s.session_date));
   document.getElementById('statDays').textContent = daysSet.size;
 
-  const { db, collection, query, where, getDocs } = window.__fb;
-  const q = query(collection(db, 'leaveRequests'), where('empId', '==', currentUser.id), where('status', '==', 'pending'));
-  const snap = await getDocs(q);
-  document.getElementById('statLeave').textContent = snap.size;
+  const pendingLeave = await fsGetAll('leave_requests', { emp_uid: currentUser.uid, status: 'pending' });
+  document.getElementById('statLeave').textContent = pendingLeave.length;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -3877,13 +3932,13 @@ async function renderAttReport() {
   if (!currentUser) return;
   const el = document.getElementById('attReportContent');
   el.innerHTML = '<div class="empty-state"><div class="empty-icon">🕐</div><div class="empty-text">Loading attendance...</div></div>';
-  const sessions = await fsGetSubcollection('attendance/' + currentUser.id + '/sessions');
+  const sessions = await fsGetAll('attendance_sessions', { emp_uid: currentUser.uid });
   const log = sessions.map(s => ({
-    ts: s.clockIn,
-    outTs: s.clockOut,
-    duration: s.duration,
-    autoOut: s.autoOut,
-    date: s.date
+    ts: s.clock_in,
+    outTs: s.clock_out,
+    duration: s.duration_minutes,
+    autoOut: s.auto_out,
+    date: s.session_date
   })).sort((a, b) => new Date(b.ts) - new Date(a.ts));
 
   if (!log.length) {
@@ -3923,12 +3978,10 @@ async function submitLeave() {
   if (!from || !to) { msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Please select both dates.</div>'; return; }
   if (new Date(to) < new Date(from)) { msg.innerHTML = '<div style="color:var(--red);font-size:13px;">End date cannot be before start date.</div>'; return; }
 
-  const id = currentUser.id + '_' + Date.now();
-  await fsSet('leaveRequests', id, {
-    id, empId: currentUser.id, empName: currentUser.name,
-    type, from, to, reason,
-    status: 'pending',
-    submittedAt: new Date().toISOString()
+  await fsInsert('leave_requests', {
+    emp_uid: currentUser.uid,
+    leave_type: type, from_date: from, to_date: to, reason,
+    status: 'pending'
   });
 
   msg.innerHTML = '<div class="alert-success">✅ <strong>Request submitted!</strong><br>Your manager will review it shortly.</div>';
@@ -3946,10 +3999,8 @@ async function refreshLeaveHistory() {
   if (!el) return;
   el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">Loading...</div></div>';
 
-  const { db, collection, query, where, getDocs } = window.__fb;
-  const q = query(collection(db, 'leaveRequests'), where('empId', '==', currentUser.id));
-  const snap = await getDocs(q);
-  const requests = snap.docs.map(d => d.data()).sort((a,b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+  const requests = (await fsGetAll('leave_requests', { emp_uid: currentUser.uid }))
+    .sort((a,b) => new Date(b.submitted_at) - new Date(a.submitted_at));
 
   if (!requests.length) {
     el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No leave requests yet.</div></div>'; return;
@@ -3957,14 +4008,14 @@ async function refreshLeaveHistory() {
 
   const statusBadge = s => `<span class="tag tag-${s}">${s.charAt(0).toUpperCase()+s.slice(1)}</span>`;
   const rows = requests.map(r => {
-    const safeType = escapeHtml(r.type.charAt(0).toUpperCase() + r.type.slice(1));
-    const safeFrom = escapeHtml(r.from);
-    const safeTo = escapeHtml(r.to);
+    const safeType = escapeHtml(r.leave_type.charAt(0).toUpperCase() + r.leave_type.slice(1));
+    const safeFrom = escapeHtml(r.from_date);
+    const safeTo = escapeHtml(r.to_date);
     const safeReason = r.reason ? escapeHtml(r.reason) : '—';
 
     return `
     <tr>
-      <td>${new Date(r.submittedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
+      <td>${new Date(r.submitted_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
       <td>${safeType}</td>
       <td>${safeFrom} → ${safeTo}</td>
       <td>${safeReason}</td>
@@ -4010,17 +4061,20 @@ async function loadProfile() {
   document.getElementById('pf_joining').textContent = currentUser.joiningDate || '—';
   document.getElementById('pf_blood').textContent   = currentUser.bloodGroup || '—';
 
-  // Load editable fields from Firestore
-  const data = await fsGet('employees', currentUser.uid);
-  const reportsToName = data?.reportsToName || currentUser.reportsToName || '';
-  const reportsToId = data?.reportsToId || currentUser.reportsToId || '—';
+  // Load editable fields fresh from the database
+  const data = normalizeEmployee(await fsGet('employees', currentUser.uid, 'uid'));
+  let reportsToName = '', reportsToId = '—';
+  if (data?.reportsToUid) {
+    const manager = normalizeEmployee(await fsGet('employees', data.reportsToUid, 'uid'));
+    if (manager) { reportsToName = manager.name; reportsToId = manager.id; }
+  }
   document.getElementById('pf_reportsTo').textContent = reportsToName ? `${reportsToName} (${reportsToId})` : '—';
   document.getElementById('pf_phone').value     = data?.phone     || currentUser.phone     || '';
   document.getElementById('pf_emergency').value = data?.emergency || currentUser.emergency || '';
 document.getElementById('pf_address').value   = data?.address   || currentUser.address   || '';
 
   // Load onboarding data for display
-  const ob = await fsGet('employeeOnboarding', currentUser.uid);
+  const ob = normalizeOnboarding(await fsGet('employee_onboarding', currentUser.uid, 'uid'));
   const obCard = document.getElementById('ob_profileCard');
   const obFields = document.getElementById('ob_profileFields');
   if (ob && obCard && obFields) {
@@ -4059,7 +4113,7 @@ async function saveProfile() {
 
   msg.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">Saving...</div>';
 
-  await fsSet('employees', currentUser.uid, { phone, emergency, address });
+  await fsUpdate('employees', currentUser.uid, { phone, emergency_contact: emergency, address }, 'uid');
 
   // Also update local cache
   currentUser.phone     = phone;
@@ -4076,7 +4130,7 @@ async function saveProfile() {
 async function toggleDarkMode(on) {
   if (currentUser) {
     store('darkMode_' + currentUser.id, on);
-    await fsSet('employees', currentUser.uid, { darkMode: on });
+    await fsUpdate('employees', currentUser.uid, { dark_mode: on }, 'uid');
   }
   applyDarkMode(on);
   const cb = document.getElementById('darkModeToggle');
@@ -4091,8 +4145,7 @@ async function requestPasswordChange() {
   const msg = document.getElementById('settingsMsg');
   msg.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">Sending reset email...</div>';
   try {
-    const { auth, sendPasswordResetEmail } = window.__fb;
-    await sendPasswordResetEmail(auth, currentUser.email);
+    await supabase.auth.resetPasswordForEmail(currentUser.email);
         const safeEmail = escapeHtml(currentUser.email || '');
     msg.innerHTML = '<div class="alert-success">✅ Password reset email sent to <strong>' + safeEmail + '</strong>. Check your inbox.</div>';
 
@@ -4114,9 +4167,11 @@ async function renderAdminUsers() {
   const el = document.getElementById('adminUsersContent');
   if (!el) return;
 
-  const allEmps = await fsGetAll('employees');
+  const allEmps = (await fsGetAll('employees')).map(normalizeEmployee);
   window.__allEmpsCache = allEmps;
-  const emps = Object.values(allEmps).sort((a, b) => {
+  const empByUid = {};
+  allEmps.forEach(e => { if (e.uid) empByUid[e.uid] = e; });
+  const emps = allEmps.sort((a, b) => {
   const statusA = String(a.accountStatus || a.employmentStatus || '').trim().toLowerCase();
   const statusB = String(b.accountStatus || b.employmentStatus || '').trim().toLowerCase();
 
@@ -4139,21 +4194,33 @@ const frozenCount = emps.filter(emp => {
 }).length;
 
   const isSuper = currentUser.id === 'HX-0001';
-  const myAccessForUsers = isSuper ? { accessManager: true, profileAccess: true } : await fsGet('toolAccess', currentUser.id) || {};
+  const myToolRow = isSuper ? null : await fsGet('tool_access', currentUser.uid, 'emp_uid');
+  const myAccessForUsers = isSuper
+    ? { accessManager: true, profileAccess: true }
+    : { accessManager: myToolRow?.access_manager === true, profileAccess: myToolRow?.profile_access === true };
   const canRequestAdminRole = isSuper || myAccessForUsers.accessManager === true;
   const canUseProfileTools = isSuper || (currentUser.isAdmin === true && myAccessForUsers.profileAccess === true);
 
   window.__hasProfileAccess = canUseProfileTools;
 
-  const allRequests = isSuper ? await fsGetAll('accessRequests') : {};
-  const pendingRequests = Object.values(allRequests)
+  const allRequests = isSuper ? await fsGetAll('access_requests') : [];
+  const pendingRequests = allRequests
     .filter(req => String(req.status || 'pending').toLowerCase() === 'pending')
-    .sort((a, b) => new Date(a.submittedAt || 0) - new Date(b.submittedAt || 0));
+    .sort((a, b) => new Date(a.submitted_at || 0) - new Date(b.submitted_at || 0));
 
-  const adminRoleRequestsRaw = isSuper ? await fsGetAll('adminRoleRequests') : {};
-  const pendingAdminRoleRequests = Object.values(adminRoleRequestsRaw)
+  const adminRoleRequestsRaw = isSuper ? await fsGetAll('admin_role_requests') : [];
+  const pendingAdminRoleRequests = adminRoleRequestsRaw
     .filter(req => String(req.status || '').toLowerCase() === 'pending')
-    .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+    .sort((a, b) => new Date(a.submitted_at || 0) - new Date(b.submitted_at || 0))
+    .map(req => ({
+      id: req.id,
+      action: req.action,
+      createdAt: req.submitted_at,
+      targetName: empByUid[req.target_uid]?.name || '',
+      targetEmpId: empByUid[req.target_uid]?.id || '',
+      requestedByName: empByUid[req.requested_by]?.name || '',
+      requestedByEmpId: empByUid[req.requested_by]?.id || ''
+    }));
 
   const managerOptions = emps
     .filter(emp => emp.uid && !isBlockedEmployee(emp))
@@ -4415,7 +4482,7 @@ const statusColor = isBlocked ? 'var(--red)' : 'var(--green)';
     const safeId = escapeHtml(emp.id);
     const safeDesignation = escapeHtml(emp.designation || '');
     const safeEmail = escapeHtml(emp.email || '');
-    const safeManager = emp.reportsToName ? `Reports to ${escapeHtml(emp.reportsToName)}` : '';
+    const safeManager = emp.reportsToUid && empByUid[emp.reportsToUid] ? `Reports to ${escapeHtml(empByUid[emp.reportsToUid].name)}` : '';
     const safeRole = emp.isAdmin ? 'Admin' : 'Employee';
         const uidArg = encodeURIComponent(emp.uid || '');
     const idArg = encodeURIComponent(emp.id || '');
@@ -4503,7 +4570,7 @@ async function approveAccessRequest(requestId) {
 
   const reqDomId = safeDomId(requestId);
   const msg = document.getElementById('ar_msg_' + reqDomId);
-  const request = await fsGet('accessRequests', requestId);
+  const request = await fsGet('access_requests', requestId);
 
   if (!request || String(request.status || 'pending').toLowerCase() !== 'pending') {
     if (msg) msg.innerHTML = '<div style="color:var(--red);font-size:13px;">This request is no longer pending.</div>';
@@ -4515,10 +4582,10 @@ async function approveAccessRequest(requestId) {
   const reportsToUid = document.getElementById('ar_reports_' + reqDomId).value.trim();
   const isAdmin = document.getElementById('ar_admin_' + reqDomId).value === 'true';
   const email = normalizeEmail(request.email);
-  const name = cleanText(request.name || `${request.firstName || ''} ${request.lastName || ''}`.trim(), 120);
+  const name = cleanText(request.name || `${request.first_name || ''} ${request.last_name || ''}`.trim(), 120);
   const designation = cleanText(request.designation, 80);
   const phone = cleanText(request.phone, 40);
-  const joiningDate = String(request.joiningDate || '').trim();
+  const joiningDate = String(request.joining_date || '').trim();
 
   if (!idRaw || !dept) {
     if (msg) msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Employee ID and Department are required before approval.</div>';
@@ -4531,16 +4598,15 @@ async function approveAccessRequest(requestId) {
   }
 
   const empId = 'HX-' + idRaw.padStart(4, '0');
-  const existingId = await fsGet('loginIndex', empId);
-  if (existingId) {
+  const existingEmp = await fsGet('employees', empId, 'emp_id');
+  if (existingEmp) {
     if (msg) msg.innerHTML = '<div style="color:var(--red);font-size:13px;">That Employee ID already exists.</div>';
     return;
   }
 
   let manager = null;
   if (reportsToUid) {
-    const allEmps = await fsGetAll('employees');
-    manager = Object.values(allEmps).find(emp => emp.uid === reportsToUid) || null;
+    manager = (window.__allEmpsCache || []).find(emp => emp.uid === reportsToUid) || null;
 
     if (!manager || isBlockedEmployee(manager)) {
       if (msg) msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Please choose an active manager.</div>';
@@ -4550,89 +4616,23 @@ async function approveAccessRequest(requestId) {
 
   if (msg) msg.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">Approving request and creating account...</div>';
 
-  let appMod = null;
-  let authMod = null;
-  let secondaryApp = null;
-  let secondaryAuth = null;
-
   try {
-    appMod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
-    authMod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
-
-    secondaryApp = appMod.initializeApp(firebaseConfig, 'requestApprover_' + Date.now());
-    secondaryAuth = authMod.getAuth(secondaryApp);
-
-    const tempPassword = Array.from(
-      crypto.getRandomValues(new Uint32Array(4)),
-      n => n.toString(36)
-    ).join('') + 'Aa1!';
-
-    const cred = await authMod.createUserWithEmailAndPassword(secondaryAuth, email, tempPassword);
-
-    const profileSaved = await fsSet('employees', cred.user.uid, {
-      uid: cred.user.uid,
-      id: empId,
-      name,
-      email,
-      phone,
-      designation,
-      department: dept,
-      reportsToUid: manager ? manager.uid : '',
-      reportsToId: manager ? manager.id : '',
-      reportsToName: manager ? manager.name : '',
-      joiningDate,
-      isAdmin,
-      hasEmailAccess: false,
-      hasVoiceAccess: false,
-      accountStatus: 'active',
-isFrozen: false,
-      createdAt: new Date().toISOString(),
-      createdFromRequest: requestId
+    await callEdgeFunction('create-employee', {
+      empId, name, email, phone, designation, department: dept,
+      reportsToUid: manager ? manager.uid : null,
+      joiningDate, isAdmin
     });
 
-    const indexSaved = await fsSet('loginIndex', empId, {
-      email,
-      uid: cred.user.uid
-    });
-
-    if (!profileSaved || !indexSaved) {
-      throw new Error('Firebase rules blocked employee creation. Update Firestore rules and try again.');
-    }
-
-    let setupEmailSent = true;
-    let setupEmailError = '';
-    try {
-      await sendPasswordResetEmail(auth, email);
-    } catch (e) {
-      setupEmailSent = false;
-      setupEmailError = e.message || 'Password setup email failed.';
-    }
-
-    await fsSet('accessRequests', requestId, {
+    await fsUpdate('access_requests', requestId, {
       status: 'approved',
-      reviewedAt: new Date().toISOString(),
-      reviewedBy: currentUser.id,
-      reviewedByName: currentUser.name || currentUser.id,
-      approvedUid: cred.user.uid,
-      approvedEmpId: empId,
-      setupEmailSent,
-      setupEmailError
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: currentUser.id
     });
 
-    if (setupEmailSent) {
-      if (msg) msg.innerHTML = '<div class="alert-success">Approved. Firebase password setup email sent.</div>';
-    } else {
-      if (msg) msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Approved, but setup email failed: ' + escapeHtml(setupEmailError) + '</div>';
-    }
-
+    if (msg) msg.innerHTML = '<div class="alert-success">Approved. A password setup email has been sent.</div>';
     setTimeout(() => renderAdminUsers(), 1500);
   } catch(e) {
     if (msg) msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Error: ' + escapeHtml(e.message || 'Could not approve request.') + '</div>';
-  } finally {
-    try {
-      if (secondaryAuth) await authMod.signOut(secondaryAuth);
-      if (secondaryApp && appMod.deleteApp) await appMod.deleteApp(secondaryApp);
-    } catch(e) {}
   }
 }
 
@@ -4642,7 +4642,7 @@ async function rejectAccessRequest(requestId) {
     return;
   }
 
-  const request = await fsGet('accessRequests', requestId);
+  const request = await fsGet('access_requests', requestId);
   if (!request || String(request.status || 'pending').toLowerCase() !== 'pending') {
     alert('This request is no longer pending.');
     return;
@@ -4651,11 +4651,10 @@ async function rejectAccessRequest(requestId) {
   const applicant = request.name || request.email || 'this applicant';
   if (!confirm(`Reject access request for ${applicant}?`)) return;
 
-  await fsSet('accessRequests', requestId, {
+  await fsUpdate('access_requests', requestId, {
     status: 'rejected',
-    reviewedAt: new Date().toISOString(),
-    reviewedBy: currentUser.id,
-    reviewedByName: currentUser.name || currentUser.id
+    reviewed_at: new Date().toISOString(),
+    reviewed_by: currentUser.id
   });
 
   renderAdminUsers();
@@ -4682,16 +4681,15 @@ const name  = cleanText(document.getElementById('nu_name').value, 120);
   }
 
   const empId = 'HX-' + idRaw.padStart(4, '0');
-  const existingId = await fsGet('loginIndex', empId);
-  if (existingId) {
+  const existingEmp = await fsGet('employees', empId, 'emp_id');
+  if (existingEmp) {
     msg.innerHTML = '<div style="color:var(--red);font-size:13px;">That Employee ID already exists.</div>';
     return;
   }
 
   let manager = null;
   if (reportsToUid) {
-    const allEmps = await fsGetAll('employees');
-    manager = Object.values(allEmps).find(emp => emp.uid === reportsToUid) || null;
+    manager = (window.__allEmpsCache || []).find(emp => emp.uid === reportsToUid) || null;
 
     if (!manager || isBlockedEmployee(manager)) {
       msg.innerHTML = '<div style="color:var(--red);font-size:13px;">Please choose an active manager.</div>';
@@ -4701,51 +4699,12 @@ const name  = cleanText(document.getElementById('nu_name').value, 120);
 
   msg.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">Creating account...</div>';
 
-  let appMod = null;
-  let authMod = null;
-  let secondaryApp = null;
-  let secondaryAuth = null;
-
   try {
-    appMod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
-    authMod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
-
-    secondaryApp = appMod.initializeApp(firebaseConfig, 'userCreator_' + Date.now());
-    secondaryAuth = authMod.getAuth(secondaryApp);
-
-    const tempPassword = Array.from(
-      crypto.getRandomValues(new Uint32Array(4)),
-      n => n.toString(36)
-    ).join('') + 'Aa1!';
-
-    const cred = await authMod.createUserWithEmailAndPassword(secondaryAuth, email, tempPassword);
-
-    await fsSet('employees', cred.user.uid, {
-      uid: cred.user.uid,
-      id: empId,
-      name,
-      email,
-      designation: desig,
-      department: dept,
-      reportsToUid: manager ? manager.uid : '',
-      reportsToId: manager ? manager.id : '',
-      reportsToName: manager ? manager.name : '',
-      joiningDate: join,
-      isAdmin,
-      hasEmailAccess: false,
-      hasVoiceAccess: false,
-accountStatus: 'active',
-isFrozen: false,
-createdAt: new Date().toISOString()
-
+    await callEdgeFunction('create-employee', {
+      empId, name, email, designation: desig, department: dept,
+      reportsToUid: manager ? manager.uid : null,
+      joiningDate: join, isAdmin
     });
-
-    await fsSet('loginIndex', empId, {
-      email,
-      uid: cred.user.uid
-    });
-
-    await sendPasswordResetEmail(auth, email);
 
     msg.innerHTML = '<div class="alert-success">Employee added. Password setup email sent.</div>';
     ['nu_name','nu_id','nu_email','nu_designation','nu_department','nu_join'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
@@ -4759,11 +4718,6 @@ createdAt: new Date().toISOString()
     box.style.cssText = 'color:var(--red);font-size:13px;';
     box.textContent = 'Error: ' + (e.message || 'Could not add employee.');
     msg.appendChild(box);
-  } finally {
-    try {
-      if (secondaryAuth) await authMod.signOut(secondaryAuth);
-      if (secondaryApp && appMod.deleteApp) await appMod.deleteApp(secondaryApp);
-    } catch(e) {}
   }
 }
 
@@ -4783,42 +4737,32 @@ async function toggleEmployeeFreeze(uid, empId, freeze) {
 
   if (!confirm(`Are you sure you want to ${action} ${empId}?`)) return;
 
-  await fsSet('employees', uid, {
-    isFrozen: freeze,
-    accountStatus: freeze ? 'frozen' : 'active',
-    statusUpdatedAt: new Date().toISOString(),
-    statusUpdatedBy: currentUser.id,
-statusUpdatedByName: currentUser.name || currentUser.id
-
-  });
+  await fsUpdate('employees', uid, {
+    is_frozen: freeze,
+    account_status: freeze ? 'frozen' : 'active',
+    status_updated_at: new Date().toISOString(),
+    status_updated_by: currentUser.id,
+    status_updated_by_name: currentUser.name || currentUser.id
+  }, 'uid');
 
   if (freeze) {
     const outTs = new Date().toISOString();
 
-    await fsSet('clockState', empId, {
-      clockedIn: false,
-      timestamp: null,
-      empId
-    });
+    await fsUpsert('clock_state', { emp_uid: uid, clocked_in: false, since: null }, 'emp_uid');
 
     try {
-      const { db, collection, getDocs, query, where } = window.__fb;
-      const openSessions = await getDocs(
-        query(collection(db, 'attendance/' + empId + '/sessions'), where('clockOut', '==', null))
-      );
-
-      openSessions.forEach(async d => {
-        const session = d.data();
-        const inTs = session.clockIn || outTs;
+      const openSessions = await fsGetAll('attendance_sessions', { emp_uid: uid, clock_out: null });
+      for (const session of openSessions) {
+        const inTs = session.clock_in || outTs;
         const duration = Math.max(0, Math.round((new Date(outTs) - new Date(inTs)) / 60000));
 
-        await fsSet('attendance/' + empId + '/sessions', d.id, {
-          clockOut: outTs,
-          duration,
-          autoOut: true,
-          closedByFreeze: true
+        await fsUpdate('attendance_sessions', session.id, {
+          clock_out: outTs,
+          duration_minutes: duration,
+          auto_out: true,
+          closed_by_freeze: true
         });
-      });
+      }
     } catch(e) {}
   }
 
@@ -4844,19 +4788,19 @@ async function toggleAdminRole(uid, empId, makeAdmin) {
 
   if (isSuper) {
     if (!confirm(`${makeAdmin ? 'Grant admin rights to' : 'Remove admin rights from'} ${empId}?`)) return;
-    await fsSet('employees', uid, { isAdmin: makeAdmin });
+    await fsUpdate('employees', uid, { is_admin: makeAdmin }, 'uid');
     renderAdminUsers();
     return;
   }
 
-  const access = await fsGet('toolAccess', currentUser.id) || {};
-  if (access.accessManager !== true) {
+  const access = await fsGet('tool_access', currentUser.uid, 'emp_uid') || {};
+  if (access.access_manager !== true) {
     alert('You do not have permission to request admin role changes.');
     return;
   }
 
-  const allEmps = await fsGetAll('employees');
-  const emp = Object.values(allEmps).find(e => e.uid === uid || e.id === empId) || null;
+  const allEmps = (await fsGetAll('employees')).map(normalizeEmployee);
+  const emp = allEmps.find(e => e.uid === uid || e.id === empId) || null;
 
   if (!emp) {
     alert('Employee not found.');
@@ -4867,23 +4811,15 @@ async function toggleAdminRole(uid, empId, makeAdmin) {
 
   if (!confirm(`Send request to HX-0001 to ${makeAdmin ? 'make' : 'remove'} ${empId} as admin?`)) return;
 
-  const requestId = 'ADMIN_ROLE_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-
-  const saved = await fsSet('adminRoleRequests', requestId, {
-    id: requestId,
-    targetUid: uid,
-    targetEmpId: empId,
-    targetName: emp.name || empId,
+  const saved = await fsInsert('admin_role_requests', {
+    target_uid: uid,
     action,
     status: 'pending',
-    requestedByUid: currentUser.uid,
-    requestedByEmpId: currentUser.id,
-    requestedByName: currentUser.name || currentUser.id,
-    createdAt: new Date().toISOString()
+    requested_by: currentUser.uid
   });
 
   if (!saved) {
-    alert('Request could not be submitted. Firebase blocked it.');
+    alert('Request could not be submitted. Supabase blocked it.');
     return;
   }
 
@@ -4897,7 +4833,7 @@ async function reviewAdminRoleRequest(requestId, decision) {
     return;
   }
 
-  const req = await fsGet('adminRoleRequests', requestId);
+  const req = await fsGet('admin_role_requests', requestId);
   if (!req || req.status !== 'pending') {
     alert('This request is no longer pending.');
     renderAdminUsers();
@@ -4908,15 +4844,13 @@ async function reviewAdminRoleRequest(requestId, decision) {
 
   if (decision === 'approved') {
     const makeAdmin = req.action === 'make_admin';
-    await fsSet('employees', req.targetUid, { isAdmin: makeAdmin });
+    await fsUpdate('employees', req.target_uid, { is_admin: makeAdmin }, 'uid');
   }
 
-  await fsSet('adminRoleRequests', requestId, {
+  await fsUpdate('admin_role_requests', requestId, {
     status: decision,
-    reviewedByUid: currentUser.uid,
-    reviewedByEmpId: currentUser.id,
-    reviewedByName: currentUser.name || currentUser.id,
-    reviewedAt: new Date().toISOString()
+    reviewed_by: currentUser.id,
+    reviewed_at: new Date().toISOString()
   });
 
   renderAdminUsers();
@@ -4936,42 +4870,33 @@ async function removeUser(uid, name, empId) {
   
   if (!confirm(`Mark ${name} (${empId}) as left/resigned? Their portal access will be blocked, but their employee record and history will stay saved.`)) return;
 
-  await fsSet('employees', uid, {
-    isFrozen: true,
-    accountStatus: 'left',
-    leftAt: new Date().toISOString(),
-    leftMarkedBy: currentUser.id,
-leftMarkedByName: currentUser.name || currentUser.id
+  await fsUpdate('employees', uid, {
+    is_frozen: true,
+    account_status: 'left',
+    left_at: new Date().toISOString(),
+    left_marked_by: currentUser.id,
+left_marked_by_name: currentUser.name || currentUser.id
 
-  });
+  }, 'uid');
 
-    if (empId) {
+    if (uid) {
     const outTs = new Date().toISOString();
 
-    await fsSet('clockState', empId, {
-      clockedIn: false,
-      timestamp: null,
-      empId
-    });
+    await fsUpsert('clock_state', { emp_uid: uid, clocked_in: false, since: null }, 'emp_uid');
 
     try {
-      const { db, collection, getDocs, query, where } = window.__fb;
-      const openSessions = await getDocs(
-        query(collection(db, 'attendance/' + empId + '/sessions'), where('clockOut', '==', null))
-      );
-
-      openSessions.forEach(async d => {
-        const session = d.data();
-        const inTs = session.clockIn || outTs;
+      const openSessions = await fsGetAll('attendance_sessions', { emp_uid: uid, clock_out: null });
+      for (const session of openSessions) {
+        const inTs = session.clock_in || outTs;
         const duration = Math.max(0, Math.round((new Date(outTs) - new Date(inTs)) / 60000));
 
-        await fsSet('attendance/' + empId + '/sessions', d.id, {
-          clockOut: outTs,
-          duration,
-          autoOut: true,
-          closedByLeftStatus: true
+        await fsUpdate('attendance_sessions', session.id, {
+          clock_out: outTs,
+          duration_minutes: duration,
+          auto_out: true,
+          closed_by_left_status: true
         });
-      });
+      }
     } catch(e) {}
   }
 
@@ -4987,18 +4912,21 @@ async function renderAdminLiveStatus() {
   const el = document.getElementById('adminLiveContent');
   if (!el) return;
 
-  const allEmps = await fsGetAll('employees');
-  const allClock = await fsGetAll('clockState');
+  const allEmps = (await fsGetAll('employees')).map(normalizeEmployee);
+  const clockRows = await fsGetAll('clock_state');
+  const clockByUid = {};
+  clockRows.forEach(c => { clockByUid[c.emp_uid] = c; });
   const now = Date.now();
 
-  const emps = Object.values(allEmps).sort((a,b) => a.id.localeCompare(b.id));
+  const emps = allEmps.sort((a,b) => a.id.localeCompare(b.id));
 
   let rows = '';
   emps.forEach(emp => {
     const safeName = escapeHtml(emp.name);
     const safeId = escapeHtml(emp.id);
     const safeDesignation = escapeHtml(emp.designation || '');
-    const state = allClock[emp.id] || load('clockState_' + emp.id, null);
+    const dbState = clockByUid[emp.uid];
+    const state = dbState ? { clockedIn: dbState.clocked_in, timestamp: dbState.since } : load('clockState_' + emp.id, null);
     const isIn = state && state.clockedIn;
     const clockTs = isIn && state.timestamp ? new Date(state.timestamp) : null;
 
@@ -5079,8 +5007,8 @@ async function renderAdminAccess() {
   if (!currentUser || currentUser.isAdmin !== true) return;
 
   const isSuper = currentUser.id === 'HX-0001';
-  const myAccess = isSuper ? { accessManager: true } : await fsGet('toolAccess', currentUser.id) || {};
-  const canManageAccess = isSuper || myAccess.accessManager === true;
+  const myAccess = isSuper ? { accessManager: true } : await fsGet('tool_access', currentUser.uid, 'emp_uid') || {};
+  const canManageAccess = isSuper || myAccess.access_manager === true;
 
   if (!canManageAccess) {
     el.innerHTML = `
@@ -5094,8 +5022,12 @@ async function renderAdminAccess() {
 
   el.innerHTML = '<div class="card-box"><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center;">Loading access settings...</div></div>';
 
-  const allEmps = await fsGetAll('employees');
-  const allAccess = await fsGetAll('toolAccess');
+  const allEmps = (await fsGetAll('employees')).map(normalizeEmployee);
+  const accessRows = await fsGetAll('tool_access');
+  const uidToEmpId = {};
+  allEmps.forEach(e => { uidToEmpId[e.uid] = e.id; });
+  const allAccess = {};
+  accessRows.forEach(a => { const empId = uidToEmpId[a.emp_uid]; if (empId) allAccess[empId] = a; });
 
   let html = '<div class="card-box">';
   html += '<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;">Tool Access Control</div>';
@@ -5112,18 +5044,18 @@ async function renderAdminAccess() {
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:0 0 10px;text-align:center;">Access Manager</div>
   </div>`;
 
-  const emps = Object.values(allEmps).sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
+  const emps = allEmps.sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
 
   emps.forEach(emp => {
     const locked = emp.id === 'HX-0001';
     const access = allAccess[emp.id] || {};
 
-    const hasEmail = access.emailAccess !== undefined ? access.emailAccess : emp.hasEmailAccess;
-    const hasVoice = access.voiceAccess !== undefined ? access.voiceAccess : emp.hasVoiceAccess;
-    const hasTime = access.timeToolAccess !== undefined ? access.timeToolAccess : true;
-    const hasCampaign = access.campaignAccess !== undefined ? access.campaignAccess : (emp.isAdmin ? true : false);
-    const hasProfile = locked ? true : access.profileAccess === true;
-    const hasAccessManager = locked ? true : access.accessManager === true;
+    const hasEmail = access.email_access !== undefined ? access.email_access : emp.hasEmailAccess;
+    const hasVoice = access.voice_access !== undefined ? access.voice_access : emp.hasVoiceAccess;
+    const hasTime = access.time_access !== undefined ? access.time_access : true;
+    const hasCampaign = access.campaign_access !== undefined ? access.campaign_access : (emp.isAdmin ? true : false);
+    const hasProfile = locked ? true : access.profile_access === true;
+    const hasAccessManager = locked ? true : access.access_manager === true;
 
     const safeName = escapeHtml(emp.name || '');
     const safeId = escapeHtml(emp.id || '');
@@ -5167,8 +5099,8 @@ async function toggleToolAccess(empId, type, granted) {
   const isSuper = currentUser.id === 'HX-0001';
   const isSensitivePermission = type === 'profile' || type === 'accessManager';
 
-  const myAccess = isSuper ? { accessManager: true } : await fsGet('toolAccess', currentUser.id) || {};
-  const canManageAccess = isSuper || myAccess.accessManager === true;
+  const myAccess = isSuper ? { accessManager: true } : await fsGet('tool_access', currentUser.uid, 'emp_uid') || {};
+  const canManageAccess = isSuper || myAccess.access_manager === true;
 
   if (!canManageAccess) {
     alert('You do not have permission to manage tool access.');
@@ -5182,42 +5114,46 @@ async function toggleToolAccess(empId, type, granted) {
     return;
   }
 
-  const currentDoc = await fsGet('toolAccess', empId);
+  const targetEmp = normalizeEmployee(await fsGet('employees', empId, 'emp_id'));
+  if (!targetEmp) { alert('Employee not found.'); return; }
+  const targetUid = targetEmp.uid;
+
+  const currentDoc = await fsGet('tool_access', targetUid, 'emp_uid');
   const current = currentDoc || {};
 
   const emailVal = type === 'email'
     ? granted
-    : (current.emailAccess !== undefined ? current.emailAccess : false);
+    : (current.email_access !== undefined ? current.email_access : false);
 
   const voiceVal = type === 'voice'
     ? granted
-    : (current.voiceAccess !== undefined ? current.voiceAccess : false);
+    : (current.voice_access !== undefined ? current.voice_access : false);
 
   const timeVal = type === 'time'
     ? granted
-    : (current.timeToolAccess !== undefined ? current.timeToolAccess : true);
+    : (current.time_access !== undefined ? current.time_access : true);
 
   const campaignVal = type === 'campaign'
     ? granted
-    : (current.campaignAccess !== undefined ? current.campaignAccess : false);
+    : (current.campaign_access !== undefined ? current.campaign_access : false);
 
   const payload = {
-    empId,
-    emailAccess: emailVal,
-    voiceAccess: voiceVal,
-    timeToolAccess: timeVal,
-    campaignAccess: campaignVal
+    emp_uid: targetUid,
+    email_access: emailVal,
+    voice_access: voiceVal,
+    time_access: timeVal,
+    campaign_access: campaignVal
   };
 
   if (isSuper) {
-    payload.profileAccess = type === 'profile' ? granted : current.profileAccess === true;
-    payload.accessManager = type === 'accessManager' ? granted : current.accessManager === true;
+    payload.profile_access = type === 'profile' ? granted : current.profile_access === true;
+    payload.access_manager = type === 'accessManager' ? granted : current.access_manager === true;
   }
 
-  const saved = await fsSet('toolAccess', empId, payload);
+  const saved = await fsUpsert('tool_access', payload, 'emp_uid');
 
   if (!saved) {
-    alert('Firebase blocked this permission change. Please check rules or your access.');
+    alert('Supabase blocked this permission change. Please check rules or your access.');
     renderAdminAccess();
     return;
   }
@@ -5241,8 +5177,8 @@ async function toggleToolAccess(empId, type, granted) {
     store('campaignAccess_' + empId, campaignVal);
 
     if (isSuper) {
-      store('profileAccess_' + empId, payload.profileAccess);
-      store('accessManager_' + empId, payload.accessManager);
+      store('profileAccess_' + empId, payload.profile_access);
+      store('accessManager_' + empId, payload.access_manager);
     }
   }
 }
@@ -5253,18 +5189,17 @@ async function renderAdminAttendance() {
   if (!el) return;
   el.innerHTML = '<div class="card-box"><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center;">Loading attendance data...</div></div>';
 
-  // Fetch all employees from Firestore
-  const allEmps = await fsGetAll('employees');
+  // Fetch all employees
+  const allEmps = (await fsGetAll('employees')).map(normalizeEmployee);
   let html = '';
 
-  for (const uid of Object.keys(allEmps)) {
-    const emp = allEmps[uid];
+  for (const emp of allEmps) {
     const safeName = escapeHtml(emp.name);
     const safeId = escapeHtml(emp.id);
-    const sessions = await fsGetSubcollection('attendance/' + emp.id + '/sessions');
+    const sessions = await fsGetAll('attendance_sessions', { emp_uid: emp.uid });
     const log = sessions.map(s => ({
-      ts: s.clockIn, outTs: s.clockOut,
-      duration: s.duration, autoOut: s.autoOut, date: s.date
+      ts: s.clock_in, outTs: s.clock_out,
+      duration: s.duration_minutes, autoOut: s.auto_out, date: s.session_date
     })).sort((a, b) => new Date(b.ts) - new Date(a.ts));
 
     if (!log.length) {
@@ -5317,8 +5252,24 @@ async function renderAdminLeaves() {
   if (!el) return;
   el.innerHTML = '<div class="card-box"><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center;">Loading...</div></div>';
 
-  const all = await fsGetAll('leaveRequests');
-  const requests = Object.values(all).sort((a,b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+  const allEmps = (await fsGetAll('employees')).map(normalizeEmployee);
+  const empByUid = {};
+  allEmps.forEach(e => { empByUid[e.uid] = e; });
+
+  const all = await fsGetAll('leave_requests');
+  const requests = all
+    .map(r => ({
+      id: r.id,
+      empName: empByUid[r.emp_uid]?.name || 'Unknown',
+      empId: empByUid[r.emp_uid]?.id || '—',
+      type: r.leave_type,
+      from: r.from_date,
+      to: r.to_date,
+      reason: r.reason,
+      status: r.status,
+      submittedAt: r.submitted_at
+    }))
+    .sort((a,b) => new Date(b.submittedAt) - new Date(a.submittedAt));
 
   if (!requests.length) {
     el.innerHTML = '<div class="card-box"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No leave requests.</div></div></div>'; return;
@@ -5369,10 +5320,10 @@ ${safeReason ? '<div class="leave-card-reason">'+safeReason+'</div>' : ''}
 }
 
 async function adminLeaveAction(id, status) {
-  await fsSet('leaveRequests', id, {
+  await fsUpdate('leave_requests', id, {
     status,
-    resolvedAt: new Date().toISOString(),
-    resolvedBy: currentUser.id
+    resolved_at: new Date().toISOString(),
+    resolved_by: currentUser.uid
   });
   renderAdminLeaves();
   refreshLeaveHistory();
@@ -5536,21 +5487,21 @@ async function portalLoadCsv() {
   showPortalMsg('Uploading ' + rows.length + ' records...', true);
 
   try {
-    const res = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({
-        action: 'saveBDOData',
-        empId: empId,
-        leads: rows
-      })
-    });
-    const result = await res.json();
-    if (result.success) {
-      showPortalMsg('✅ Loaded ' + result.count + ' records for ' + (BDO_NAMES[empId]||empId) + ' into Google Sheets.', true);
-    } else {
-      showPortalMsg('❌ Error: ' + (result.error || 'Unknown error'), false);
+    // find the Supabase uid behind the chosen HX-#### id, if one was picked,
+    // so these leads can be assigned to that person
+    let assignedUid = null;
+    if (empId) {
+      const emp = await fsGet('employees', empId, 'emp_id');
+      assignedUid = emp ? emp.uid : null;
     }
+    const payload = rows.map(r => ({
+      mc: r.mc, entity: r.entity, entity_status: r.entityStatus, power: r.power,
+      company: r.company, address: r.address, phone: r.phone, email: r.email,
+      assigned_to: assignedUid
+    }));
+    const { data, error } = await supabase.from('bdo_leads').insert(payload).select();
+    if (error) throw error;
+    showPortalMsg('✅ Loaded ' + data.length + ' records for ' + (BDO_NAMES[empId]||empId) + '.', true);
   } catch(e) {
     showPortalMsg('❌ Failed to reach server: ' + e.message, false);
   }
@@ -5587,8 +5538,8 @@ window.addEventListener('popstate', function(e) {
     return;
   }
 
-  const access = await fsGet('toolAccess', currentUser.id) || {};
-  const hasCampaign = access.campaignAccess !== undefined ? access.campaignAccess : currentUser.isAdmin === true;
+  const access = await fsGet('tool_access', currentUser.uid, 'emp_uid') || {};
+  const hasCampaign = access.campaign_access !== undefined ? access.campaign_access : currentUser.isAdmin === true;
 
   if (!hasCampaign) {
     alert('You do not have access to campaign leads.');
@@ -5601,9 +5552,14 @@ window.addEventListener('popstate', function(e) {
   }
   
   try {
-    const res = await campaignFetch('/leads');
-    
-    const data = await res.json();
+    const settings = await fsGet('campaign_settings', 1);
+    const limit = settings ? settings.daily_limit_per_account : 50;
+    const { data, error } = await supabase.from('campaign_leads')
+      .select('*')
+      .eq('status', 'matured')
+      .order('created_at', { ascending: true })
+      .limit(limit);
+    if (error) throw error;
     
     if (!data.length) {
       alert('No matured leads available for download today.');
@@ -5636,8 +5592,9 @@ const csv = [headers, ...rows].map(r => r.map(f => `"${csvCell(f)}"`).join(','))
     a.download = `matured_leads_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    // Mark downloaded leads as called_pending
-await campaignFetch('/leads/mark-called', { method: 'PATCH' });
+    // Mark downloaded leads as called_pending, assigned to whoever downloaded them
+    const ids = data.map(r => r.id);
+    await supabase.from('campaign_leads').update({ status: 'called_pending', assigned_to: currentUser.uid }).in('id', ids);
     alert(`Downloaded ${data.length} matured leads successfully.`);
     
   } catch(e) {
@@ -5655,11 +5612,7 @@ await campaignFetch('/leads/mark-called', { method: 'PATCH' });
     return;
   }
   try {
-    await campaignFetch('/settings/limit', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ daily_limit_per_account: limit })
-    });
+    await fsUpdate('campaign_settings', 1, { daily_limit_per_account: limit });
     const msg = document.getElementById('campaignSettingsMsg');
     msg.innerHTML = '<div class="alert-success">✅ Daily limit updated to ' + limit + ' emails per account.</div>';
     setTimeout(() => msg.innerHTML = '', 4000);
@@ -5674,11 +5627,7 @@ async function setCampaignStatus(active) {
     return;
   }
   try {
-    await campaignFetch('/settings/status', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ campaign_active: active })
-    });
+    await fsUpdate('campaign_settings', 1, { campaign_active: active });
     const msg = document.getElementById('campaignSettingsMsg');
     if (msg) {
       msg.innerHTML = '<div class="alert-success">✅ Campaign ' + (active ? 'started' : 'paused') + ' successfully.</div>';
@@ -5701,8 +5650,7 @@ async function renderCampaignStats() {
   el.innerHTML = '<div class="card-box"><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center;">Loading campaign stats...</div></div>';
 
   try {
-    const res = await campaignFetch('/stats');
-    const data = await res.json();
+    const data = await fsGetAll('campaign_leads');
 
     const total        = data.length;
     const pending      = data.filter(r => r.status === 'pending_seq1').length;
@@ -5778,18 +5726,13 @@ async function renderCampaignStats() {
   showCampaignMsg('Uploading ' + leads.length + ' leads...', true);
 
   try {
-    const res = await campaignFetch('/leads', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(leads)
-    });
-    if (res.ok) {
+    const { error } = await supabase.from('campaign_leads').insert(leads);
+    if (!error) {
       showCampaignMsg('✅ Successfully uploaded ' + leads.length + ' leads.', true);
       document.getElementById('campaignCsvPaste').value = '';
       document.getElementById('campaignCsvFile').value = '';
     } else {
-      const err = await res.json();
-      showCampaignMsg('❌ Error: ' + (err.message || 'Upload failed'), false);
+      showCampaignMsg('❌ Error: ' + (error.message || 'Upload failed'), false);
     }
   } catch(e) {
     showCampaignMsg('❌ Connection error. Try again.', false);
@@ -5801,31 +5744,19 @@ async function renderCampaignStats() {
 // ══════════════════════════════════════════════════════════════
 async function writeNotification(empUid, title, body, type = 'profile_update') {
   try {
-    const notifId = Date.now().toString() + Math.random().toString(36).slice(2, 6);
-    await fsSet('notifications/' + empUid + '/items', notifId, {
-      id: notifId,
+    await fsInsert('notifications', {
+      emp_uid: empUid,
       type,
       title,
       body,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-      createdByName: currentUser?.name || 'Admin',
+      is_read: false,
+      created_by_name: currentUser?.name || 'Admin',
     });
   } catch(e) {}
 }
 
 async function loadNotificationBadge() {
-  if (!currentUser) return;
-  const items = await fsGetSubcollection('notifications/' + currentUser.uid + '/items');
-  const unreadCount = items.filter(n => !n.isRead).length;
-  const badge = document.getElementById('notifBadge');
-  if (!badge) return;
-  if (unreadCount > 0) {
-    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-    badge.style.display = '';
-  } else {
-    badge.style.display = 'none';
-  }
+  return refreshNotifBadge();
 }
 
 async function loadNotifications() {
@@ -5833,7 +5764,10 @@ async function loadNotifications() {
   if (!el || !currentUser) return;
   el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;">Loading...</div>';
 
-  const items = await fsGetSubcollection('notifications/' + currentUser.uid + '/items');
+  const items = (await fsGetAll('notifications', { emp_uid: currentUser.uid })).map(n => ({
+    id: n.id, type: n.type, title: n.title, body: n.body,
+    isRead: n.is_read, createdAt: n.created_at
+  }));
   items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   if (!items.length) {
@@ -5869,7 +5803,7 @@ const typeIcon = { profile_update: '👤', notice_board: '📌', company_assign:
   // Mark all unread as read
   const unread = items.filter(n => !n.isRead);
   for (const n of unread) {
-    await fsSet('notifications/' + currentUser.uid + '/items', n.id, { isRead: true });
+    await fsUpdate('notifications', n.id, { is_read: true });
   }
   if (unread.length) {
     const badge = document.getElementById('notifBadge');
@@ -5886,8 +5820,8 @@ async function markAllNotifsRead() {
 // ══════════════════════════════════════════════════════════════
 async function checkTeamCard() {
   if (!currentUser) return;
-  const allEmps = await fsGetAll('employees');
-  const hasTeam = Object.values(allEmps).some(e => e.reportsToUid === currentUser.uid && !isBlockedEmployee(e));
+  const allEmps = (await fsGetAll('employees')).map(normalizeEmployee);
+  const hasTeam = allEmps.some(e => e.reportsToUid === currentUser.uid && !isBlockedEmployee(e));
   const card = document.getElementById('teamCard');
   if (card) card.style.display = hasTeam ? '' : 'none';
 }
@@ -5897,10 +5831,8 @@ async function loadTeamView() {
   if (!el || !currentUser) return;
   el.innerHTML = '<div class="empty-state"><div class="empty-text">Loading...</div></div>';
 
-  const { db, collection, query, where, getDocs } = window.__fb;
-  const _tq = query(collection(db, 'employees'), where('reportsToUid', '==', currentUser.uid));
-  const _tsnap = await getDocs(_tq);
-  const team = _tsnap.docs.map(d => ({ uid: d.id, ...d.data() }))
+  const team = (await fsGetAll('employees', { reports_to_uid: currentUser.uid }))
+    .map(normalizeEmployee)
     .filter(e => !isBlockedEmployee(e))
     .sort((a, b) => String(a.id).localeCompare(String(b.id)));
 
@@ -5911,7 +5843,7 @@ async function loadTeamView() {
 
   let html = '';
   for (const emp of team) {
-    const ob = await fsGet('employeeOnboarding', emp.uid);
+    const ob = normalizeOnboarding(await fsGet('employee_onboarding', emp.uid, 'uid'));
     const initial = escapeHtml(String(emp.name || '?').charAt(0).toUpperCase());
     const rows = [
       ['Email',             emp.email              || '—'],
@@ -5952,7 +5884,7 @@ async function loadTeamView() {
 // ══════════════════════════════════════════════════════════════
 async function openEmpEditModal(uid) {
   if (!currentUser || !currentUser.isAdmin) return;
-  const emp = (window.__allEmpsCache || {})[uid] || await fsGet('employees', uid);
+  const emp = (window.__allEmpsCache || []).find(e => e.uid === uid) || normalizeEmployee(await fsGet('employees', uid, 'uid'));
   if (!emp) return;
 
   document.getElementById('editEmpUid').value = uid;
@@ -5962,10 +5894,10 @@ async function openEmpEditModal(uid) {
   document.getElementById('editEmpCompany').value = emp.assignedCompany || '';
   document.getElementById('editEmpMsg').innerHTML = '';
 
-  const allEmps = window.__allEmpsCache || await fsGetAll('employees');
+  const allEmps = window.__allEmpsCache || (await fsGetAll('employees')).map(normalizeEmployee);
   const select = document.getElementById('editEmpReports');
   select.innerHTML = '<option value="">No manager / top level</option>';
-  Object.values(allEmps)
+  allEmps
     .filter(e => e.uid && !isBlockedEmployee(e) && e.uid !== uid)
     .sort((a, b) => String(a.id).localeCompare(String(b.id)))
     .forEach(e => {
@@ -5994,18 +5926,16 @@ async function saveEmpDetails() {
   }
   msg.innerHTML = '<div style="color:var(--text-muted);">Saving...</div>';
 
-  const allEmps = window.__allEmpsCache || await fsGetAll('employees');
-  const manager = reportsToUid ? (Object.values(allEmps).find(e => e.uid === reportsToUid) || null) : null;
-  const prev    = await fsGet('employees', uid);
+  const allEmps = window.__allEmpsCache || (await fsGetAll('employees')).map(normalizeEmployee);
+  const manager = reportsToUid ? (allEmps.find(e => e.uid === reportsToUid) || null) : null;
+  const prev    = normalizeEmployee(await fsGet('employees', uid, 'uid'));
 
-const ok = await fsSet('employees', uid, {
+const ok = await fsUpdate('employees', uid, {
     designation:  desig,
     department:   dept,
-    reportsToUid:  manager ? manager.uid  : '',
-    reportsToId:   manager ? manager.id   : '',
-    reportsToName: manager ? manager.name : '',
-    assignedCompany: company,
-  });
+    reports_to_uid:  manager ? manager.uid  : null,
+    assigned_company: company,
+  }, 'uid');
 
   if (!ok) {
     msg.innerHTML = '<div style="color:var(--red);">Save failed. Try again.</div>';
@@ -6016,9 +5946,11 @@ const ok = await fsSet('employees', uid, {
 const changes = [];
   if (prev?.designation !== desig) changes.push(`Designation → ${desig}`);
   if (prev?.department  !== dept)  changes.push(`Department → ${dept}`);
-  const prevMgr = prev?.reportsToName || 'None';
+  const prevManagerUid = prev?.reportsToUid || '';
+  const newManagerUid  = manager ? manager.uid : '';
+  const prevMgrName = prevManagerUid ? (allEmps.find(e => e.uid === prevManagerUid)?.name || 'Unknown') : 'None';
   const newMgr  = manager ? manager.name : 'None';
-  if (prevMgr !== newMgr) changes.push(`Reports To → ${newMgr}`);
+  if (prevManagerUid !== newManagerUid) changes.push(`Reports To → ${newMgr}`);
   const prevCompany = prev?.assignedCompany || '';
   if (prevCompany !== company && company) changes.push(`Assigned Company → ${company}`);
 
@@ -6032,7 +5964,7 @@ if (changes.length > 0) {
   }
 
   // Notify new supervisor that someone now reports to them
-  if (prevMgr !== newMgr && manager && manager.uid) {
+  if (prevManagerUid !== newManagerUid && manager && manager.uid) {
     const empBeingAssigned = prev?.name || uid;
     await writeNotification(manager.uid,
       '👥 New team member assigned',
@@ -6042,9 +5974,9 @@ if (changes.length > 0) {
   }
 
   // Notify old supervisor that someone was removed from their team
-  if (prevMgr !== newMgr && prev?.reportsToUid && prev.reportsToUid !== (manager?.uid || '')) {
+  if (prevManagerUid !== newManagerUid && prevManagerUid && prevManagerUid !== newManagerUid) {
     const empBeingAssigned = prev?.name || uid;
-    await writeNotification(prev.reportsToUid,
+    await writeNotification(prevManagerUid,
       '👥 Team member reassigned',
       `${empBeingAssigned} (${prev?.id || ''}) no longer reports to you. Reassigned by ${currentUser.name}.`,
       'profile_update'
@@ -6089,29 +6021,20 @@ async function checkRelativesRealTime() {
 
   const detected = []; // { empId, empName, designation, type }
 
-  // Check 1: Is anyone in the firm my sibling? (they share my father's CNIC)
-  if (fatherCnic.length === 13) {
-    const idx = await fsGet('relativeIndex', fatherCnic);
-    if (idx?.entries?.length) {
-      idx.entries.forEach(e => {
-        // Exclude self (in case they're re-submitting)
-        if (e.uid !== currentUser?.uid) {
-          detected.push({ ...e, type: 'sibling', label: `${e.empName || e.empId} (same father — likely sibling)` });
-        }
+  if (fatherCnic.length === 13 || ownCnic.length === 13) {
+    const { data: matches } = await supabase.rpc('find_relatives', {
+      p_father_cnic: fatherCnic.length === 13 ? fatherCnic : '',
+      p_own_cnic: ownCnic.length === 13 ? ownCnic : ''
+    });
+    (matches || []).forEach(m => {
+      detected.push({
+        uid: m.uid, empId: m.emp_id, empName: m.name, designation: m.designation,
+        type: m.relation,
+        label: m.relation === 'sibling'
+          ? `${m.name || m.emp_id} (same father — likely sibling)`
+          : `${m.name || m.emp_id} (you are their parent)`
       });
-    }
-  }
-
-  // Check 2: Is anyone in the firm my child? (their father's CNIC is my own CNIC)
-  if (ownCnic.length === 13) {
-    const idx = await fsGet('relativeIndex', ownCnic);
-    if (idx?.entries?.length) {
-      idx.entries.forEach(e => {
-        if (e.uid !== currentUser?.uid) {
-          detected.push({ ...e, type: 'parent-child', label: `${e.empName || e.empId} (you are their parent)` });
-        }
-      });
-    }
+    });
   }
 
   if (detected.length) {
@@ -6278,34 +6201,34 @@ async function openViewAsEmployee(uid) {
   sub.textContent = 'Read-only super admin view';
   body.innerHTML = '<div class="empty-state"><div class="empty-text">Loading...</div></div>';
 
-  const { db, collection, query, where, getDocs } = window.__fb;
-  const [emp, ob, _tasksTo, _tasksBy, _appsFrom, _appsTo, _noticesSnap] = await Promise.all([
-    fsGet('employees', uid),
-    fsGet('employeeOnboarding', uid),
-    getDocs(query(collection(db, 'tasks'),        where('assignedToUid', '==', uid))),
-    getDocs(query(collection(db, 'tasks'),        where('assignedByUid', '==', uid))),
-    getDocs(query(collection(db, 'applications'), where('fromUid', '==', uid))),
-    getDocs(query(collection(db, 'applications'), where('toUid',   '==', uid))),
-    getDocs(collection(db, 'notices'))
+  const [empRow, obRow, tasksTo, tasksBy, appsFrom, appsTo, noticesRaw] = await Promise.all([
+    fsGet('employees', uid, 'uid'),
+    fsGet('employee_onboarding', uid, 'uid'),
+    fsGetAll('tasks', { assigned_to_uid: uid }),
+    fsGetAll('tasks', { assigned_by_uid: uid }),
+    fsGetAll('applications', { from_uid: uid }),
+    fsGetAll('applications', { to_uid: uid }),
+    fsGetAll('notices')
   ]);
-  const tasks        = [..._tasksTo.docs.map(d=>({id:d.id,...d.data()})), ..._tasksBy.docs.map(d=>({id:d.id,...d.data()}))];
-  const applications = [..._appsFrom.docs.map(d=>({id:d.id,...d.data()})), ..._appsTo.docs.map(d=>({id:d.id,...d.data()}))];
-  const notices      = Object.fromEntries(_noticesSnap.docs.map(d=>[d.id, {id:d.id,...d.data()}]));
+
+  const emp = normalizeEmployee(empRow);
+  const ob  = normalizeOnboarding(obRow);
+  const mapTask = t => ({ id: t.id, title: t.title, description: t.description, status: t.status, dueDate: t.due_date, createdAt: t.created_at, assignedToUid: t.assigned_to_uid, assignedByUid: t.assigned_by_uid });
+  const mapApp  = a => ({ id: a.id, subject: a.subject, body: a.body, status: a.status, createdAt: a.created_at, fromUid: a.from_uid, toUid: a.to_uid });
+  const mapNotice = n => ({ id: n.id, title: n.title, body: n.body, priority: n.priority, isPinned: n.is_pinned, expiresAt: n.expires_at, excludedIds: n.excluded_ids, excludedDepts: n.excluded_depts, createdAt: n.created_at, createdBy: n.created_by });
+
+  const tasks         = [...tasksTo.map(mapTask), ...tasksBy.map(mapTask)];
+  const applications  = [...appsFrom.map(mapApp), ...appsTo.map(mapApp)];
+  const notices       = Object.fromEntries(noticesRaw.map(mapNotice).map(n => [n.id, n]));
 
   if (!emp) {
     body.innerHTML = '<div class="empty-state"><div class="empty-text">Employee not found.</div></div>';
     return;
   }
 
-  await fsSet('viewAsAudit', 'VIEWAS_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8), {
-    viewerUid: currentUser.uid,
-    viewerEmpId: currentUser.id,
-    viewerName: currentUser.name || currentUser.id,
-    targetUid: uid,
-    targetEmpId: emp.id || '',
-    targetName: emp.name || '',
-    mode: 'read_only',
-    createdAt: new Date().toISOString()
+  await fsInsert('view_as_audit', {
+    viewed_by: currentUser.uid,
+    viewed_emp_uid: uid
   });
 
   title.textContent = 'Viewing: ' + (emp.name || 'Employee');
@@ -6329,13 +6252,19 @@ async function openViewAsEmployee(uid) {
 
   const visibleNotices = noticesVisibleToViewAsEmployee(notices, emp);
 
+  let reportsToName = 'None';
+  if (emp.reportsToUid) {
+    const mgr = normalizeEmployee(await fsGet('employees', emp.reportsToUid, 'uid'));
+    if (mgr) reportsToName = mgr.name;
+  }
+
   const employmentHtml = viewAsRows([
     ['Employee ID', emp.id],
     ['Name', emp.name],
     ['Email', emp.email],
     ['Designation', emp.designation],
     ['Department', emp.department],
-    ['Reports To', emp.reportsToName || 'None'],
+    ['Reports To', reportsToName],
     ['Joining Date', emp.joiningDate],
     ['Account Status', emp.accountStatus || 'active']
   ]);
@@ -6394,10 +6323,12 @@ async function openEmpProfile(uid) {
   document.getElementById('empProfileContent').innerHTML =
     '<div class="empty-state"><div class="empty-text">Loading...</div></div>';
 
-  const [emp, ob] = await Promise.all([
-    fsGet('employees', uid),
-    fsGet('employeeOnboarding', uid)
+  const [empRow, obRow] = await Promise.all([
+    fsGet('employees', uid, 'uid'),
+    fsGet('employee_onboarding', uid, 'uid')
   ]);
+  const emp = normalizeEmployee(empRow);
+  const ob  = normalizeOnboarding(obRow);
 
   document.getElementById('empProfileName').textContent = emp?.name || 'Unknown Employee';
   document.getElementById('empProfileSub').textContent =
@@ -6515,7 +6446,7 @@ window.normalizeCnic           = normalizeCnic;
 
 async function openOnboardingForEdit() {
   if (!currentUser?.uid) return;
-  const existing = await fsGet('employeeOnboarding', currentUser.uid);
+  const existing = normalizeOnboarding(await fsGet('employee_onboarding', currentUser.uid, 'uid'));
   if (!existing) {
     document.getElementById('modalOnboarding').classList.add('show');
     return;
@@ -6677,8 +6608,7 @@ async function renderReplyInbox() {
   if (!el) return;
 
   try {
-    const res = await campaignFetch('/replies');
-    const data = await res.json();
+    const data = await fsGetAll('campaign_leads', { replied: true });
 
     if (!data.length) {
       el.innerHTML = '<div class="empty-state"><div class="empty-icon">📬</div><div class="empty-text">No replies yet. Check back after campaign starts.</div></div>';
@@ -6730,14 +6660,17 @@ async function loadNoticeBoard() {
   if (!el || !currentUser) return;
 
   try {
-    const { db, collection, query, where, getDocs } = window.__fb;
     const now = new Date();
-    const _nq = query(collection(db, 'notices'), where('expiresAt', '>', now.toISOString()));
-    const _nsnap = await getDocs(_nq);
+    const noticesRaw = await fsGetAll('notices');
     const empId = (currentUser.id || '').trim().toUpperCase();
     const dept  = (currentUser.department || '').trim().toLowerCase();
 
-    const visible = _nsnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(n => {
+    const visible = noticesRaw.map(n => ({
+      id: n.id, title: n.title, body: n.body, priority: n.priority,
+      isPinned: n.is_pinned, expiresAt: n.expires_at,
+      excludedIds: n.excluded_ids || [], excludedDepts: n.excluded_depts || [],
+      createdAt: n.created_at, createdBy: n.created_by
+    })).filter(n => {
       if (n.expiresAt && new Date(n.expiresAt) < now) return false;
       if (n.excludedIds && n.excludedIds.length) {
         const excl = n.excludedIds.map(x => x.trim().toUpperCase());
@@ -6800,14 +6733,9 @@ async function loadNoticeBoard() {
 
     // Mark all visible notices as read for this employee (read receipts)
     for (const n of visible) {
-      const alreadyRead = await fsGet('noticeReads/' + n.id + '/readers', currentUser.uid);
+      const { data: alreadyRead } = await supabase.from('notice_reads').select('notice_id').eq('notice_id', n.id).eq('emp_uid', currentUser.uid).maybeSingle();
       if (!alreadyRead) {
-        await fsSet('noticeReads/' + n.id + '/readers', currentUser.uid, {
-          uid:    currentUser.uid,
-          empId:  currentUser.id,
-          name:   currentUser.name,
-          readAt: new Date().toISOString()
-        });
+        await fsInsert('notice_reads', { notice_id: n.id, emp_uid: currentUser.uid });
       }
     }
 
@@ -6838,24 +6766,22 @@ async function adminPostNotice() {
   const excludedIds   = exclIdsRaw   ? exclIdsRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
   const excludedDepts = exclDeptsRaw ? exclDeptsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
 
-  const noticeId = 'notice_' + Date.now();
   const notice = {
-    id: noticeId, title, body,
+    title, body,
     priority: prio,
-    isPinned,
-    expiresAt: new Date(exp).toISOString(),
-    excludedIds, excludedDepts,
-    createdAt: new Date().toISOString(),
-    createdBy: currentUser.id || currentUser.name || 'Admin'
+    is_pinned: isPinned,
+    expires_at: new Date(exp).toISOString(),
+    excluded_ids: excludedIds, excluded_depts: excludedDepts,
+    created_by: currentUser.id || currentUser.name || 'Admin'
   };
 
   try {
-    await fsSet('notices', noticeId, notice);
+    await fsInsert('notices', notice);
 
     // Push notification to all eligible employees
     try {
-      const allEmps = await fsGetAll('employees');
-      const notifPromises = Object.values(allEmps)
+      const allEmps = (await fsGetAll('employees')).map(normalizeEmployee);
+      const notifPromises = allEmps
         .filter(emp => {
           if (!emp.uid) return false;
           if (isBlockedEmployee && isBlockedEmployee(emp)) return false;
@@ -6896,8 +6822,7 @@ async function adminDeleteNotice(noticeId) {
   if (!currentUser || !currentUser.isAdmin) return;
   if (!confirm('Delete this announcement?')) return;
   try {
-    const { db, doc, deleteDoc } = window.__fb;
-    await deleteDoc(doc(db, 'notices', noticeId));
+    await fsDelete('notices', noticeId);
     renderAdminNotices();
     loadNoticeBoard();
   } catch(e) {
@@ -6910,11 +6835,17 @@ async function renderAdminNotices() {
   if (!el) return;
   el.innerHTML = '<div class="empty-state"><div class="empty-text">Loading...</div></div>';
   try {
-    const all = await fsGetAll('notices');
+    const allRaw = await fsGetAll('notices');
+    const all = allRaw.map(n => ({
+      id: n.id, title: n.title, body: n.body, priority: n.priority,
+      isPinned: n.is_pinned, expiresAt: n.expires_at,
+      excludedIds: n.excluded_ids || [], excludedDepts: n.excluded_depts || [],
+      createdAt: n.created_at, createdBy: n.created_by
+    }));
     const now = new Date();
 
     // Pinned first, then by date
-    const sorted = Object.values(all).sort((a, b) => {
+    const sorted = all.sort((a, b) => {
       if (a.isPinned && !b.isPinned) return -1;
       if (!a.isPinned && b.isPinned) return 1;
       return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
@@ -6926,8 +6857,10 @@ async function renderAdminNotices() {
     }
 
     // Fetch total eligible employee count (for read receipt denominator)
-    const allEmps = await fsGetAll('employees');
-    const activeEmps = Object.values(allEmps).filter(e => e.uid && !isBlockedEmployee(e));
+    const allEmps = (await fsGetAll('employees')).map(normalizeEmployee);
+    const activeEmps = allEmps.filter(e => e.uid && !isBlockedEmployee(e));
+    const empByUid = {};
+    allEmps.forEach(e => { empByUid[e.uid] = e; });
 
     const pLabel = { urgent:'🚨 Urgent', info:'📣 Important', general:'📌 General' };
     const pColor = { urgent:'var(--red)', info:'var(--orange)', general:'var(--text-muted)' };
@@ -6947,8 +6880,8 @@ async function renderAdminNotices() {
       ].filter(Boolean).join(' · ');
 
       // Read receipts
-      const reads = await fsGetAll('noticeReads/' + n.id + '/readers');
-      const readCount = Object.keys(reads).length;
+      const reads = await fsGetAll('notice_reads', { notice_id: n.id });
+      const readCount = reads.length;
 
       // Eligible count for this notice (total active minus excluded)
       const eligibleCount = activeEmps.filter(emp => {
@@ -6966,7 +6899,7 @@ async function renderAdminNotices() {
       const pct = eligibleCount > 0 ? Math.round((readCount / eligibleCount) * 100) : 0;
 
       // Who read it
-      const readerNames = Object.values(reads).map(r => escapeHtml(r.name || r.empId || '?')).join(', ');
+      const readerNames = reads.map(r => escapeHtml(empByUid[r.emp_uid]?.name || '?')).join(', ');
 
       const noticeIdSafe = escapeHtml(n.id || '');
       const pinBtnClass  = n.isPinned ? 'nb-pin-btn pinned' : 'nb-pin-btn';
@@ -7019,7 +6952,7 @@ function nbMsg(el, text, ok) {
 }
 async function adminTogglePin(noticeId, pin) {
   if (!currentUser || !currentUser.isAdmin) return;
-  await fsSet('notices', noticeId, { isPinned: pin });
+  await fsUpdate('notices', noticeId, { is_pinned: pin });
   renderAdminNotices();
   loadNoticeBoard();
 }
@@ -7044,11 +6977,16 @@ async function loadAssignments() {
   if (!currentUser) return;
   const uid = currentUser.uid;
 
+  const mapCompany = c => ({ id: c.id, customerId: c.customer_id, company: c.company, email: c.email, phone: c.phone, plan: c.plan, mc: c.mc, dot: c.dot, address: c.address, documents: c.documents, trucks: c.trucks, assignedAt: c.assigned_at });
+  const mapDriver  = d => ({ id: d.id, driverId: d.driver_id, name: d.name, email: d.email, phone: d.phone, cdlClass: d.cdl_class, cdlState: d.cdl_state, cdlExpiry: d.cdl_expiry, runType: d.run_type, experience: d.experience, equipment: d.equipment, status: d.status, documents: d.documents, assignedAt: d.assigned_at });
+
   // Show/hide card based on whether any assignments exist
-  const [compSnap, drSnap] = await Promise.all([
-    fsGetSubcollection('assignments/' + uid + '/companies'),
-    fsGetSubcollection('assignments/' + uid + '/drivers'),
+  const [compRaw, drRaw] = await Promise.all([
+    fsGetAll('assignment_companies', { emp_uid: uid }),
+    fsGetAll('assignment_drivers', { emp_uid: uid }),
   ]);
+  const compSnap = compRaw.map(mapCompany);
+  const drSnap = drRaw.map(mapDriver);
 
   const card = document.getElementById('assignmentsCard');
   if (card) card.style.display = (compSnap.length || drSnap.length) ? '' : 'none';
@@ -7110,8 +7048,11 @@ async function openAssignDetail(type, id) {
   body.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>';
 
   const uid = currentUser.uid;
-  const path = type === 'company' ? 'assignments/' + uid + '/companies' : 'assignments/' + uid + '/drivers';
-  const items = await fsGetSubcollection(path);
+  const table = type === 'company' ? 'assignment_companies' : 'assignment_drivers';
+  const rawItems = await fsGetAll(table, { emp_uid: uid });
+  const items = rawItems.map(x => type === 'company'
+    ? { id: x.id, customerId: x.customer_id, company: x.company, email: x.email, phone: x.phone, plan: x.plan, mc: x.mc, dot: x.dot, address: x.address, documents: x.documents, trucks: x.trucks, assignedAt: x.assigned_at }
+    : { id: x.id, driverId: x.driver_id, name: x.name, email: x.email, phone: x.phone, cdlClass: x.cdl_class, cdlState: x.cdl_state, cdlExpiry: x.cdl_expiry, runType: x.run_type, experience: x.experience, equipment: x.equipment, status: x.status, documents: x.documents, assignedAt: x.assigned_at });
   const item  = items.find(x => (x.customerId || x.driverId || x.id) === id) || items[0];
   if (!item) { body.innerHTML = '<p style="color:var(--text-muted);">Not found.</p>'; return; }
 
@@ -7185,10 +7126,12 @@ async function loadMyTasks() {
   const el = document.getElementById('myTasksList');
   el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>';
 
-  const { db, collection, query, where, getDocs } = window.__fb;
-  const q = query(collection(db, 'tasks'), where('assignedToUid', '==', currentUser.uid));
-  const snap = await getDocs(q);
-  const mine = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const rows = await fsGetAll('tasks', { assigned_to_uid: currentUser.uid });
+  const mine = rows.map(t => ({
+    id: t.id, title: t.title, description: t.description, status: t.status,
+    dueDate: t.due_date, assignedByName: t.assigned_by_name, comments: t.comments || [],
+    createdAt: t.created_at
+  })).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
 
   const pending = mine.filter(t => t.status !== 'confirmed');
   const badge = document.getElementById('myTasksBadge');
@@ -7223,10 +7166,12 @@ async function loadAssignedByMeTasks() {
   const el = document.getElementById('assignedTasksList');
   el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>';
 
-  const { db, collection, query, where, getDocs } = window.__fb;
-  const q = query(collection(db, 'tasks'), where('assignedByUid', '==', currentUser.uid));
-  const snap = await getDocs(q);
-  const mine = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const rows = await fsGetAll('tasks', { assigned_by_uid: currentUser.uid });
+  const mine = rows.map(t => ({
+    id: t.id, title: t.title, description: t.description, status: t.status,
+    dueDate: t.due_date, assignedToName: t.assigned_to_name, comments: t.comments || [],
+    createdAt: t.created_at
+  })).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
 
   if (!mine.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">You haven\'t assigned any tasks yet.</div></div>'; return; }
 
@@ -7258,20 +7203,20 @@ async function openAssignTaskModal() {
   const sel = document.getElementById('taskAssignTo');
   sel.innerHTML = '<option value="">Loading…</option>';
 
-  const all = await fsGetAll('employees');
+  const all = (await fsGetAll('employees')).map(normalizeEmployee);
   _allEmployeesForTasks = all;
   let options = '<option value="">— Select employee —</option>';
 
   if (currentUser.isAdmin) {
     // Admin can assign to anyone
-    Object.entries(all).forEach(([uid, e]) => {
-      options += `<option value="${uid}">${escapeHtml(e.name||uid)} (${e.id||uid}) — ${escapeHtml(e.designation||'')}</option>`;
+    all.forEach(e => {
+      options += `<option value="${e.uid}">${escapeHtml(e.name||e.uid)} (${e.id||e.uid}) — ${escapeHtml(e.designation||'')}</option>`;
     });
   } else {
     // Supervisor: only their direct reports
-    Object.entries(all).forEach(([uid, e]) => {
+    all.forEach(e => {
       if (e.reportsToUid === currentUser.uid) {
-        options += `<option value="${uid}">${escapeHtml(e.name||uid)} (${e.id||uid})</option>`;
+        options += `<option value="${e.uid}">${escapeHtml(e.name||e.uid)} (${e.id||e.uid})</option>`;
       }
     });
   }
@@ -7290,19 +7235,16 @@ async function submitAssignTask() {
   if (!desc)   { errEl.textContent = 'Description is required.'; return; }
   errEl.textContent = '';
 
-  const toEmp = _allEmployeesForTasks[toUid] || {};
-  const taskId = 'TASK_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+  const toEmp = _allEmployeesForTasks.find(e => e.uid === toUid) || {};
 
-  await fsSet('tasks', taskId, {
-    id: taskId,
-    title, description: desc, dueDate: due,
-    assignedToUid: toUid,
-    assignedToName: toEmp.name || toUid,
-    assignedByUid: currentUser.uid,
-    assignedByName: currentUser.name,
+  await fsInsert('tasks', {
+    title, description: desc, due_date: due || null,
+    assigned_to_uid: toUid,
+    assigned_to_name: toEmp.name || toUid,
+    assigned_by_uid: currentUser.uid,
+    assigned_by_name: currentUser.name,
     status: 'pending',
     comments: [],
-    createdAt: new Date().toISOString(),
   });
 
   await writeNotification(toUid,
@@ -7322,9 +7264,9 @@ async function markTaskCompleted(taskId) {
   const task = await fsGet('tasks', taskId);
   if (!task) return;
 
-  await fsSet('tasks', taskId, { status: 'completed' });
+  await fsUpdate('tasks', taskId, { status: 'completed' });
 
-  await writeNotification(task.assignedByUid,
+  await writeNotification(task.assigned_by_uid,
     '✅ Task Marked Complete',
     `${currentUser.name} has marked the task "${task.title}" as completed. Review and confirm or reject.`,
     'task_completed'
@@ -7336,13 +7278,13 @@ async function resolveTask(taskId, resolution) {
   const task = await fsGet('tasks', taskId);
   if (!task) return;
 
-  await fsSet('tasks', taskId, { status: resolution });
+  await fsUpdate('tasks', taskId, { status: resolution });
 
   const msg = resolution === 'confirmed'
     ? `${currentUser.name} confirmed your task "${task.title}" as complete. Well done!`
     : `${currentUser.name} rejected the completion claim on "${task.title}". Please review and resubmit.`;
 
-  await writeNotification(task.assignedToUid,
+  await writeNotification(task.assigned_to_uid,
     resolution === 'confirmed' ? '✅ Task Confirmed' : '❌ Task Claim Rejected',
     msg,
     'task_resolved'
@@ -7383,15 +7325,15 @@ async function submitTaskComment() {
     authorName: currentUser.name,
     text,
     createdAt: new Date().toISOString(),
-    readByAssignee: currentUser.uid === task.assignedToUid,
+    readByAssignee: currentUser.uid === task.assigned_to_uid,
   };
 
   const updatedComments = [...(task.comments || []), comment];
-  await fsSet('tasks', _currentTaskId, { comments: updatedComments });
+  await fsUpdate('tasks', _currentTaskId, { comments: updatedComments });
 
   // Notify the other party
-  const notifyUid = currentUser.uid === task.assignedByUid ? task.assignedToUid : task.assignedByUid;
-  const notifyName = currentUser.uid === task.assignedByUid ? task.assignedToName : task.assignedByName;
+  const notifyUid = currentUser.uid === task.assigned_by_uid ? task.assigned_to_uid : task.assigned_by_uid;
+  const notifyName = currentUser.uid === task.assigned_by_uid ? task.assigned_to_name : task.assigned_by_name;
   await writeNotification(notifyUid,
     '💬 Comment on Task',
     `${currentUser.name} commented on task "${task.title}": "${text.slice(0,80)}${text.length>80?'…':''}"`,
@@ -7399,7 +7341,7 @@ async function submitTaskComment() {
   );
 
   document.getElementById('taskCommentInput').value = '';
-  const isAssigner = currentUser.uid === task.assignedByUid;
+  const isAssigner = currentUser.uid === task.assigned_by_uid;
   await renderTaskComments(_currentTaskId, isAssigner);
 }
 
@@ -7425,11 +7367,12 @@ async function loadAppInbox() {
   const el = document.getElementById('appInboxList');
   el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>';
 
-  const { db, collection, query, where, getDocs } = window.__fb;
-  const q = query(collection(db, 'applications'), where('toUid', '==', currentUser.uid));
-  const snap = await getDocs(q);
+  const rows = await fsGetAll('applications', { to_uid: currentUser.uid });
   // Inbox = apps addressed to me (by uid or by role I hold)
-  const inbox = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const inbox = rows.map(a => ({
+    id: a.id, subject: a.subject, fromName: a.from_name,
+    isReadByRecipient: a.is_read_by_recipient, status: a.status, createdAt: a.created_at
+  })).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
 
   const unread = inbox.filter(a => !a.isReadByRecipient).length;
   const badge = document.getElementById('appInboxBadge');
@@ -7457,10 +7400,11 @@ async function loadAppSent() {
   const el = document.getElementById('appSentList');
   el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>';
 
-  const { db, collection, query, where, getDocs } = window.__fb;
-  const q = query(collection(db, 'applications'), where('fromUid', '==', currentUser.uid));
-  const snap = await getDocs(q);
-  const sent = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const rows = await fsGetAll('applications', { from_uid: currentUser.uid });
+  const sent = rows.map(a => ({
+    id: a.id, subject: a.subject, toName: a.to_name, toRole: a.to_role,
+    status: a.status, reply: a.reply, createdAt: a.created_at
+  })).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
 
   if (!sent.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">📤</div><div class="empty-text">No applications sent yet.</div></div>'; return; }
 
@@ -7488,21 +7432,18 @@ async function submitApplication() {
   if (!body)  { errEl.textContent = 'Body is required.'; return; }
   errEl.textContent = 'Sending…';
 
-  const all = await fsGetAll('employees');
-  const toEmp = all[toUid] || {};
+  const all = (await fsGetAll('employees')).map(normalizeEmployee);
+  const toEmp = all.find(e => e.uid === toUid) || {};
   const toName = toEmp.name || toUid;
 
-  const appId = 'APP_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
-  await fsSet('applications', appId, {
-    id: appId,
+  await fsInsert('applications', {
     subject: subj, body,
-    fromUid: currentUser.uid, fromName: currentUser.name, fromId: currentUser.id,
-    toUid, toName,
+    from_uid: currentUser.uid, from_name: currentUser.name, from_id: currentUser.id,
+    to_uid: toUid, to_name: toName,
     status: 'pending',
-    isReadByRecipient: false,
+    is_read_by_recipient: false,
     reply: '',
     replies: [],
-    createdAt: new Date().toISOString(),
   });
 
   if (toUid) {
@@ -7534,9 +7475,9 @@ async function openAppDetail(appId, isRecipient) {
   title.textContent = app.subject || 'Application';
 
   // Mark as read
-  if (isRecipient && !app.isReadByRecipient) {
-    await fsSet('applications', appId, { isReadByRecipient: true, status: 'acknowledged' });
-    await writeNotification(app.fromUid, '👁 Application Acknowledged',
+  if (isRecipient && !app.is_read_by_recipient) {
+    await fsUpdate('applications', appId, { is_read_by_recipient: true, status: 'acknowledged' });
+    await writeNotification(app.from_uid, '👁 Application Acknowledged',
       `${currentUser.name} has acknowledged your application: "${app.subject}".`, 'application_update');
   }
 
@@ -7544,14 +7485,14 @@ async function openAppDetail(appId, isRecipient) {
     <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px;">
       <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:10px;">Respond</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-        <button class="btn-sm" style="background:var(--green);color:#fff;" onclick="updateAppStatus('${appId}','${app.fromUid}','accepted')">✓ Accept</button>
-        <button class="btn-sm" style="background:var(--red);color:#fff;" onclick="updateAppStatus('${appId}','${app.fromUid}','rejected')">✗ Reject</button>
-        <button class="btn-sm" style="background:var(--orange);color:#fff;" onclick="updateAppStatus('${appId}','${app.fromUid}','in_review')">🔍 In Review</button>
-        <button class="btn-sm btn-sm-outline" onclick="updateAppStatus('${appId}','${app.fromUid}','thanks')">🙏 Thank You</button>
-        <button class="btn-sm btn-sm-outline" onclick="updateAppStatus('${appId}','${app.fromUid}','will_respond')">⏳ Will Get Back</button>
+        <button class="btn-sm" style="background:var(--green);color:#fff;" onclick="updateAppStatus('${appId}','${app.from_uid}','accepted')">✓ Accept</button>
+        <button class="btn-sm" style="background:var(--red);color:#fff;" onclick="updateAppStatus('${appId}','${app.from_uid}','rejected')">✗ Reject</button>
+        <button class="btn-sm" style="background:var(--orange);color:#fff;" onclick="updateAppStatus('${appId}','${app.from_uid}','in_review')">🔍 In Review</button>
+        <button class="btn-sm btn-sm-outline" onclick="updateAppStatus('${appId}','${app.from_uid}','thanks')">🙏 Thank You</button>
+        <button class="btn-sm btn-sm-outline" onclick="updateAppStatus('${appId}','${app.from_uid}','will_respond')">⏳ Will Get Back</button>
       </div>
       <textarea class="field-input" id="appReplyInput" style="min-height:80px;" placeholder="Type a reply message (optional)…"></textarea>
-      <button class="btn-sm" style="margin-top:8px;background:var(--navy3);color:var(--text);" onclick="sendAppReply('${appId}','${app.fromUid}')">Send Reply</button>
+      <button class="btn-sm" style="margin-top:8px;background:var(--navy3);color:var(--text);" onclick="sendAppReply('${appId}','${app.from_uid}')">Send Reply</button>
     </div>` : '';
 
   const replies = (app.replies || []).map(r => `
@@ -7562,10 +7503,10 @@ async function openAppDetail(appId, isRecipient) {
 
   body.innerHTML = `
     <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:12px;color:var(--text-muted);">
-      <span>From: <strong style="color:var(--text);">${escapeHtml(app.fromName||'—')} (${escapeHtml(app.fromId||'')})</strong></span>
-      <span>To: <strong style="color:var(--text);">${escapeHtml(app.toName || ROLE_DISPLAY[app.toRole] || '—')}</strong></span>
+      <span>From: <strong style="color:var(--text);">${escapeHtml(app.from_name||'—')} (${escapeHtml(app.from_id||'')})</strong></span>
+      <span>To: <strong style="color:var(--text);">${escapeHtml(app.to_name || ROLE_DISPLAY[app.to_role] || '—')}</strong></span>
       <span>Status: <strong style="color:var(--orange);">${escapeHtml(app.status||'pending')}</strong></span>
-      <span>${app.createdAt ? new Date(app.createdAt).toLocaleString() : ''}</span>
+      <span>${app.created_at ? new Date(app.created_at).toLocaleString() : ''}</span>
     </div>
     <div style="padding:16px;background:var(--bg);border:1px solid var(--border);border-radius:10px;font-size:14px;line-height:1.7;white-space:pre-wrap;">${escapeHtml(app.body||'')}</div>
     ${replies ? `<div style="margin-top:16px;"><div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:10px;">Replies</div>${replies}</div>` : ''}
@@ -7573,7 +7514,7 @@ async function openAppDetail(appId, isRecipient) {
 }
 
 async function updateAppStatus(appId, fromUid, newStatus) {
-  await fsSet('applications', appId, { status: newStatus });
+  await fsUpdate('applications', appId, { status: newStatus });
   const statusMsg = { accepted:'accepted', rejected:'rejected', in_review:'marked In Review', thanks:'sent a Thank You', will_respond:'noted they will respond' }[newStatus] || newStatus;
   await writeNotification(fromUid, '📝 Application Update',
     `${currentUser.name} has ${statusMsg} your application.`, 'application_update');
@@ -7593,7 +7534,7 @@ async function sendAppReply(appId, fromUid) {
     createdAt: new Date().toISOString(),
   };
   const replies = [...(app?.replies||[]), reply];
-  await fsSet('applications', appId, { reply: text, replies });
+  await fsUpdate('applications', appId, { reply: text, replies });
 
   await writeNotification(fromUid, '💬 Reply to Your Application',
     `${currentUser.name} replied to your application "${app?.subject||''}": "${text.slice(0,80)}${text.length>80?'…':''}"`, 'application_reply');
