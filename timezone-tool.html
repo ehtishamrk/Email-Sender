@@ -713,51 +713,36 @@ back.</div></div>
 </div>
 
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDBd2hw7Gq1-mwR5evKF-YPcAGRYDNl3fw",
-  authDomain: "haulxify-employee-portal.firebaseapp.com",
-  projectId: "haulxify-employee-portal",
-  storageBucket: "haulxify-employee-portal.firebasestorage.app",
-  messagingSenderId: "170605105002",
-  appId: "1:170605105002:web:d5da4718f77fd1182adf13"
-};
+// ══════════════════════════════════════════════════════════════
+//  PASTE YOUR OWN VALUES HERE — same ones you used in index.html
+// ══════════════════════════════════════════════════════════════
+const SUPABASE_URL = "PASTE_YOUR_SUPABASE_PROJECT_URL_HERE";
+const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_PUBLIC_KEY_HERE";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const firebaseApp = initializeApp(firebaseConfig);
-const auth = getAuth(firebaseApp);
-const db = getFirestore(firebaseApp);
+const portalProfile = await (async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return null;
 
-const portalProfile = await new Promise((resolve) => {
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      resolve(null);
-      return;
-    }
+  try {
+    const { data: emp } = await supabase.from('employees').select('*').eq('uid', session.user.id).maybeSingle();
+    if (!emp) return null;
 
-    try {
-      const snap = await getDoc(doc(db, 'employees', user.uid));
-      if (!snap.exists()) {
-        resolve(null);
-        return;
-      }
+    const { data: access } = await supabase.from('tool_access').select('*').eq('emp_uid', session.user.id).maybeSingle();
 
-      const profile = { uid: user.uid, ...snap.data() };
-      const accessSnap = await getDoc(doc(db, 'toolAccess', profile.id));
-      const access = accessSnap.exists() ? accessSnap.data() : {};
-
-      resolve({
-        ...profile,
-        timeToolAccess: access.timeToolAccess !== undefined ? access.timeToolAccess : true
-      });
-
-    } catch (e) {
-      resolve(null);
-    }
-  });
-});
+    return {
+      uid: session.user.id,
+      id: emp.emp_id,
+      name: emp.name,
+      isAdmin: emp.is_admin,
+      timeToolAccess: access && access.time_access !== undefined ? access.time_access : true
+    };
+  } catch (e) {
+    return null;
+  }
+})();
 
 if (!portalProfile || !portalProfile.id) {
   alert('Please sign in from the employee portal before opening this tool.');
@@ -773,18 +758,21 @@ if (portalProfile.timeToolAccess !== true) {
 
   
 window.__PORTAL_PROFILE = portalProfile;
+window.__SUPABASE = supabase;
 
 (function() {
 'use strict';
 
 
 // ── CONFIG ──────────────────────────────────────
-var API = 'https://script.google.com/macros/s/AKfycbxkVYnxV3FmWq52UFipohgUXGV2RBC9S0EuZ_Wgj1xMn8pkY7WWfBZHtR9KeocPELC7/exec';
+// The Google Sheet backend is retired — this tool now talks to Supabase directly.
+var supabase = window.__SUPABASE;
 
 // ── EMPLOYEE ID ──────────────────────────────────
 var params = new URLSearchParams(window.location.search);
 var portalProfile = window.__PORTAL_PROFILE || {};
 var EMP_ID = portalProfile.id || 'GUEST';
+var EMP_UID = portalProfile.uid || null;
 var IS_ADMIN = portalProfile.isAdmin === true;
 
 if (EMP_ID !== 'GUEST') {
@@ -820,11 +808,11 @@ var lastActivity = Date.now();
 function pingActivity() {
   lastActivity = Date.now();
   try { localStorage.setItem('hx_activity_' + EMP_ID, lastActivity.toString()); } catch(e) {}
-  try {
-    fetch(API, {method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({action:'reportActivity', empId: EMP_ID, ts: new Date().toISOString()})
-    }).catch(function(){});
-  } catch(e) {}
+  if (EMP_UID) {
+    supabase.from('dialer_activity')
+      .upsert({ emp_uid: EMP_UID, last_active_at: new Date().toISOString() }, { onConflict: 'emp_uid' })
+      .then(function(){}).catch(function(){});
+  }
 }
 // Activity only pings on dialer navigation — not generic page interaction
 // NOTE: No ping on page load — only real dialer actions count as activity
@@ -1000,17 +988,23 @@ document.getElementById("saveCbBtn").addEventListener("click", function() {
  empId: EMP_ID,
  date: date,
  time: time,
- dateForSheet: date + 'T12:00:00',
  notes: notes,
  mc: lead.mc || "",
  company: lead.company || "",
  phone: lead.phone || "",
- rowIndex: curIdx,
+ leadId: lead.rowIndex || null,
  savedAt: new Date().toISOString()
  };
- // Save to Callbacks sheet via App Script
-fetch(API, {method:"POST", headers:{"Content-Type":"text/plain"},
- body: JSON.stringify({action:"saveCallback", callback: cbRec})
+ // Save to Supabase
+supabase.from('callbacks').insert({
+  emp_uid: EMP_UID,
+  lead_id: cbRec.leadId,
+  callback_date: date,
+  callback_time: time,
+  notes: notes,
+  mc: cbRec.mc,
+  company: cbRec.company,
+  phone: cbRec.phone
  }).then(function(){
    renderCallbacks();
  }).catch(function(){
@@ -1031,9 +1025,7 @@ fetch(API, {method:"POST", headers:{"Content-Type":"text/plain"},
 if (curIdx < leads.length - 1) {
     curIdx++;
     localStorage.setItem('leadIdx_'+EMP_ID, curIdx);
-    fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'reportActivity',empId:EMP_ID,ts:new Date().toISOString(),leadIdx:curIdx})
-    }).catch(function(){});
+    pingActivity();
   }
  renderLead(); updateDialerStats(); renderLeadSearch();
   renderCallbacks();
@@ -1285,19 +1277,19 @@ function initDialer(){
   document.getElementById('noDataState').style.display='block';
   document.getElementById('leadDisplay').style.display='none';
   document.getElementById('dialerSub').textContent='Fetching your leads...';
-  fetch(API+'?action=getBDOLeads&empId='+encodeURIComponent(EMP_ID))
-    .then(function(r){return r.json();})
-    .then(function(rows){
+  supabase.from('bdo_leads').select('*').eq('assigned_to', EMP_UID).order('created_at', {ascending:true})
+    .then(function(res){
+      var rows = res.data;
       if(!Array.isArray(rows)||rows.length===0){
         document.getElementById('dialerSub').textContent='No data loaded';
         updateDialerStats();return;
       }
       leads=rows.map(function(r){
-        return{mc:r.mc||'',entity:r.entity||'',entityStatus:r.status||'',
+        return{mc:r.mc||'',entity:r.entity||'',entityStatus:r.entity_status||'',
           power:r.power||'',company:r.company||'',address:r.address||'',
-          phone:r.phone||'',email:r.email||'',callStatus:r.callStatus||'',
-          dnc:r.dnc||false,contactName:r.contactName||'',truckType:r.truckType||'',
-          rowIndex:r.rowIndex};
+          phone:r.phone||'',email:r.email||'',callStatus:r.call_status||'',
+          dnc:r.dnc||false,contactName:r.contact_name||'',truckType:r.truck_type||'',
+          rowIndex:r.id};
       });
       meta={};
       leads.forEach(function(lead,i){
@@ -1407,10 +1399,7 @@ document.getElementById('prevBtn').addEventListener('click', function(){
   if(curIdx>0){
     curIdx--;
     localStorage.setItem('leadIdx_'+EMP_ID, curIdx);
-    // Save position to sheet
-    fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'reportActivity',empId:EMP_ID,ts:new Date().toISOString(),leadIdx:curIdx})
-    }).catch(function(){});
+    pingActivity();
     renderLead();
   }
 });
@@ -1426,9 +1415,7 @@ document.getElementById('nextBtn').addEventListener('click', function(){
   if(curIdx < leads.length-1){
     curIdx++;
     localStorage.setItem('leadIdx_'+EMP_ID, curIdx);
-    fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'reportActivity',empId:EMP_ID,ts:new Date().toISOString(),leadIdx:curIdx})
-    }).catch(function(){});
+    pingActivity();
     renderLead(); updateDialerStats(); renderLeadSearch();
   }
 });
@@ -1440,15 +1427,9 @@ document.getElementById('confirmStatusBtn').addEventListener('click', function()
   meta[curIdx].status = selectedStatus;
   meta[curIdx].calledAt = new Date().toISOString();
   saveMeta();
-  fetch(API, {method:'POST', headers:{'Content-Type':'text/plain'},
-    body: JSON.stringify({
-      action:    'reportActivity',
-      empId:     EMP_ID,
-      ts:        new Date().toISOString(),
-      callCount: Object.keys(meta).filter(function(k){ return meta[k] && meta[k].status && meta[k].status !== ''; }).length
-    })}).catch(function(){});
+  pingActivity();
 
-  // Sync to sheet
+  // Sync to Supabase
   syncLeadMeta(curIdx);
 document.getElementById('statusModal').classList.remove('show');
 
@@ -1465,9 +1446,7 @@ document.getElementById('statusModal').classList.remove('show');
  if (curIdx < leads.length-1) {
     curIdx++;
     localStorage.setItem('leadIdx_'+EMP_ID, curIdx);
-    fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'reportActivity',empId:EMP_ID,ts:new Date().toISOString(),leadIdx:curIdx})
-    }).catch(function(){});
+    pingActivity();
   }
   selectedStatus = null;
   document.querySelectorAll('.status-opt').forEach(function(o){o.classList.remove('selected');});
@@ -1602,10 +1581,12 @@ function parseCbDate(raw) {
 function renderCallbacks() {
   var el = document.getElementById('cbList');
   if (!el) return;
-  fetch(API+'?action=getCallbacks&empId='+encodeURIComponent(EMP_ID))
-    .then(function(r){return r.json();})
-    .then(function(cbs){
-      _cbData = Array.isArray(cbs) ? cbs : [];
+  supabase.from('callbacks').select('*').eq('emp_uid', EMP_UID).order('callback_date', {ascending:true})
+    .then(function(res){
+      var cbs = res.data;
+      _cbData = (Array.isArray(cbs) ? cbs : []).map(function(c){
+        return { id:c.id, date:c.callback_date, time:c.callback_time, mc:c.mc, company:c.company, phone:c.phone, notes:c.notes };
+      });
       if(!_cbData.length){
         el.innerHTML='<div style="font-size:12px;color:var(--muted);text-align:center;padding:12px 0;">No callbacks scheduled.</div>';
         return;
@@ -1700,15 +1681,10 @@ document.getElementById('cbDetailSave').addEventListener('click', function(){
   }
   var i = document.getElementById('cbDetailModal')._cbIdx;
   var cb = _cbData[i];
-  var updated = {
-    empId: EMP_ID, mc: cb.mc||'', company: cb.company||'',
-    phone: cb.phone||'', date: newDate, time: newTime,
-    notes: document.getElementById('cbDetailNotes').value.trim(),
-    savedAt: cb.savedAt, rowIndex: cb.rowIndex
-  };
-  fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},
-    body:JSON.stringify({action:'updateCallback', callback: updated})
-  }).then(function(){
+  var notes = document.getElementById('cbDetailNotes').value.trim();
+  supabase.from('callbacks').update({
+    callback_date: newDate, callback_time: newTime, notes: notes
+  }).eq('id', cb.id).then(function(){
     document.getElementById('cbDetailModal').classList.remove('show');
     renderCallbacks();
   }).catch(function(){
@@ -1720,9 +1696,7 @@ document.getElementById('cbDetailDelete').addEventListener('click', function(){
   var i = document.getElementById('cbDetailModal')._cbIdx;
   var cb = _cbData[i];
   if(!confirm('Delete callback for '+(cb.company||cb.mc||'this lead')+'?')) return;
-  fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},
-    body:JSON.stringify({action:'deleteCallback', empId: EMP_ID, savedAt: cb.savedAt})
-  }).then(function(){
+  supabase.from('callbacks').delete().eq('id', cb.id).then(function(){
     document.getElementById('cbDetailModal').classList.remove('show');
     renderCallbacks();
   }).catch(function(){
@@ -2059,17 +2033,15 @@ document.getElementById('coldEmailBtn').addEventListener('click', function(){
 function syncLeadMeta(idx){
   var lead = leads[idx]||{};
   var m = meta[idx]||{};
-  var sheetRowIndex = (lead.rowIndex !== undefined) ? lead.rowIndex : idx;
-  fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({
-    action:'updateLeadMeta',
-    empId:EMP_ID,
-    rowIndex:sheetRowIndex,
-    callStatus:m.status||'',
-    dnc:m.dnc||false,
-    contactName:m.contactName||'',
-    truckType:m.truckType||'',
-    calledAt:m.calledAt||new Date().toISOString()
-  })}).catch(function(){});
+  var leadId = lead.rowIndex;
+  if (!leadId) return;
+  supabase.from('bdo_leads').update({
+    call_status: m.status||'',
+    dnc: m.dnc||false,
+    contact_name: m.contactName||'',
+    truck_type: m.truckType||'',
+    called_at: m.calledAt||new Date().toISOString()
+  }).eq('id', leadId).then(function(){}).catch(function(){});
 }
 
 // ================================================================
@@ -2148,25 +2120,32 @@ function saveAppt(){
   var eid=document.getElementById('fEditId').value;
   var pkt='';
   if(loc&&ti){var pt=ti.split(':').map(Number),r=toPKT(pt[0],pt[1],loc.tz);pkt=f12(r.h,r.m)+(r.dd?' ('+(r.dd>0?'next':'prev')+' day PKT)':'');}
-  var arr=loadA(),appt;
-  if(eid){
-    var idx=arr.findIndex(function(a){return String(a.id)===String(eid);});
-    if(idx>=0){appt=Object.assign({},arr[idx],{mc:mc,company:co,person:pe,phone:ph,truck:tr,date:da,time:ti,comments:cm,location:loc?loc.n:arr[idx].location,locationTz:loc?loc.tz:arr[idx].locationTz,pktEquiv:pkt,updatedAt:new Date().toISOString()});arr[idx]=appt;}
-  }else{
-    appt={id:Date.now(),mc:mc,company:co,person:pe,phone:ph,truck:tr,date:da,time:ti,comments:cm,location:loc?loc.n:'',locationTz:loc?loc.tz:'',pktEquiv:pkt,createdAt:new Date().toISOString(),empId:EMP_ID};
-    arr.push(appt);
-  }
-  saveA(arr);
-  fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:eid?'updateAppointment':'addAppointment',empId:appt.empId||EMP_ID,mc:appt.mc,company:appt.company,person:appt.person,phone:appt.phone,truck:appt.truck,date:appt.date,time:appt.time,location:appt.location,pktEquiv:appt.pktEquiv,comments:appt.comments,createdAt:appt.createdAt})}).catch(function(){});
-  document.getElementById('apptSuccess').classList.add('show');
-  setTimeout(function(){document.getElementById('apptModal').classList.remove('show');document.getElementById('viewModal').classList.remove('show');viewId=null;renderAppts();},1400);
+
+  var payload = {
+    emp_uid: EMP_UID, mc:mc, company:co, person:pe, phone:ph, truck:tr,
+    appt_date:da||null, appt_time:ti||null, location: loc?loc.n:'',
+    pkt_equiv: pkt, comments: cm
+  };
+
+  var request = eid
+    ? supabase.from('appointments').update(payload).eq('id', eid)
+    : supabase.from('appointments').insert(payload);
+
+  request.then(function(){
+    document.getElementById('apptSuccess').classList.add('show');
+    setTimeout(function(){document.getElementById('apptModal').classList.remove('show');document.getElementById('viewModal').classList.remove('show');viewId=null;renderAppts();},1400);
+  }).catch(function(){
+    document.getElementById('apptSuccess').classList.add('show');
+    setTimeout(function(){document.getElementById('apptModal').classList.remove('show');document.getElementById('viewModal').classList.remove('show');viewId=null;renderAppts();},1400);
+  });
 }
 
 function deleteAppt(id){
-  var appt=loadA().find(function(a){return String(a.id)===String(id);});
-  saveA(loadA().filter(function(a){return String(a.id)!==String(id);}));
-  if(appt&&appt.createdAt)fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'deleteAppointment',empId:appt.empId||EMP_ID,createdAt:appt.createdAt})}).catch(function(){});
-  document.getElementById('viewModal').classList.remove('show');viewId=null;renderAppts();
+  supabase.from('appointments').delete().eq('id', id).then(function(){
+    document.getElementById('viewModal').classList.remove('show');viewId=null;renderAppts();
+  }).catch(function(){
+    document.getElementById('viewModal').classList.remove('show');viewId=null;renderAppts();
+  });
 }
 
 function openViewModal(appt){
@@ -2205,17 +2184,16 @@ function editFromView(){var a=loadA().find(function(x){return String(x.id)===Str
 function deleteFromView(){if(confirm('Delete this appointment?'))deleteAppt(viewId);}
 
 function renderAppts(){
-  fetch(API+'?action=getAppointments&empId='+encodeURIComponent(EMP_ID))
-    .then(function(r){return r.json();})
-    .then(function(sheetAppts){
-      if(Array.isArray(sheetAppts) && sheetAppts.length){
-        var localAppts = loadA();
-        var sheetIds = sheetAppts.map(function(a){return String(a.createdAt);});
-        var localOnly = localAppts.filter(function(a){return !sheetIds.includes(String(a.createdAt));});
-        var merged = sheetAppts.concat(localOnly);
-        saveA(merged);
-      }
-      _doRenderAppts(loadA());
+  supabase.from('appointments').select('*').eq('emp_uid', EMP_UID)
+    .then(function(res){
+      var rows = res.data || [];
+      var mapped = rows.map(function(a){
+        return { id:a.id, mc:a.mc, company:a.company, person:a.person, phone:a.phone,
+          truck:a.truck, date:a.appt_date, time:a.appt_time, location:a.location,
+          pktEquiv:a.pkt_equiv, comments:a.comments, createdAt:a.created_at, empId:EMP_ID };
+      });
+      saveA(mapped);
+      _doRenderAppts(mapped);
     })
     .catch(function(){ _doRenderAppts(loadA()); });
 }
