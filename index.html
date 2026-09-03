@@ -2123,6 +2123,17 @@
         <button class="btn-sm" onclick="saveDailyLimit()">Save</button>
       </div>
     </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-top:1px solid var(--border);">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">Days Between Follow-Ups</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">How long to wait before a lead is due for its next email</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="gapDaysInput" min="1" max="30" value="4"
+          style="width:70px;padding:8px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg2);color:var(--text);font-size:14px;font-weight:700;text-align:center;font-family:'Syne',sans-serif;">
+        <button class="btn-sm" onclick="saveGapDays()">Save</button>
+      </div>
+    </div>
     <div id="campaignSettingsMsg" style="margin-top:8px;"></div>
   </div>
 
@@ -2672,8 +2683,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 //  Both of these are SAFE to be public — same as your old Firebase
 //  apiKey was already public in this same file.
 // ══════════════════════════════════════════════════════════════
-const SUPABASE_URL = "https://nvgnuigtxfyzlminvmby.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52Z251aWd0eGZ5emxtaW52bWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4NTIzMzgsImV4cCI6MjEwMzQyODMzOH0.U7YKaFIS5_oj8ERKO3hkLcWQ6sjhJgloCJnZw2pYJ_Y";
+const SUPABASE_URL = "PASTE_YOUR_SUPABASE_PROJECT_URL_HERE";
+const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_PUBLIC_KEY_HERE";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const auth = supabase.auth; // kept as its own name since older code below refers to "auth"
@@ -2744,6 +2755,7 @@ window.submitOnboardingForm = submitOnboardingForm;
   window.downloadMaturedLeads = downloadMaturedLeads;
 window.uploadCampaignLeads = uploadCampaignLeads;
 window.saveDailyLimit = saveDailyLimit;
+window.saveGapDays = saveGapDays;
 window.setCampaignStatus = setCampaignStatus;
 
 window.openTimeTool = function() {
@@ -3727,6 +3739,8 @@ async function loadCampaignSettings() {
     const data = await fsGet('campaign_settings', 1);
     if (data) {
       document.getElementById('dailyLimitInput').value = data.daily_limit_per_account;
+      const gapEl = document.getElementById('gapDaysInput');
+      if (gapEl && data.followup_gap_days != null) gapEl.value = data.followup_gap_days;
     }
   } catch(e) {}
 }
@@ -5554,25 +5568,34 @@ window.addEventListener('popstate', function(e) {
   try {
     const settings = await fsGet('campaign_settings', 1);
     const limit = settings ? settings.daily_limit_per_account : 50;
+    const gapDays = settings && settings.followup_gap_days != null ? settings.followup_gap_days : 4;
+
+    // A lead is "due" once its next_touch_at has passed — set automatically
+    // whenever it's uploaded or last downloaded, gapDays apart.
     const { data, error } = await supabase.from('campaign_leads')
       .select('*')
-      .eq('status', 'matured')
-      .order('created_at', { ascending: true })
+      .lte('next_touch_at', new Date().toISOString())
+      .eq('replied', false)
+      .neq('status', 'unsubscribed')
+      .neq('status', 'called_pending')
+      .order('next_touch_at', { ascending: true })
       .limit(limit);
     if (error) throw error;
     
     if (!data.length) {
-      alert('No matured leads available for download today.');
+      alert('No leads are due for their next touch today.');
       return;
     }
     
-    const headers = ['Company Name','Phone','Email','State','MC Number','Opened E1','Opened E2','Opened E3'];
+    const stageLabel = { pending_seq1: 'Ready for Email 1', seq1_sent: 'Ready for Email 2', seq2_sent: 'Ready for Email 3', seq3_sent: 'Sequence complete — call now' };
+    const headers = ['Company Name','Phone','Email','State','MC Number','Stage','Opened E1','Opened E2','Opened E3'];
     const rows = data.map(r => [
       r.company_name || '',
       r.phone_number || '',
       r.email || '',
       r.state || '',
       r.mc_number || '',
+      stageLabel[r.status] || r.status,
       r.seq1_opened ? 'Yes' : 'No',
       r.seq2_opened ? 'Yes' : 'No',
       r.seq3_opened ? 'Yes' : 'No',
@@ -5589,13 +5612,31 @@ const csv = [headers, ...rows].map(r => r.map(f => `"${csvCell(f)}"`).join(','))
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `matured_leads_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `leads_due_today_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    // Mark downloaded leads as called_pending, assigned to whoever downloaded them
-    const ids = data.map(r => r.id);
-    await supabase.from('campaign_leads').update({ status: 'called_pending', assigned_to: currentUser.uid }).in('id', ids);
-    alert(`Downloaded ${data.length} matured leads successfully.`);
+
+    // Advance each lead to its next stage. Grouped by current status so
+    // this is a handful of bulk updates rather than one per lead.
+    const nextTouch = new Date(Date.now() + gapDays * 86400000).toISOString();
+    const advance = { pending_seq1: 'seq1_sent', seq1_sent: 'seq2_sent', seq2_sent: 'seq3_sent', seq3_sent: 'called_pending' };
+    const sentAtField = { pending_seq1: 'seq1_sent_at', seq1_sent: 'seq2_sent_at', seq2_sent: 'seq3_sent_at' };
+
+    const byStatus = {};
+    data.forEach(r => { (byStatus[r.status] = byStatus[r.status] || []).push(r.id); });
+
+    for (const [fromStatus, ids] of Object.entries(byStatus)) {
+      const toStatus = advance[fromStatus];
+      if (!toStatus) continue;
+      const update = { status: toStatus, assigned_to: currentUser.uid };
+      // Once the sequence is exhausted, stop auto-resurfacing it — it now
+      // needs a human decision (call, or manually re-queue).
+      update.next_touch_at = toStatus === 'called_pending' ? null : nextTouch;
+      if (sentAtField[fromStatus]) update[sentAtField[fromStatus]] = new Date().toISOString();
+      await supabase.from('campaign_leads').update(update).in('id', ids);
+    }
+
+    alert(`Downloaded ${data.length} leads due for their next touch today.`);
     
   } catch(e) {
     alert('Error downloading leads. Check your connection.');
@@ -5615,6 +5656,26 @@ const csv = [headers, ...rows].map(r => r.map(f => `"${csvCell(f)}"`).join(','))
     await fsUpdate('campaign_settings', 1, { daily_limit_per_account: limit });
     const msg = document.getElementById('campaignSettingsMsg');
     msg.innerHTML = '<div class="alert-success">✅ Daily limit updated to ' + limit + ' emails per account.</div>';
+    setTimeout(() => msg.innerHTML = '', 4000);
+  } catch(e) {
+    alert('Error saving. Check connection.');
+  }
+}
+
+async function saveGapDays() {
+  if (!currentUser || !currentUser.isAdmin) {
+    alert('Only admins can change campaign settings.');
+    return;
+  }
+  const gap = parseInt(document.getElementById('gapDaysInput').value);
+  if (!gap || gap < 1 || gap > 30) {
+    alert('Please enter a number between 1 and 30.');
+    return;
+  }
+  try {
+    await fsUpdate('campaign_settings', 1, { followup_gap_days: gap });
+    const msg = document.getElementById('campaignSettingsMsg');
+    msg.innerHTML = '<div class="alert-success">✅ Follow-up gap updated to ' + gap + ' days.</div>';
     setTimeout(() => msg.innerHTML = '', 4000);
   } catch(e) {
     alert('Error saving. Check connection.');
@@ -5652,11 +5713,12 @@ async function renderCampaignStats() {
   try {
     const data = await fsGetAll('campaign_leads');
 
+    const now          = new Date();
     const total        = data.length;
     const pending      = data.filter(r => r.status === 'pending_seq1').length;
     const seq1sent     = data.filter(r => r.status === 'seq1_sent').length;
     const seq2sent     = data.filter(r => r.status === 'seq2_sent').length;
-    const matured      = data.filter(r => r.status === 'matured').length;
+    const matured      = data.filter(r => r.next_touch_at && new Date(r.next_touch_at) <= now && r.status !== 'called_pending' && r.status !== 'unsubscribed' && !r.replied).length;
     const calledP      = data.filter(r => r.status === 'called_pending').length;
     const replied      = data.filter(r => r.replied === true).length;
     const unsub        = data.filter(r => r.status === 'unsubscribed').length;
@@ -5678,7 +5740,7 @@ async function renderCampaignStats() {
           <div class="stat-chip"><div class="stat-chip-val" style="color:var(--gold);">${openRate}%</div><div class="stat-chip-label">Open Rate (E1)</div></div>
           <div class="stat-chip"><div class="stat-chip-val" style="color:var(--green);">${replyRate}%</div><div class="stat-chip-label">Reply Rate</div></div>
           <div class="stat-chip"><div class="stat-chip-val" style="color:var(--green);">${replied.toLocaleString()}</div><div class="stat-chip-label">Replies Received</div></div>
-          <div class="stat-chip"><div class="stat-chip-val" style="color:var(--gold);">${matured.toLocaleString()}</div><div class="stat-chip-label">Matured Leads</div></div>
+          <div class="stat-chip"><div class="stat-chip-val" style="color:var(--gold);">${matured.toLocaleString()}</div><div class="stat-chip-label">Due For Next Touch</div></div>
           <div class="stat-chip"><div class="stat-chip-val">${calledP.toLocaleString()}</div><div class="stat-chip-label">Downloaded for Calling</div></div>
           <div class="stat-chip"><div class="stat-chip-val" style="color:var(--red);">${unsub.toLocaleString()}</div><div class="stat-chip-label">Unsubscribed</div></div>
           <div class="stat-chip"><div class="stat-chip-val">${opened2.toLocaleString()}</div><div class="stat-chip-label">Opened Follow-Up</div></div>
@@ -5717,7 +5779,8 @@ async function renderCampaignStats() {
       power_units: parseInt(cols[5]) || null,
       drivers: parseInt(cols[6]) || null,
       phone_number: cols[7] || '',
-      status: 'pending_seq1'
+      status: 'pending_seq1',
+      next_touch_at: new Date().toISOString()
     });
   }
 
