@@ -2686,7 +2686,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPABASE_URL = "nvgnuigtxfyzlminvmby";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52Z251aWd0eGZ5emxtaW52bWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4NTIzMzgsImV4cCI6MjEwMzQyODMzOH0.U7YKaFIS5_oj8ERKO3hkLcWQ6sjhJgloCJnZw2pYJ_Y";
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_URL = "https://nvgnuigtxfyzlminvmby.supabase.co";
 const auth = supabase.auth; // kept as its own name since older code below refers to "auth"
 
 window.__sb = { supabase };
